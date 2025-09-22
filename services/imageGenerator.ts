@@ -1,9 +1,11 @@
-interface AnalysisSection {
-  title: string;
-  content: string;
-}
+import type { AnalysisSection } from '../components/ResultDisplay';
 
 type Theme = 'light' | 'dark';
+
+interface ShareableImageTranslations {
+  title: string;
+  footer: string;
+}
 
 // Helper to escape characters for SVG text
 const escapeSVG = (text: string): string => {
@@ -38,7 +40,7 @@ function wrapText(text: string, maxWidth: number, charWidth: number): string[] {
 }
 
 
-function generateSVGString(sections: AnalysisSection[], theme: Theme): string {
+function generateSVGString(section: AnalysisSection, theme: Theme, translations: ShareableImageTranslations): string {
     const themeConfig = {
         light: {
             bg: '#F5F5F4', // stone-100
@@ -55,9 +57,7 @@ function generateSVGString(sections: AnalysisSection[], theme: Theme): string {
     };
     const colors = themeConfig[theme];
 
-    const keySymbolsSection = sections.find(s => s.title.includes('Ключевые символы')) || { title: 'Ключевые символы', content: 'Символы не найдены.'};
-
-    const lines = wrapText(keySymbolsSection.content, 680, 11);
+    const lines = wrapText(section.content, 680, 11);
 
     const tSpans = lines.map((line, index) => 
         `<tspan x="60" dy="${index === 0 ? 0 : '1.4em'}">${escapeSVG(line)}</tspan>`
@@ -86,27 +86,27 @@ function generateSVGString(sections: AnalysisSection[], theme: Theme): string {
                     <path d="M 65 65 L 66 67 L 68 67.5 L 66 68.5 L 65 70.5 L 64 68.5 L 62 67.5 L 64 67 Z" opacity="0.7" />
                 </g>
             </g>
-            <text x="70" y="45" class="title" fill="${colors.title}">Кофейный Психолог</text>
+            <text x="70" y="45" class="title" fill="${colors.title}">${escapeSVG(translations.title)}</text>
         </g>
 
         <!-- Content -->
         <line x1="60" y1="120" x2="740" y2="120" stroke="${colors.accent}" stroke-width="1"/>
-        <text x="60" y="160" class="subtitle" fill="${colors.title}">${escapeSVG(keySymbolsSection.title)}</text>
+        <text x="60" y="160" class="subtitle" fill="${colors.title}">${escapeSVG(section.title)}</text>
         <text y="200" class="body" fill="${colors.text}">
             ${tSpans}
         </text>
 
         <!-- Footer -->
         <text x="400" y="420" text-anchor="middle" class="body" font-size="14" fill="${colors.accent}" opacity="0.8">
-            Анализ создан с помощью Coffee Cup Psychologist
+            ${escapeSVG(translations.footer)}
         </text>
     </svg>
     `;
 }
 
-export function generateShareableImage(sections: AnalysisSection[], theme: Theme): Promise<Blob | null> {
+export function generateShareableImage(section: AnalysisSection, theme: Theme, translations: ShareableImageTranslations): Promise<Blob | null> {
     return new Promise((resolve, reject) => {
-        const svgString = generateSVGString(sections, theme);
+        const svgString = generateSVGString(section, theme, translations);
         const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
         const url = URL.createObjectURL(svgBlob);
 

@@ -14,14 +14,15 @@ This file contains the logic for communicating with the Google Gemini API.
 - **Parameters**:
     - `imageData: string`: The image encoded in Base64.
     - `mimeType: string`: The MIME type of the image (e.g., `image/jpeg`).
-    - `focusArea: string`: The topic selected by the user for the analysis ('General Well-being', 'Career', 'Relationships').
+    - `focusArea: string`: The topic selected by the user for the analysis ('wellbeing', 'career', 'relationships').
+    - `language: Lang`: The language code ('en', 'ru', 'zh') for the desired response language.
 - **Returns**: A `Promise<string>` that resolves to a string containing the analysis, formatted in Markdown.
 
 #### Prompt Engineering
 
 The prompt sent to the API is constructed dynamically to ensure high-quality, relevant responses.
 
-1.  **System Instruction**: A high-level instruction is passed in the `config` object. It sets the model's persona to that of a "wise and insightful psychologist" who uses coffee ground reading for self-discovery, not fortune-telling. This is a more effective way to establish the desired tone and role for the AI.
+1.  **System Instruction**: A high-level instruction is passed in the `config` object. It sets the model's persona to that of a "wise and insightful psychologist" who uses coffee ground reading for self-discovery, not fortune-telling. It also **dynamically sets the required response language** based on the user's selection, ensuring a fully localized experience.
 
 2.  **User Prompt**: The user-facing prompt contains two main parts:
     - **Focus Instruction**: Depending on the `focusArea` parameter, a specific instruction is added to guide the analysis toward career, relationships, or general well-being.

@@ -5,13 +5,16 @@ import ImageUploader from './components/ImageUploader';
 import ResultDisplay from './components/ResultDisplay';
 import { LoaderIcon } from './components/LoaderIcon';
 import { BackgroundPattern } from './components/BackgroundPattern';
+import { OfficialLogo } from './components/logos/OfficialLogo';
 
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './components/ui/card';
 import { Button } from './components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from './components/ui/toggle-group';
 import { CoffeeIcon } from './components/CoffeeIcon';
+import { translations, Lang, detectInitialLanguage, t as i18n_t } from './lib/i18n';
 
 type Theme = 'light' | 'dark';
+type FocusArea = 'wellbeing' | 'career' | 'relationships';
 
 const App: React.FC = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -19,7 +22,13 @@ const App: React.FC = () => {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [focusArea, setFocusArea] = useState<string>('Общее самочувствие');
+  const [focusArea, setFocusArea] = useState<FocusArea>('wellbeing');
+  const [language, setLanguage] = useState<Lang>(detectInitialLanguage);
+
+  const t = useCallback((key: keyof typeof translations.en) => {
+    return i18n_t(key, language);
+  }, [language]);
+
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined' && window.localStorage) {
       const storedTheme = window.localStorage.getItem('theme');
@@ -39,6 +48,11 @@ const App: React.FC = () => {
     root.classList.add(theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('language', language);
+    document.documentElement.lang = language;
+  }, [language]);
 
   const toggleTheme = () => {
     setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
@@ -63,7 +77,7 @@ const App: React.FC = () => {
 
   const handleAnalyzeClick = useCallback(async () => {
     if (!imageFile) {
-      setError("Пожалуйста, сначала выберите изображение.");
+      setError(t('error.selectImage'));
       return;
     }
 
@@ -80,15 +94,15 @@ const App: React.FC = () => {
       const mimeType = dataUrlParts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
       const imageData = dataUrlParts[1];
 
-      const result = await analyzeCoffeeCup(imageData, mimeType, focusArea);
+      const result = await analyzeCoffeeCup(imageData, mimeType, focusArea, language);
       setAnalysis(result);
     } catch (err) {
       console.error(err);
-      setError("Не удалось проанализировать изображение. Пожалуйста, попробуйте еще раз.");
+      setError(t('error.analyzeFailed'));
     } finally {
       setIsLoading(false);
     }
-  }, [imageFile, focusArea]);
+  }, [imageFile, focusArea, language, t]);
 
   const handleReset = () => {
     setImageFile(null);
@@ -96,15 +110,17 @@ const App: React.FC = () => {
     setAnalysis(null);
     setError(null);
     setIsLoading(false);
-    setFocusArea('Общее самочувствие');
+    setFocusArea('wellbeing');
   };
+  
+  const isUploaderVisible = !isLoading && !error && !analysis && !imageUrl;
 
   const renderContent = () => {
     if (isLoading) {
       return (
         <div className="flex flex-col items-center justify-center text-center p-8 h-96">
           <LoaderIcon className="w-8 h-8 animate-spin text-primary" />
-          <p className="mt-4 text-muted-foreground animate-pulse">Изучаю узоры на кофейной гуще...</p>
+          <p className="mt-4 text-muted-foreground animate-pulse">{t('loader.message')}</p>
         </div>
       );
     }
@@ -114,43 +130,43 @@ const App: React.FC = () => {
         <div className="text-center text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-900/50 p-4 rounded-lg border border-red-300 dark:border-red-700">
           <p>{error}</p>
           <Button onClick={handleReset} variant="link" className="mt-2">
-            Попробовать снова
+            {t('error.tryAgain')}
           </Button>
         </div>
       );
     }
 
     if (analysis) {
-      return <ResultDisplay analysis={analysis} onReset={handleReset} theme={theme} />;
+      return <ResultDisplay analysis={analysis} onReset={handleReset} theme={theme} t={t} />;
     }
 
     if (imageUrl) {
       return (
         <div className="flex flex-col items-center text-center">
             <CardHeader>
-                <CardTitle className="text-2xl font-display">Ваша чашка готова к анализу</CardTitle>
+                <CardTitle className="text-2xl font-display">{t('imageReady.title')}</CardTitle>
             </CardHeader>
             <CardContent className="w-full flex flex-col items-center">
                  <div className="relative w-full max-w-sm mb-6 rounded-lg overflow-hidden shadow-lg border">
                     <img src={imageUrl} alt="Uploaded coffee cup" className="w-full h-auto object-cover" />
                 </div>
                  <div className="mb-6 w-full max-w-sm">
-                    <h3 className="text-lg font-medium text-foreground mb-3">На чем сфокусироваться?</h3>
+                    <h3 className="text-lg font-medium text-foreground mb-3">{t('imageReady.focus.title')}</h3>
                     <ToggleGroup
                         type="single"
                         defaultValue={focusArea}
                         value={focusArea}
-                        onValueChange={(value) => { if(value) setFocusArea(value) }}
+                        onValueChange={(value) => { if(value) setFocusArea(value as FocusArea) }}
                         aria-label="Focus Area"
                     >
-                        <ToggleGroupItem value="Общее самочувствие" aria-label="Focus on General well-being">
-                            Общее самочувствие
+                        <ToggleGroupItem value="wellbeing" aria-label="Focus on General well-being">
+                            {t('imageReady.focus.wellbeing')}
                         </ToggleGroupItem>
-                        <ToggleGroupItem value="Карьера" aria-label="Focus on Career">
-                            Карьера
+                        <ToggleGroupItem value="career" aria-label="Focus on Career">
+                            {t('imageReady.focus.career')}
                         </ToggleGroupItem>
-                        <ToggleGroupItem value="Отношения" aria-label="Focus on Relationships">
-                            Отношения
+                        <ToggleGroupItem value="relationships" aria-label="Focus on Relationships">
+                            {t('imageReady.focus.relationships')}
                         </ToggleGroupItem>
                     </ToggleGroup>
                 </div>
@@ -162,30 +178,37 @@ const App: React.FC = () => {
                     ) : (
                         <CoffeeIcon className="mr-2 h-4 w-4" />
                     )}
-                    Анализировать
+                    {t('button.analyze')}
                 </Button>
                 <Button onClick={handleReset} variant="outline" size="lg">
-                    Сбросить
+                    {t('button.reset')}
                 </Button>
             </CardFooter>
         </div>
       );
     }
 
-    return <ImageUploader onImageSelect={handleImageSelect} />;
+    return <ImageUploader onImageSelect={handleImageSelect} t={t} />;
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-8 font-sans bg-background text-foreground transition-colors duration-300 relative">
+    <div className={`min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-8 font-sans bg-background text-foreground transition-colors duration-300 relative ${isUploaderVisible ? 'state-uploader' : ''}`}>
       <BackgroundPattern />
-      <Header onToggleTheme={toggleTheme} currentTheme={theme} />
-      <main className="w-full max-w-2xl mx-auto flex-grow flex flex-col items-center justify-center z-10">
+      <Header 
+        logoComponent={OfficialLogo}
+        onToggleTheme={toggleTheme} 
+        currentTheme={theme} 
+        language={language} 
+        setLanguage={setLanguage}
+        t={t}
+      />
+      <main className="w-full max-w-4xl mx-auto flex-grow flex flex-col items-center z-10">
         <Card className="w-full shadow-2xl transition-all duration-500 backdrop-blur-xl bg-card/70">
             {renderContent()}
         </Card>
-        <footer className="text-center mt-8 text-muted-foreground text-sm z-10">
-          <p>&copy; {new Date().getFullYear()} Кофейный Психолог. Все права защищены.</p>
-           <p className="mt-1">Помните, это лишь инструмент для самопознания.</p>
+        <footer className="text-center mt-auto pt-8 text-muted-foreground text-sm z-10">
+          <p>{t('footer.copyright').replace('{year}', new Date().getFullYear().toString())}</p>
+          <p className="mt-1">{t('footer.disclaimer')}</p>
         </footer>
       </main>
     </div>

@@ -11,14 +11,15 @@ interface ResultDisplayProps {
   analysis: string;
   onReset: () => void;
   theme: 'light' | 'dark';
+  t: (key: string) => string;
 }
 
-interface AnalysisSection {
+export interface AnalysisSection {
   title: string;
   content: string;
 }
 
-const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme }) => {
+const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme, t }) => {
   const [sections, setSections] = useState<AnalysisSection[]>([]);
   const [intro, setIntro] = useState<string>('');
   const [isSharing, setIsSharing] = useState<boolean>(false);
@@ -44,15 +45,25 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme 
   const handleShare = async () => {
     setIsSharing(true);
     try {
-        const imageBlob = await generateShareableImage(sections, theme);
+        const mainSection = sections[0];
+        if (!mainSection) {
+            throw new Error("No analysis sections found to share.");
+        }
+
+        const imageTranslations = {
+            title: t('header.title'),
+            footer: t('share.image.footer'),
+        };
+
+        const imageBlob = await generateShareableImage(mainSection, theme, imageTranslations);
         if (!imageBlob) {
             throw new Error("Failed to generate image.");
         }
 
         const file = new File([imageBlob], 'coffee-analysis.png', { type: 'image/png' });
         const shareData = {
-            title: 'Мой кофейный анализ',
-            text: 'Вот что рассказала моя кофейная чашка:',
+            title: t('share.title'),
+            text: t('share.text'),
             files: [file],
         };
 
@@ -69,7 +80,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme 
         }
     } catch (err) {
         console.error("Sharing failed:", err);
-        alert("Не удалось поделиться изображением. Пожалуйста, попробуйте еще раз.");
+        alert(t('share.error'));
     } finally {
         setIsSharing(false);
     }
@@ -77,7 +88,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme 
 
   return (
     <div className="flex flex-col items-center w-full p-6 sm:p-8">
-      <h2 className="text-3xl font-display font-bold text-foreground mb-6 text-center">Ваш Психологический Портрет</h2>
+      <h2 className="text-3xl font-display font-bold text-foreground mb-6 text-center">{t('result.title')}</h2>
       <ScrollArea className="w-full bg-muted/50 rounded-lg p-6 max-h-[50vh] prose dark:prose-invert prose-stone border">
          <div className="font-sans text-foreground leading-relaxed">
             {intro && (
@@ -98,7 +109,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme 
       >
         <Button
           onClick={handleShare}
-          disabled={isSharing}
+          disabled={isSharing || sections.length === 0}
           variant="outline"
         >
           {isSharing ? (
@@ -106,10 +117,10 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme 
           ) : (
              <ShareIcon className="w-4 h-4 mr-2" />
           )}
-          <span>Поделиться</span>
+          <span>{t('result.button.share')}</span>
         </Button>
         <Button onClick={onReset}>
-          Проанализировать еще одну чашку
+          {t('result.button.analyzeAnother')}
         </Button>
       </div>
     </div>
