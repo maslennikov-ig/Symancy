@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2344403c'%3E%3Cpath fill-rule='evenodd' d='M9.3,3.62_C_9.69,3.23,10.29,3,10.92,3_h_6.58_c_2.11,0,3.83,1.72,3.83,3.83_v_2.67_c_0,1.06-0.86,1.92-1.92,1.92_h_-1.91_v_-1.91_c_0-2.11-1.72-3.83-3.83-3.83_H_9.3_z_M_5.47,5.54_C_5.47,4.48,6.34,3.62,7.39,3.62_h_1.91_v_9.58_c_0,1.06-0.86,1.92-1.92,1.92_H_5.47_C_3.36,15.11,1.64,13.39,1.64,11.28_v_-1.91_C_1.64,7.26,3.36,5.54,5.47,5.54_z_M_7.39,17.02_h_8.61_c_1.06,0,1.92,0.86,1.92,1.92_v_0.96_c_0,1.06-0.86,1.92-1.92,1.92_H_7.39_c_-1.06,0-1.92-0.86-1.92-1.92_v_-0.96_C_5.47,17.88,6.34,17.02,7.39,17.02_z' clip-rule='evenodd'/%3E%3C/svg%3E" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coffee Cup Psychologist</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          container: {
+            center: true,
+            padding: "2rem",
+            screens: {
+              "2xl": "1400px",
+            },
+          },
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              display: ['Playfair Display', 'serif'],
+            },
+            colors: {
+              border: "hsl(var(--border))",
+              input: "hsl(var(--input))",
+              ring: "hsl(var(--ring))",
+              background: "hsl(var(--background))",
+              foreground: "hsl(var(--foreground))",
+              primary: {
+                DEFAULT: "hsl(var(--primary))",
+                foreground: "hsl(var(--primary-foreground))",
+              },
+              secondary: {
+                DEFAULT: "hsl(var(--secondary))",
+                foreground: "hsl(var(--secondary-foreground))",
+              },
+              destructive: {
+                DEFAULT: "hsl(var(--destructive))",
+                foreground: "hsl(var(--destructive-foreground))",
+              },
+              muted: {
+                DEFAULT: "hsl(var(--muted))",
+                foreground: "hsl(var(--muted-foreground))",
+              },
+              accent: {
+                DEFAULT: "hsl(var(--accent))",
+                foreground: "hsl(var(--accent-foreground))",
+              },
+              popover: {
+                DEFAULT: "hsl(var(--popover))",
+                foreground: "hsl(var(--popover-foreground))",
+              },
+              card: {
+                DEFAULT: "hsl(var(--card))",
+                foreground: "hsl(var(--card-foreground))",
+              },
+            },
+            borderRadius: {
+              lg: "var(--radius)",
+              md: "calc(var(--radius) - 2px)",
+              sm: "calc(var(--radius) - 4px)",
+            },
+            keyframes: {
+              "accordion-down": {
+                from: { height: "0" },
+                to: { height: "var(--radix-accordion-content-height)" },
+              },
+              "accordion-up": {
+                from: { height: "var(--radix-accordion-content-height)" },
+                to: { height: "0" },
+              },
+            },
+            animation: {
+              "accordion-down": "accordion-down 0.2s ease-out",
+              "accordion-up": "accordion-up 0.2s ease-out",
+            },
+          },
+        },
+      };
+    </script>
+    <script>
+      if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.20.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-markdown": "https://aistudiocdn.com/react-markdown@^9.0.1",
+    "remark-gfm": "https://aistudiocdn.com/remark-gfm@^4.0.0"
+  }
+}
+</script>
+<style>
+  @layer base {
+    :root {
+      --background: 30 50% 98%; /* stone-50 */
+      --foreground: 20 14.3% 4.1%; /* stone-950 */
+      --card: 30 50% 98%; /* stone-50 */
+      --card-foreground: 20 14.3% 4.1%; /* stone-950 */
+      --popover: 30 50% 98%;
+      --popover-foreground: 20 14.3% 4.1%;
+      --primary: 38 92% 50%; /* amber-500 */
+      --primary-foreground: 20 14.3% 4.1%;
+      --secondary: 40 4.8% 95.9%; /* stone-100 */
+      --secondary-foreground: 20 14.3% 4.1%;
+      --muted: 40 4.8% 95.9%;
+      --muted-foreground: 30 5.9% 34.1%; /* stone-600 */
+      --accent: 40 4.8% 95.9%;
+      --accent-foreground: 20 14.3% 4.1%;
+      --destructive: 0 84.2% 60.2%;
+      --destructive-foreground: 0 0% 98%;
+      --border: 30 5.9% 90%; /* stone-200 */
+      --input: 30 5.9% 90%;
+      --ring: 38 92% 50%; /* amber-500 */
+      --radius: 0.75rem;
+    }
+
+    .dark {
+      --background: 20 14.3% 4.1%; /* stone-950 */
+      --foreground: 0 0% 98%; /* stone-50 */
+      --card: 24 9.8% 10%; /* stone-900 */
+      --card-foreground: 0 0% 98%;
+      --popover: 20 14.3% 4.1%;
+      --popover-foreground: 0 0% 98%;
+      --primary: 38 92% 50%; /* amber-500 */
+      --primary-foreground: 20 14.3% 4.1%;
+      --secondary: 24 9.8% 10%; /* stone-800 */
+      --secondary-foreground: 0 0% 98%;
+      --muted: 24 9.8% 10%;
+      --muted-foreground: 30 5.1% 63.1%; /* stone-400 */
+      --accent: 24 9.8% 10%;
+      --accent-foreground: 0 0% 98%;
+      --destructive: 0 62.8% 30.6%;
+      --destructive-foreground: 0 0% 98%;
+      --border: 30 3.7% 15.9%; /* stone-800 */
+      --input: 30 3.7% 15.9%;
+      --ring: 38 92% 50%;
+    }
+  }
+
+  @layer base {
+    * {
+      @apply border-border;
+    }
+    body {
+      @apply bg-background text-foreground;
+    }
+  }
+
+  /* Custom Scrollbar for Webkit browsers */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+     background-color: hsl(var(--muted-foreground) / 0.8);
+  }
+</style>
+
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
