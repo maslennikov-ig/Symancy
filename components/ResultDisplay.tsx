@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { generateShareableImage } from '../services/imageGenerator';
@@ -6,46 +7,22 @@ import { ShareIcon } from './ShareIcon';
 import { LoaderIcon } from './LoaderIcon';
 import { ScrollArea } from './ui/scroll-area';
 import { Button } from './ui/button';
+import { AnalysisResponse } from '../services/geminiService';
 
 interface ResultDisplayProps {
-  analysis: string;
+  analysis: AnalysisResponse;
   onReset: () => void;
   theme: 'light' | 'dark';
   t: (key: string) => string;
 }
 
-export interface AnalysisSection {
-  title: string;
-  content: string;
-}
-
 const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme, t }) => {
-  const [sections, setSections] = useState<AnalysisSection[]>([]);
-  const [intro, setIntro] = useState<string>('');
   const [isSharing, setIsSharing] = useState<boolean>(false);
-
-  useEffect(() => {
-    // This regex splits the text by lines that look like markdown headers (## Title), capturing the title.
-    const parts = analysis.split(/^\s*##?\s*(.*)\s*$/m);
-    
-    const introText = parts.shift()?.trim() || '';
-    setIntro(introText);
-    
-    const parsedSections: AnalysisSection[] = [];
-    for (let i = 0; i < parts.length; i += 2) {
-      const title = parts[i]?.trim();
-      const content = parts[i + 1]?.trim();
-      if (title && content) {
-        parsedSections.push({ title, content });
-      }
-    }
-    setSections(parsedSections);
-  }, [analysis]);
 
   const handleShare = async () => {
     setIsSharing(true);
     try {
-        const mainSection = sections[0];
+        const mainSection = analysis.sections[0];
         if (!mainSection) {
             throw new Error("No analysis sections found to share.");
         }
@@ -91,10 +68,10 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme,
       <h2 className="text-3xl font-display font-bold text-foreground mb-6 text-center">{t('result.title')}</h2>
       <ScrollArea className="w-full bg-muted/50 rounded-lg p-6 max-h-[50vh] prose dark:prose-invert prose-stone border">
          <div className="font-sans text-foreground leading-relaxed">
-            {intro && (
-               <ReactMarkdown remarkPlugins={[remarkGfm]}>{intro}</ReactMarkdown>
+            {analysis.intro && (
+               <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysis.intro}</ReactMarkdown>
             )}
-            {sections.map((section, index) => (
+            {analysis.sections.map((section, index) => (
               <div key={index} className="mt-6">
                 <h3 className="font-display text-xl font-bold text-foreground mb-3">
                   {section.title}
@@ -109,7 +86,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme,
       >
         <Button
           onClick={handleShare}
-          disabled={isSharing || sections.length === 0}
+          disabled={isSharing || analysis.sections.length === 0}
           variant="outline"
         >
           {isSharing ? (

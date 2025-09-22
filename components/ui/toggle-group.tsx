@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, forwardRef } from 'react';
 import { cn } from '../../lib/utils';
 import { Button } from './button';
@@ -50,8 +51,6 @@ const ToggleGroupItem = forwardRef<HTMLButtonElement, ToggleGroupItemProps>(
       <Button
         ref={ref}
         variant={isSelected ? 'default' : 'ghost'}
-        // Fix: The `cn` utility was called with an object for conditional classes, which it doesn't support.
-        // Changed to a conditional expression that results in a string or a falsy value.
         className={cn("px-3 py-1.5 h-auto", isSelected && 'bg-background hover:bg-background/80 text-foreground', className)}
         onClick={() => onValueChange(value)}
         {...props}

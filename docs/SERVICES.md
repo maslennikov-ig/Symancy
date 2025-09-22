@@ -1,3 +1,4 @@
+
 # Services Documentation
 
 This document describes the services responsible for interacting with external APIs.
@@ -16,19 +17,20 @@ This file contains the logic for communicating with the Google Gemini API.
     - `mimeType: string`: The MIME type of the image (e.g., `image/jpeg`).
     - `focusArea: string`: The topic selected by the user for the analysis ('wellbeing', 'career', 'relationships').
     - `language: Lang`: The language code ('en', 'ru', 'zh') for the desired response language.
-- **Returns**: A `Promise<string>` that resolves to a string containing the analysis, formatted in Markdown.
+- **Returns**: A `Promise<AnalysisResponse>` that resolves to a structured object containing the analysis intro and sections.
 
-#### Prompt Engineering
+#### Prompt Engineering & JSON Mode
 
-The prompt sent to the API is constructed dynamically to ensure high-quality, relevant responses.
+The prompt sent to the API is constructed dynamically to ensure high-quality, relevant, and structured responses.
 
-1.  **System Instruction**: A high-level instruction is passed in the `config` object. It sets the model's persona to that of a "wise and insightful psychologist" who uses coffee ground reading for self-discovery, not fortune-telling. It also **dynamically sets the required response language** based on the user's selection, ensuring a fully localized experience.
+1.  **System Instruction**: A high-level instruction is passed in the `config` object. It sets the model's persona to that of a "wise and insightful psychologist" who uses coffee ground reading for self-discovery, not fortune-telling. It also **dynamically sets the required response language** based on the user's selection.
 
-2.  **User Prompt**: The user-facing prompt contains two main parts:
-    - **Focus Instruction**: Depending on the `focusArea` parameter, a specific instruction is added to guide the analysis toward career, relationships, or general well-being.
-    - **Structure Instruction**: This part defines the required structure and tone of the response. The model is asked to describe symbols, provide a psychological interpretation, and formulate gentle recommendations. It is also explicitly asked to format the response using Markdown for better readability.
+2.  **JSON Response**: The function leverages Gemini's JSON mode.
+    -   A `responseSchema` is defined to specify the exact shape of the desired JSON output (an object with `intro` and `sections` fields).
+    -   The `responseMimeType` is set to `application/json`.
+    -   The prompt explicitly instructs the model to return a JSON object that adheres to the schema.
 
-This structured approach allows for more consistent, relevant, and well-formatted responses from the model.
+This robust approach eliminates the need for fragile string parsing on the frontend, making the application more reliable and easier to maintain.
 
 ---
 
@@ -40,11 +42,24 @@ This service handles the creation of a shareable image from the analysis results
 
 - **Purpose**: Creates a PNG image containing the key insights from the analysis, suitable for sharing on social media.
 - **Parameters**:
-    - `sections: AnalysisSection[]`: An array of the parsed analysis sections. It specifically looks for the "Key Symbols" section.
+    - `section: AnalysisSection`: The first parsed analysis section.
     - `theme: 'light' | 'dark'`: The current UI theme, used to style the image accordingly.
+    - `translations`: An object containing localized strings for the image title and footer.
 - **Returns**: A `Promise<Blob | null>` that resolves to a PNG image blob.
 
 The process involves:
-1. Generating an SVG string with the analysis text, logo, and themed colors.
-2. Drawing this SVG onto an HTML `<canvas>` element.
-3. Exporting the canvas content as a PNG blob.
+1.  Generating an SVG string with the analysis text, logo, and themed colors.
+2.  Drawing this SVG onto an HTML `<canvas>` element.
+3.  Exporting the canvas content as a PNG blob.
+
+---
+
+### `lib/supabaseClient.ts`
+
+This file handles the connection to the Supabase backend.
+
+- **Purpose**: Initializes and exports a singleton Supabase client instance.
+- **Functionality**: It uses environment variables for the Supabase URL and anonymous key to configure the client. This client is then imported by other parts of the application, such as the `AuthContext`, to handle user authentication and other backend interactions.
+- **Authentication Methods Implemented**:
+    - **OAuth Providers**: Google, Apple, Facebook.
+    - **Magic Link (OTP)**: Passwordless sign-in via a one-time link sent to the user's email.

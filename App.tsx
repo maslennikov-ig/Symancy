@@ -1,10 +1,11 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
-import { analyzeCoffeeCup } from './services/geminiService';
+import { analyzeCoffeeCup, AnalysisResponse } from './services/geminiService';
 import Header from './components/Header';
 import ImageUploader from './components/ImageUploader';
 import ResultDisplay from './components/ResultDisplay';
 import { LoaderIcon } from './components/LoaderIcon';
-import { BackgroundPattern } from './components/BackgroundPattern';
+import { MysticalBackground } from './components/MysticalCoffeeCupIllustration';
 import { OfficialLogo } from './components/logos/OfficialLogo';
 
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './components/ui/card';
@@ -19,7 +20,7 @@ type FocusArea = 'wellbeing' | 'career' | 'relationships';
 const App: React.FC = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [focusArea, setFocusArea] = useState<FocusArea>('wellbeing');
@@ -193,7 +194,7 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-8 font-sans bg-background text-foreground transition-colors duration-300 relative ${isUploaderVisible ? 'state-uploader' : ''}`}>
-      <BackgroundPattern />
+      <MysticalBackground />
       <Header 
         logoComponent={OfficialLogo}
         onToggleTheme={toggleTheme} 
