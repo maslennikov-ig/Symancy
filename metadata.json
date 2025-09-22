@@ -1,0 +1,5 @@
+{
+  "name": "Coffee Cup Psychologist",
+  "description": "Upload a photo of your coffee cup, and this app will analyze the coffee grounds to find symbols and provide psychological insights and recommendations.",
+  "requestFramePermissions": []
+}
