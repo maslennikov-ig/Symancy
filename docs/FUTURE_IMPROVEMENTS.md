@@ -6,7 +6,7 @@ This document contains a list of ideas and potential directions for the future d
 
 ### Functionality
 
-- **Analysis History**: Implement a feature to save previous analysis results in `localStorage` or on a server (if a backend is added), allowing users to track their journey.
+- **Analysis History**: Implement a feature to save previous analysis results to a user's account (powered by Supabase), allowing them to track their journey across devices.
 - **Deeper Analysis Customization**: Allow users to input their own questions or context, which would be added to the prompt to get an even more personalized analysis.
 - **Streaming Response**: Instead of waiting for the full API response, implement streaming so that the analysis text appears word-by-word, creating a more dynamic, "live" dialogue effect.
 - **Add More Languages**: Expand the localization to include more languages based on user demand.

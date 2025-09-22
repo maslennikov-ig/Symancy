@@ -1,4 +1,5 @@
-import type { AnalysisSection } from '../components/ResultDisplay';
+
+import type { AnalysisSection } from './geminiService';
 
 type Theme = 'light' | 'dark';
 

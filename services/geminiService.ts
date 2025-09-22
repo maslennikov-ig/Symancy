@@ -1,6 +1,17 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { Lang } from "../lib/i18n";
+
+// Define the structured response format
+export interface AnalysisSection {
+  title: string;
+  content: string;
+}
+
+export interface AnalysisResponse {
+  intro: string;
+  sections: AnalysisSection[];
+}
 
 const API_KEY = process.env.API_KEY;
 
@@ -9,7 +20,6 @@ if (!API_KEY) {
 }
 
 const ai = new GoogleGenAI({ apiKey: API_KEY });
-
 const model = 'gemini-2.5-flash';
 
 const languageMap: Record<Lang, string> = {
@@ -18,7 +28,38 @@ const languageMap: Record<Lang, string> = {
   zh: "Chinese",
 };
 
-export const analyzeCoffeeCup = async (imageData: string, mimeType: string, focusArea: string, language: Lang): Promise<string> => {
+// Define the schema for the expected JSON response from the Gemini API.
+const responseSchema = {
+  type: Type.OBJECT,
+  properties: {
+    intro: {
+      type: Type.STRING,
+      description: "An introductory paragraph for the analysis, formatted in Markdown.",
+    },
+    sections: {
+      type: Type.ARRAY,
+      description: "An array of analysis sections.",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          title: {
+            type: Type.STRING,
+            description: "The title of the section (e.g., 'Key Symbols and Figures').",
+          },
+          content: {
+            type: Type.STRING,
+            description: "The detailed content of the section, formatted in Markdown.",
+          },
+        },
+        required: ["title", "content"],
+      },
+    },
+  },
+  required: ["intro", "sections"],
+};
+
+
+export const analyzeCoffeeCup = async (imageData: string, mimeType: string, focusArea: string, language: Lang): Promise<AnalysisResponse> => {
   try {
     const languageName = languageMap[language];
     const systemInstruction = `You are a wise and insightful psychologist who uses the ancient art of coffee ground reading for deep personality analysis. Your task is not to predict the future, but to help the person understand themselves better. Your response must be in ${languageName}.`;
@@ -36,12 +77,14 @@ export const analyzeCoffeeCup = async (imageData: string, mimeType: string, focu
         break;
     }
 
-    const structurePrompt = `Carefully study the provided image of the coffee grounds in the cup. Your analysis must include:
-1.  **Key Symbols and Figures**: Describe what you see.
-2.  **Psychological Interpretation**: Explain what these symbols might mean in the context of the chosen theme.
-3.  **Conclusions and Recommendations**: Formulate gentle and supportive advice to help the person on their path.
+    const structurePrompt = `Carefully study the provided image of the coffee grounds in the cup. Your analysis must be returned as a JSON object matching the provided schema. The JSON object should contain:
+1.  **intro**: An introductory paragraph.
+2.  **sections**: An array of objects, each with 'title' and 'content'.
+    - The first section should be titled 'Key Symbols and Figures' and describe what you see.
+    - The second should be 'Psychological Interpretation' and explain what these symbols might mean.
+    - The third should be 'Conclusions and Recommendations' with gentle, supportive advice.
 
-Your response should be structured, profound, and written in a calm, therapeutic tone. Avoid categorical predictions. Instead, use metaphorical and suggestive language that encourages self-reflection. Format your response using Markdown for better readability: use headings, lists, and text emphasis.`;
+The content for 'intro' and 'content' fields should be formatted using Markdown for better readability (headings, lists, emphasis). Your response should be profound and written in a calm, therapeutic tone. Avoid categorical predictions. Instead, use metaphorical and suggestive language that encourages self-reflection.`;
     
     const prompt = `${focusInstruction}\n\n${structurePrompt}`;
 
@@ -61,37 +104,17 @@ Your response should be structured, profound, and written in a calm, therapeutic
       contents: { parts: [imagePart, textPart] },
       config: {
         systemInstruction: systemInstruction,
+        responseMimeType: "application/json",
+        responseSchema: responseSchema,
       }
     });
 
-    return response.text;
+    return JSON.parse(response.text);
   } catch (error) {
     console.error("Error calling Gemini API:", error);
-    throw new Error("Failed to get analysis from Gemini API.");
-  }
-};
-
-// Fix: Add the missing `generateLogo` function to resolve the import error in LogoLab.tsx.
-export const generateLogo = async (prompt: string): Promise<string> => {
-  try {
-    const response = await ai.models.generateImages({
-      model: 'imagen-4.0-generate-001',
-      prompt: prompt,
-      config: {
-        numberOfImages: 1,
-        outputMimeType: 'image/png',
-        aspectRatio: '1:1',
-      },
-    });
-
-    if (response.generatedImages && response.generatedImages.length > 0 && response.generatedImages[0].image?.imageBytes) {
-      const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
-      const imageUrl = `data:image/png;base64,${base64ImageBytes}`;
-      return imageUrl;
+    if (error instanceof Error && error.message.includes('JSON')) {
+        throw new Error("Failed to parse analysis from Gemini API. The response was not valid JSON.");
     }
-    throw new Error('No image was generated by the API.');
-  } catch (error) {
-    console.error(`Error generating logo with prompt "${prompt}":`, error);
-    throw new Error("Failed to generate logo from Gemini API.");
+    throw new Error("Failed to get analysis from Gemini API.");
   }
 };

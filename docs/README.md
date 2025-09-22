@@ -9,6 +9,7 @@ The goal of the application is not to predict the future, but to offer users a u
 ## Key Features
 
 - **AI-Powered Analysis**: Utilizes the multimodal capabilities of the `gemini-2.5-flash` model to interpret images.
+- **User Authentication**: Secure sign-in using Google or a passwordless magic link, powered by Supabase. Users can view their profile and log out.
 - **Image Upload**: A user-friendly interface for uploading photos via drag-and-drop or file selection.
 - **Focused Analysis**: Users can choose a specific area of life to focus on (General Well-being, Career, Relationships) to receive more relevant insights.
 - **Multi-language Support**: The interface is available in English, Russian, and Chinese, with automatic language detection. AI responses are provided in the selected language.
@@ -22,6 +23,7 @@ The goal of the application is not to predict the future, but to offer users a u
 
 - **Frontend**: React, TypeScript
 - **API**: Google Gemini API (`@google/genai`)
+- **Authentication**: Supabase
 - **Styling**: Tailwind CSS
 - **UI Components**: Custom `shadcn-ui` inspired component library
 - **Icons**: Custom SVG components
