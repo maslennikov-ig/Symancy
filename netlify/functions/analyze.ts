@@ -1,3 +1,4 @@
+
 import type { Handler } from "@netlify/functions";
 
 // This file is a self-contained Netlify function that uses the Gemini REST API via fetch.
@@ -60,7 +61,7 @@ const handler: Handler = async (event) => {
     }
 
     const languageName = languageMap[language] || "English";
-    const systemInstruction = `You are a wise and insightful psychologist who uses the ancient art of coffee ground reading for deep personality analysis. Your task is not to predict the future, but to help the person understand themselves better. Your response must be in ${languageName}.`;
+    const systemInstructionText = `You are a wise and insightful psychologist who uses the ancient art of coffee ground reading for deep personality analysis. Your task is not to predict the future, but to help the person understand themselves better. Your response must be in ${languageName}.`;
 
     let focusInstruction = '';
     switch (focusArea) {
@@ -90,17 +91,17 @@ The content for 'intro' and 'content' fields should be formatted using Markdown 
       contents: [
         {
           parts: [
-            { inline_data: { mime_type: mimeType, data: imageData } },
+            { inlineData: { mimeType: mimeType, data: imageData } },
             { text: prompt },
           ],
         },
       ],
-      system_instruction: {
-          parts: [ { text: systemInstruction } ]
+      systemInstruction: {
+          parts: [ { text: systemInstructionText } ]
       },
-      generation_config: {
-        response_mime_type: "application/json",
-        response_schema: responseSchema,
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: responseSchema,
       },
     };
 
@@ -120,6 +121,14 @@ The content for 'intro' and 'content' fields should be formatted using Markdown 
     }
 
     const data = await geminiResponse.json();
+    
+    // Improved error handling: Check for safety blocks
+    if (data.promptFeedback?.blockReason) {
+      console.error(`Gemini API request blocked: ${data.promptFeedback.blockReason}`);
+      const errorMessage = `Analysis blocked due to: ${data.promptFeedback.blockReason}. Please try a different image.`;
+      return { statusCode: 400, body: JSON.stringify({ error: errorMessage }) };
+    }
+    
     const analysisText = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!analysisText) {
