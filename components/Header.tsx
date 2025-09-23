@@ -6,6 +6,7 @@ import { ProfileIcon } from './auth/ProfileIcon';
 import AuthModal from './auth/AuthModal';
 import { useAuth } from '../contexts/AuthContext';
 import { LogoutIcon } from './auth/LogoutIcon';
+import { HistoryIcon } from './HistoryIcon';
 
 interface HeaderProps {
     logoComponent: React.FC<React.SVGProps<SVGSVGElement>>;
@@ -14,6 +15,7 @@ interface HeaderProps {
     language: Lang;
     setLanguage: (lang: Lang) => void;
     t: (key: string) => string;
+    onShowHistory: () => void;
 }
 
 const languages: { code: Lang, name: string }[] = [
@@ -22,7 +24,7 @@ const languages: { code: Lang, name: string }[] = [
     { code: 'zh', name: '中文' },
 ];
 
-const Header: React.FC<HeaderProps> = ({ logoComponent: LogoComponent, onToggleTheme, currentTheme, language, setLanguage, t }) => {
+const Header: React.FC<HeaderProps> = ({ logoComponent: LogoComponent, onToggleTheme, currentTheme, language, setLanguage, t, onShowHistory }) => {
     const { user, signOut } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -49,6 +51,11 @@ const Header: React.FC<HeaderProps> = ({ logoComponent: LogoComponent, onToggleT
         setIsMenuOpen(false);
         setIsAuthModalOpen(true);
     };
+    
+    const handleHistoryClick = () => {
+        onShowHistory();
+        setIsMenuOpen(false);
+    }
 
     const handleLogout = async () => {
         await signOut();
@@ -91,6 +98,11 @@ const Header: React.FC<HeaderProps> = ({ logoComponent: LogoComponent, onToggleT
                                             <div className="p-2 border-b">
                                                 <p className="text-sm font-medium text-foreground truncate" title={user.email}>{user.email}</p>
                                             </div>
+                                            <button role="menuitem" className="w-full text-left px-4 py-2 mt-1 text-sm rounded-sm transition-colors hover:bg-accent focus:outline-none focus:bg-accent flex items-center font-medium" onClick={handleHistoryClick}>
+                                                <HistoryIcon className="w-4 h-4 mr-2" />
+                                                {t('menu.myHistory')}
+                                            </button>
+                                            <div className="border-t border-border -mx-2 my-1"></div>
                                         </>
                                     ) : (
                                         <div className="p-1">

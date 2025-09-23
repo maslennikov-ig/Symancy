@@ -1,4 +1,3 @@
-
 # Component Documentation
 
 This document describes the key React components used in the "Coffee Cup Psychologist" application.
@@ -18,7 +17,8 @@ This document describes the key React components used in the "Coffee Cup Psychol
     - `focusArea`: The selected topic for analysis ('wellbeing', 'career', 'relationships').
     - `theme`: The current theme ('light' or 'dark').
     - `language`: The current language ('en', 'ru', 'zh').
-- **Usage**: Rendered in `index.tsx` and serves as the application's entry point.
+    - `currentView`: The currently active view ('uploader' or 'history').
+- **Usage**: Rendered in `index.tsx` and serves as the application's entry point. It handles the logic for saving analysis results for logged-in users and switching between the main uploader/result view and the history view.
 
 ---
 
@@ -28,7 +28,7 @@ This document describes the key React components used in the "Coffee Cup Psychol
 - **Functionality**:
     - **Unified Dropdown**: Clicking the icon opens a dropdown menu.
     - **Guest View**: For logged-out users, the menu provides a prominent "Sign In" button which opens the `AuthModal`.
-    - **Authenticated View**: For logged-in users, the menu displays the user's email, theme and language selectors, and a "Sign Out" button.
+    - **Authenticated View**: For logged-in users, the menu displays the user's email, a "My History" button, theme and language selectors, and a "Sign Out" button.
 - **Props**:
     - `logoComponent`: The SVG component to be used as the main logo.
     - `onToggleTheme: () => void`: A function to toggle the theme.
@@ -36,6 +36,7 @@ This document describes the key React components used in the "Coffee Cup Psychol
     - `language: Lang`: The current language code.
     - `setLanguage: (lang: Lang) => void`: A function to set the application language.
     - `t: (key: string) => string`: The translation function.
+    - `onShowHistory: () => void`: A callback function that switches the main view to the history display.
 - **Usage**: `<Header {...props} />`
 
 ---
@@ -59,6 +60,23 @@ This document describes the key React components used in the "Coffee Cup Psychol
     - `theme: 'light' | 'dark'`: The current theme, passed to the image generator service.
     - `t: (key: string) => string`: The translation function.
 - **Usage**: `<ResultDisplay analysis={analysis} onReset={handleReset} theme={theme} t={t} />`
+
+---
+
+#### `HistoryDisplay.tsx`
+
+- **Purpose**: Displays a list of past analysis results for the logged-in user.
+- **Functionality**:
+    - Fetches the user's analysis history from the `historyService`.
+    - Manages its own loading, error, and empty states.
+    - Renders a scrollable list of past analyses, showing the focus area, date, and a snippet of the introduction.
+    - Allows a user to click a "View Analysis" button to load a past result into the main view.
+- **Props**:
+    - `onSelectAnalysis: (item: HistoryItem) => void`: A callback that passes the selected history item back to `App.tsx` to be displayed.
+    - `onClose: () => void`: A function to switch the view back to the uploader.
+    - `t: (key: string) => string`: The translation function.
+    - `language: Lang`: The current language for date formatting.
+- **Usage**: `<HistoryDisplay {...props} />`
 
 ---
 
@@ -114,6 +132,7 @@ All icons are simple React components wrapping SVG paths for consistency.
 - **`UploadIcon.tsx`**: Icon for the image dropzone.
 - **`ProfileIcon.tsx`**: Icon for the user profile/settings menu.
 - **`LogoutIcon.tsx`**: Icon for the sign-out button.
+- **`HistoryIcon.tsx`**: Icon for the "My History" menu item.
 - **`GoogleIcon.tsx`**: Icon for the Google sign-in button.
 - **`AppleIcon.tsx`**: Icon for the Apple sign-in button.
 - **`FacebookIcon.tsx`**: Icon for the Facebook sign-in button.
