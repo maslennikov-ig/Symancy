@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -63,26 +64,41 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme,
     }
   };
 
+  const AnimatedContent: React.FC<{ children: React.ReactNode, delay: number }> = ({ children, delay }) => (
+    <div 
+        className="animate-fade-in-up"
+        style={{ animationDelay: `${delay}ms`, animationFillMode: 'backwards' }}
+    >
+        {children}
+    </div>
+  );
+
   return (
-    <div className="flex flex-col items-center w-full p-6 sm:p-8">
-      <h2 className="text-3xl font-display font-bold text-foreground mb-6 text-center">{t('result.title')}</h2>
-      <ScrollArea className="w-full bg-muted/50 rounded-lg p-6 max-h-[50vh] prose dark:prose-invert prose-stone border">
+    <div className="flex flex-col w-full p-6 sm:p-8 h-full">
+      <AnimatedContent delay={0}>
+        <h2 className="flex-shrink-0 text-3xl font-display font-bold text-foreground mb-6 text-center">{t('result.title')}</h2>
+      </AnimatedContent>
+      <ScrollArea className="w-full bg-muted/50 rounded-lg p-6 prose dark:prose-invert prose-stone border flex-grow min-h-0">
          <div className="font-sans text-foreground leading-relaxed">
             {analysis.intro && (
-               <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysis.intro}</ReactMarkdown>
+              <AnimatedContent delay={150}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysis.intro}</ReactMarkdown>
+              </AnimatedContent>
             )}
             {analysis.sections.map((section, index) => (
-              <div key={index} className="mt-6">
-                <h3 className="font-display text-xl font-bold text-foreground mb-3">
-                  {section.title}
-                </h3>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{section.content}</ReactMarkdown>
-              </div>
+              <AnimatedContent key={index} delay={300 + index * 150}>
+                <div className="mt-6">
+                    <h3 className="font-display text-xl font-bold text-foreground mb-3">
+                    {section.title}
+                    </h3>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{section.content}</ReactMarkdown>
+                </div>
+              </AnimatedContent>
             ))}
          </div>
       </ScrollArea>
       <div 
-        className="mt-8 flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4"
+        className="flex-shrink-0 mt-8 flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 justify-center"
       >
         <Button
           onClick={handleShare}
@@ -96,7 +112,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme,
           )}
           <span>{t('result.button.share')}</span>
         </Button>
-        <Button onClick={onReset}>
+        <Button onClick={onReset} className="animate-pulse-ring">
           {t('result.button.analyzeAnother')}
         </Button>
       </div>

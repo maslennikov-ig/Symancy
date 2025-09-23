@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { analyzeCoffeeCup, AnalysisResponse } from './services/geminiService';
 import { saveAnalysis, HistoryItem } from './services/historyService';
@@ -236,7 +237,7 @@ const App: React.FC = () => {
             language={language}
           />
         ) : (
-          <Card className="w-full shadow-2xl transition-all duration-500 backdrop-blur-xl bg-card/70">
+          <Card className="w-full shadow-2xl transition-all duration-500 backdrop-blur-xl bg-card/70 flex flex-col flex-grow">
               {renderContent()}
           </Card>
         )}
