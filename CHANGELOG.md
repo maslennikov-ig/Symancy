@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.1.0]
+
+### Added
+- **Analysis History**: Implemented a feature for logged-in users to save and view their past analysis results. This allows users to track their journey of self-discovery across devices.
+- **History Service**: Created `services/historyService.ts` to interact with Supabase for storing and retrieving analysis history from a new `analysis_history` table.
+- **History UI**: Added a `HistoryDisplay` component to show the list of past analyses and a "My History" button in the user menu for authenticated users.
+
 ## [2.0.0]
 
 ### Changed

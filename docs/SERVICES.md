@@ -1,7 +1,6 @@
-
 # Services Documentation
 
-This document describes the services responsible for interacting with external APIs.
+This document describes the services responsible for interacting with external APIs and the database.
 
 ---
 
@@ -34,6 +33,28 @@ This robust approach eliminates the need for fragile string parsing on the front
 
 ---
 
+### `services/historyService.ts`
+
+This service manages reading and writing analysis history to the Supabase database.
+
+#### `saveAnalysis` Function
+
+- **Purpose**: Saves a completed analysis to the `analysis_history` table for the logged-in user.
+- **Parameters**:
+    - `userId: string`: The ID of the currently authenticated user.
+    - `analysis: AnalysisResponse`: The full structured analysis object from the Gemini API.
+    - `focusArea: string`: The focus area selected for the analysis.
+- **Behavior**: This is a non-critical, "fire-and-forget" function. It does not block the UI and will silently log a warning to the console on failure, ensuring that a database issue does not prevent the user from seeing their result.
+
+#### `getHistory` Function
+
+- **Purpose**: Fetches the complete analysis history for the currently logged-in user.
+- **Parameters**: None.
+- **Returns**: A `Promise<HistoryItem[]>` that resolves to an array of past analyses, ordered from newest to oldest.
+- **Security**: This function relies on Supabase's Row Level Security (RLS) being enabled on the `analysis_history` table. The RLS policy ensures that the query can only ever return records belonging to the authenticated user who is making the request.
+
+---
+
 ### `services/imageGenerator.ts`
 
 This service handles the creation of a shareable image from the analysis results.
@@ -59,7 +80,7 @@ The process involves:
 This file handles the connection to the Supabase backend.
 
 - **Purpose**: Initializes and exports a singleton Supabase client instance.
-- **Functionality**: It uses environment variables for the Supabase URL and anonymous key to configure the client. This client is then imported by other parts of the application, such as the `AuthContext`, to handle user authentication and other backend interactions.
+- **Functionality**: It uses environment variables for the Supabase URL and anonymous key to configure the client. This client is then imported by other parts of the application, such as the `AuthContext` and services, to handle user authentication and database interactions.
 - **Authentication Methods Implemented**:
     - **OAuth Providers**: Google, Apple, Facebook.
     - **Magic Link (OTP)**: Passwordless sign-in via a one-time link sent to the user's email.

@@ -1,12 +1,15 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { analyzeCoffeeCup, AnalysisResponse } from './services/geminiService';
+import { saveAnalysis, HistoryItem } from './services/historyService';
 import Header from './components/Header';
 import ImageUploader from './components/ImageUploader';
 import ResultDisplay from './components/ResultDisplay';
+import HistoryDisplay from './components/HistoryDisplay';
 import { LoaderIcon } from './components/LoaderIcon';
 import { MysticalBackground } from './components/MysticalCoffeeCupIllustration';
 import { OfficialLogo } from './components/logos/OfficialLogo';
+import { useAuth } from './contexts/AuthContext';
 
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './components/ui/card';
 import { Button } from './components/ui/button';
@@ -16,8 +19,10 @@ import { translations, Lang, detectInitialLanguage, t as i18n_t } from './lib/i1
 
 type Theme = 'light' | 'dark';
 type FocusArea = 'wellbeing' | 'career' | 'relationships';
+type View = 'uploader' | 'history';
 
 const App: React.FC = () => {
+  const { user } = useAuth();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
@@ -25,6 +30,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [focusArea, setFocusArea] = useState<FocusArea>('wellbeing');
   const [language, setLanguage] = useState<Lang>(detectInitialLanguage);
+  const [currentView, setCurrentView] = useState<View>('uploader');
 
   const t = useCallback((key: keyof typeof translations.en) => {
     return i18n_t(key, language);
@@ -97,13 +103,20 @@ const App: React.FC = () => {
 
       const result = await analyzeCoffeeCup(imageData, mimeType, focusArea, language);
       setAnalysis(result);
+
+      if (user) {
+        // This is a non-critical operation, so we don't await or handle errors here
+        // to avoid blocking the user from seeing their result.
+        saveAnalysis(user.id, result, focusArea);
+      }
+
     } catch (err) {
       console.error(err);
       setError(t('error.analyzeFailed'));
     } finally {
       setIsLoading(false);
     }
-  }, [imageFile, focusArea, language, t]);
+  }, [imageFile, focusArea, language, t, user]);
 
   const handleReset = () => {
     setImageFile(null);
@@ -112,9 +125,19 @@ const App: React.FC = () => {
     setError(null);
     setIsLoading(false);
     setFocusArea('wellbeing');
+    setCurrentView('uploader');
+  };
+
+  const handleSelectHistoryItem = (item: HistoryItem) => {
+      setAnalysis(item.analysis);
+      setFocusArea(item.focus_area as FocusArea);
+      setImageUrl(null);
+      setError(null);
+      setIsLoading(false);
+      setCurrentView('uploader');
   };
   
-  const isUploaderVisible = !isLoading && !error && !analysis && !imageUrl;
+  const isUploaderVisible = !isLoading && !error && !analysis && !imageUrl && currentView === 'uploader';
 
   const renderContent = () => {
     if (isLoading) {
@@ -202,11 +225,21 @@ const App: React.FC = () => {
         language={language} 
         setLanguage={setLanguage}
         t={t}
+        onShowHistory={() => setCurrentView('history')}
       />
       <main className="w-full max-w-4xl mx-auto flex-grow flex flex-col items-center z-10">
-        <Card className="w-full shadow-2xl transition-all duration-500 backdrop-blur-xl bg-card/70">
-            {renderContent()}
-        </Card>
+        {currentView === 'history' ? (
+          <HistoryDisplay
+            onSelectAnalysis={handleSelectHistoryItem}
+            onClose={() => setCurrentView('uploader')}
+            t={t}
+            language={language}
+          />
+        ) : (
+          <Card className="w-full shadow-2xl transition-all duration-500 backdrop-blur-xl bg-card/70">
+              {renderContent()}
+          </Card>
+        )}
         <footer className="text-center mt-auto pt-8 text-muted-foreground text-sm z-10">
           <p>{t('footer.copyright').replace('{year}', new Date().getFullYear().toString())}</p>
           <p className="mt-1">{t('footer.disclaimer')}</p>
