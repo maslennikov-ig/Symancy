@@ -1,0 +1,19 @@
+import React, { forwardRef } from 'react';
+import { cn } from '../../lib/utils';
+
+const ScrollArea = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, children, ...props }, ref) => (
+    <div 
+      ref={ref}
+      className={cn("relative overflow-hidden", className)}
+      {...props}
+    >
+      <div className="h-full w-full rounded-[inherit] overflow-y-auto custom-scrollbar">
+        {children}
+      </div>
+    </div>
+  )
+);
+ScrollArea.displayName = "ScrollArea";
+
+export { ScrollArea };
