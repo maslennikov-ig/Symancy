@@ -1,4 +1,4 @@
-# Technical Design Document: CoffeeReader MVP
+# Technical Design Document: Symancy MVP
 
 **Version:** 1.0
 **Date:** 2025-10-13
@@ -166,7 +166,7 @@
                             │
         ┌───────────────────▼──────────────────────┐
         │                                          │
-        │         CoffeeReader System              │
+        │         Symancy System              │
         │                                          │
         │  - AI Coffee Cup Reading                 │
         │  - Subscription Management               │
@@ -188,7 +188,7 @@ External Systems: [User], [Telegram], [AI Provider], [Payment Gateway],
 
 ```
 ┌───────────────────────────────────────────────────────────────────┐
-│                         CoffeeReader System                        │
+│                         Symancy System                        │
 │                                                                    │
 │  ┌──────────────────┐        ┌─────────────────────┐             │
 │  │  Telegram Bot    │◄──────►│   Mini App (SPA)    │             │
@@ -633,7 +633,7 @@ DELETE FROM audit_logs WHERE created_at < NOW() - INTERVAL '90 days';
 ```yaml
 openapi: 3.0.3
 info:
-  title: CoffeeReader API
+  title: Symancy API
   version: 1.0.0
   description: AI-powered coffee cup reading platform API
   contact:
@@ -4955,7 +4955,7 @@ function hashCode(str: string): number {
 ```
 Real-time Migration Dashboard:
 ┌──────────────────────────────────────────────────────────┐
-│ CoffeeReader Migration Status                            │
+│ Symancy Migration Status                            │
 ├──────────────────────────────────────────────────────────┤
 │ Total Users:              10,542                         │
 │ Migrated to MVP:          10,215  (96.9%)                │

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CoffeeReader (CoffePsy) is an AI-powered psychological self-discovery platform that analyzes coffee cup patterns using Google Gemini API. The app combines ancient coffee ground reading with modern AI to provide personalized psychological insights.
+Symancy is an AI-powered psychological self-discovery platform that analyzes coffee cup patterns using Google Gemini API. The app combines ancient coffee ground reading with modern AI to provide personalized psychological insights.
 
 **Key aspects:**
 - React + TypeScript frontend with Vite
