@@ -449,29 +449,25 @@ After applying all updates:
 
 ---
 
-## Recent Updates (FUTURE Agents Logic)
+## Recent Updates
 
-**Change**: Enhanced subagent assignment logic in Planning Phase (Phase 0)
+**Change 1**: Enhanced subagent assignment with FUTURE agents logic
+- Strict rules: MAIN for trivial, existing if 100% match, FUTURE otherwise
+- FUTURE agents: launch N meta-agent-v3 calls in single message, ask restart
+- Updated: speckit.implement.md, speckit.tasks.md, tasks-template.md, CLAUDE.md
 
-**Key Changes**:
-1. **Strict Assignment Rules**:
-   - `[EXECUTOR: MAIN]` - ONLY for trivial tasks (1-2 line fixes, simple imports, single dependency install)
-   - Existing subagents - ONLY if 100% match (thorough examination required)
-   - `[EXECUTOR: future-agent-name]` - If no 100% match (preferred approach)
+**Change 2**: Clarified "single message" rule for ALL parallel tasks
+- Parallel execution applies to all agents, not just meta-agent
+- Updated atomicity rule: launch N agent calls in single message
+- Updated: speckit.implement.md, tasks-template.md, CLAUDE.md, this document
 
-2. **FUTURE Agents Workflow**:
-   - After all task assignments complete
-   - If FUTURE agents exist: launch N meta-agent-v3 calls in single message (1 agent = 1 call)
-   - After creation: ask user to restart claude-code
+**Change 3**: Optimized CLAUDE.md for token efficiency
+- Added CRITICAL rule: ALWAYS verify results after delegation, NEVER skip
+- Removed duplicates, condensed sections, removed project-specific content
+- Net reduction: 18 lines (12%)
+- Removed emojis from tasks-template.md (5 instances)
 
-3. **Updated Documents**:
-   - `.claude/commands/speckit.implement.md` - step 4 (PLANNING PHASE)
-   - `.claude/commands/speckit.tasks.md` - Planning Phase description
-   - `.specify/templates/tasks-template.md` - Phase 0 (P001, P003)
-   - `CLAUDE.md` - Planning Phase section
-   - `docs/Agents Ecosystem/spec-kit-comprehensive-updates.md` - all relevant sections
-
-**Rationale**: Prefer creating specialized agents over forcing existing agents or main agent for non-trivial tasks. This ensures better code quality, clearer responsibilities, and easier maintenance.
+**Rationale**: Specialized agents for quality, single-message for performance, token efficiency for cost.
 
 ---
 
