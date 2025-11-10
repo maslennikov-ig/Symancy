@@ -461,11 +461,13 @@ After applying all updates:
 - Updated atomicity rule: launch N agent calls in single message
 - Updated: speckit.implement.md, tasks-template.md, CLAUDE.md, this document
 
-**Change 3**: Optimized CLAUDE.md for token efficiency
-- Added CRITICAL rule: ALWAYS verify results after delegation, NEVER skip
-- Removed duplicates, condensed sections, removed project-specific content
-- Net reduction: 18 lines (12%)
-- Removed emojis from tasks-template.md (5 instances)
+**Change 3**: Optimized CLAUDE.md and all templates for token efficiency
+- CLAUDE.md: Added CRITICAL verification rule, removed duplicates (net -18 lines, -12%)
+- tasks-template.md: Removed emojis (5 instances)
+- checklist-template.md: Condensed comments (40 → 27 lines, -33%)
+- spec-template.md: Removed verbosity (115 → 81 lines, -30%)
+- plan-template.md: Simplified instructions (105 → 95 lines, -10%)
+- Total templates reduction: -57 lines
 
 **Rationale**: Specialized agents for quality, single-message for performance, token efficiency for cost.
 
