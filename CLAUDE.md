@@ -1,176 +1,153 @@
-# CLAUDE.md
+# Agent Orchestration Rules
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+> **IMPORTANT**: This file overrides default Claude Code behavior. Follow these rules strictly.
 
-## Project Overview
+## Main Pattern: You Are The Orchestrator
 
-Symancy is an AI-powered psychological self-discovery platform that analyzes coffee cup patterns using Google Gemini API. The app combines ancient coffee ground reading with modern AI to provide personalized psychological insights.
+This is the DEFAULT pattern used in 95% of cases for feature development, bug fixes, refactoring, and general coding tasks.
 
-**Key aspects:**
-- React + TypeScript frontend with Vite
-- Supabase for authentication and database
-- Google Gemini API for image analysis and psychological interpretation
-- Multi-language support (English, Russian, Chinese)
-- User analysis history with focus areas (wellbeing, career, relationships)
+### Core Rules
 
-## Development Commands
+**1. GATHER FULL CONTEXT FIRST (MANDATORY)**
 
-### Start development server
-```bash
-npm run dev
+Before delegating or implementing any task:
+- Read existing code in related files
+- Search codebase for similar patterns and implementations
+- Review relevant documentation files (specs, design docs, ADRs)
+- Check recent commits that touched related areas
+- Understand dependencies and integration points
+
+NEVER delegate or implement blindly. We often have prior research, implementations, or documentation that prevents duplicate work or conflicting approaches.
+
+**2. DELEGATE TO SUBAGENTS**
+
+- Provide complete context to subagent (code snippets, file paths, patterns, documentation references)
+- Specify exact expected output and validation criteria
+- After subagent completes, verify results yourself (read modified files, run type-check)
+- If results incorrect, re-delegate with corrections and error context
+- If TypeScript errors after changes, re-delegate to same subagent with type errors OR delegate to typescript-types-specialist for complex type issues
+
+**3. EXECUTE DIRECTLY (MINIMAL CHANGES ONLY)**
+
+Execute directly without subagent for trivial tasks:
+- Single dependency installation (npm install)
+- Single-line code fixes (typos, obvious bugs)
+- Simple import additions
+- Minimal configuration changes
+
+For anything beyond minimal changes, delegate to appropriate subagent.
+
+**4. TRACK PROGRESS WITH TODOWRITE**
+
+- Create todos at task start
+- Mark in_progress BEFORE starting each task
+- Mark completed IMMEDIATELY after validation
+- Determine task granularity yourself based on complexity
+
+**5. COMMIT STRATEGY**
+
+Run `/push patch` after EACH completed task (not batched):
+- Mark task [X] in tasks.md
+- Add artifacts to task description: `→ Artifacts: [file1](path), [file2](path)`
+- Update TodoWrite to completed
+- Then `/push patch`
+
+Rationale: Atomic commits, detailed history, easy rollback, better review.
+
+The `/push` command handles:
+- Version bumping (patch/minor/major)
+- Changelog generation
+- Git operations (commit, tag, push)
+- Proper commit message formatting
+
+**6. EXECUTION PATTERN**
+
 ```
-- Runs on http://localhost:3000
-- Hot reload enabled via Vite
-
-### Build for production
-```bash
-npm run build
-```
-- Outputs to `dist/` directory
-- TypeScript compilation and Vite bundling
-
-### Preview production build
-```bash
-npm run preview
-```
-
-## Environment Configuration
-
-Create `.env.local` with:
-```
-GEMINI_API_KEY=your_api_key_here
-```
-
-**Note:** Supabase credentials are currently hardcoded in `lib/supabaseClient.ts` but should be moved to environment variables for production.
-
-## Architecture
-
-### Core Application Flow
-
-1. **App.tsx** - Main orchestrator managing:
-   - Image upload workflow
-   - Analysis request/response lifecycle
-   - View state (uploader vs history)
-   - Theme and language preferences
-   - User authentication state via AuthContext
-
-2. **Authentication Flow** (AuthContext.tsx)
-   - Wraps app with Supabase auth session management
-   - Provides: `user`, `session`, `signInWithProvider()`, `signOut()`
-   - Supports OAuth providers (Google, Facebook, Yandex, Apple, Telegram)
-
-3. **Analysis Pipeline**
-   - User uploads image → converted to base64
-   - `geminiService.ts` sends image + focus area + language to Gemini API
-   - Response structured as JSON with `intro` and `sections[]`
-   - If authenticated, saves to `analysis_history` table via `historyService.ts`
-
-### Key Services
-
-**geminiService.ts**
-- Direct client-side calls to Google Gemini API (`gemini-2.5-flash` model)
-- Uses structured output with response schema for consistent JSON format
-- Three analysis modes based on focus area: wellbeing, career, relationships
-- Multi-language system instructions (EN, RU, ZH)
-
-**historyService.ts**
-- `saveAnalysis()` - Stores analysis to Supabase (non-blocking, failures logged)
-- `getHistory()` - Fetches user's analysis history (RLS enforced)
-- Assumes `analysis_history` table exists (see docs/SUPABASE_SCHEMA.md)
-
-**imageGenerator.ts**
-- Generates shareable social media images from analysis results
-
-### Database Schema
-
-**analysis_history table** (PostgreSQL via Supabase)
-- `id` (uuid, pk)
-- `user_id` (uuid, fk to auth.users)
-- `created_at` (timestamptz)
-- `analysis` (jsonb) - Full AnalysisResponse object
-- `focus_area` (text) - 'wellbeing' | 'career' | 'relationships'
-
-**Row Level Security (RLS):**
-- SELECT/INSERT policies: `auth.uid() = user_id`
-- Users can only access their own analysis history
-
-### Component Architecture
-
-**UI Library:**
-- Custom shadcn-ui inspired components in `components/ui/`
-- Tailwind CSS with custom "coffee" theme palette
-- Light mode ("latte") and dark mode ("espresso")
-
-**Component Structure:**
-- `Header.tsx` - Logo, theme toggle, language selector, history button, auth controls
-- `ImageUploader.tsx` - Drag-and-drop or file select for coffee cup images
-- `ResultDisplay.tsx` - Renders analysis with markdown support (react-markdown)
-- `HistoryDisplay.tsx` - Lists past analyses with filtering by focus area
-- `auth/AuthModal.tsx` - OAuth provider buttons and profile management
-
-### State Management
-
-**Local state in App.tsx:**
-- `imageFile`, `imageUrl` - Upload handling
-- `analysis` - Current analysis result
-- `focusArea` - Selected analysis focus ('wellbeing' | 'career' | 'relationships')
-- `language` - UI and API response language ('en' | 'ru' | 'zh')
-- `theme` - UI theme preference
-- `currentView` - Toggle between 'uploader' and 'history'
-
-**Context:**
-- `AuthContext` - Global auth state, wraps entire app in index.tsx
-
-### Internationalization (i18n)
-
-**lib/i18n.ts** provides:
-- `translations` object with EN, RU, ZH strings
-- `detectInitialLanguage()` - Reads from localStorage or browser preference
-- `t(key, lang)` - Translation helper
-- Language stored in localStorage and applied to `<html lang>`
-
-### Path Alias
-
-`@/*` resolves to project root (configured in vite.config.ts and tsconfig.json)
-
-## Important Implementation Details
-
-### API Key Exposure
-The Gemini API key is exposed in the client bundle via Vite's `define` config (vite.config.ts:14-15). This is acceptable for development but should use a serverless function proxy for production.
-
-### Analysis Non-Blocking Save
-In App.tsx:109-112, `saveAnalysis()` is called without await to prevent blocking the UI if the database write fails. Errors are logged but don't interrupt the user experience.
-
-### Image-to-Base64 Conversion
-`fileToBase64()` in App.tsx:69-76 converts uploaded images to base64 data URLs, then extracts MIME type and data for Gemini API consumption.
-
-### Gemini Response Schema
-The structured output schema (geminiService.ts:27-54) enforces:
-```typescript
-{
-  intro: string,  // Markdown formatted
-  sections: Array<{
-    title: string,  // e.g., "Key Symbols and Figures"
-    content: string // Markdown formatted
-  }>
-}
+FOR EACH TASK:
+1. Read task description
+2. GATHER FULL CONTEXT (code + docs + patterns + history + research)
+3. Delegate to subagent OR execute directly (trivial only)
+4. Verify implementation (read files + run type-check)
+5. Accept/reject loop (re-delegate if needed)
+6. Update TodoWrite to completed
+7. Mark task [X] in tasks.md + add artifacts
+8. Run /push patch
+9. Move to next task
 ```
 
-### Focus Area Prompting
-Different system instructions are injected based on focus area (geminiService.ts:81-92):
-- `career` → professional development, ambitions
-- `relationships` → love, friendship, personal connections
-- `wellbeing` → emotional state, life balance (default)
+**7. HANDLING CONTRADICTIONS**
 
-## n8n Workflow Integration
+If you encounter contradictions between rules, documentation, or best practices:
+- First, gather all relevant context
+- Analyze if you can resolve based on project patterns and conventions
+- If truly ambiguous or critical decision, ask user with specific options
+- Only ask when genuinely unable to determine best practice (rare, ~10% of cases)
 
-The project includes n8n automation workflows in `n8n/Pre-MVP workflow n8n.json` for process automation. This is part of the broader MVP strategy for multi-platform support (Telegram Mini Apps, WhatsApp Business API).
+### Planning Phase (ALWAYS First)
 
-## Documentation
+Before implementing any tasks:
+- Analyze task execution model (parallel/sequential)
+- Assign executors (existing subagents or meta-agent for creation)
+- Resolve research questions (simple: solve now, complex: deepresearch prompt)
+- Apply atomicity rule: 1 task = 1 agent invocation
 
-Key docs in `docs/`:
-- `SUPABASE_SCHEMA.md` - Database schema and RLS policies
-- `SERVICES.md` - Detailed service layer documentation
-- `COMPONENTS.md` - Component library reference
-- `PROVIDER_SETUP.md` - OAuth provider configuration
-- `STYLING.md` - Theme and styling guidelines
+See speckit.implement.md for detailed workflow.
+
+---
+
+## Health Workflows Pattern (5% of cases)
+
+For automated health checks via slash commands:
+- `/health-bugs` - Bug detection and fixing
+- `/health-security` - Security vulnerability scanning
+- `/health-cleanup` - Dead code removal
+- `/health-deps` - Dependency management
+
+These commands use agent-based orchestration with plan files and worker coordination. Follow command-specific instructions when invoked.
+
+See `docs/Agents Ecosystem/AGENT-ORCHESTRATION.md` for detailed architecture.
+
+---
+
+## Project Conventions
+
+**File Organization**:
+- Agents: `.claude/agents/{domain}/{orchestrators|workers}/`
+- Commands: `.claude/commands/`
+- Skills: `.claude/skills/{skill-name}/SKILL.md`
+- Temporary files: `.tmp/current/` (git ignored)
+- Reports: `docs/reports/{domain}/{YYYY-MM}/`
+
+**Code Standards**:
+- Type-check must pass before commit
+- Build must pass before commit
+- No hardcoded credentials
+
+**Agent Selection**:
+- Use Worker when: Plan file specifies nextAgent (health workflows only)
+- Use Skill when: Reusable utility function, no state needed, <100 lines
+
+**Supabase Operations**:
+- Use Supabase MCP when `.mcp.json` includes supabase server
+- Project: MegaCampusAI (ref: `diqooqbuchsliypgwksu`)
+- Migrations: `packages/course-gen-platform/supabase/migrations/`
+
+**MCP Configuration**:
+- BASE (`.mcp.base.json`): context7 + sequential-thinking (~600 tokens)
+- FULL (`.mcp.full.json`): + supabase + playwright + n8n + shadcn (~5000 tokens)
+- Switch with `./switch-mcp.sh`
+
+---
+
+## Reference Docs
+
+- Agent-based orchestration details: `docs/Agents Ecosystem/AGENT-ORCHESTRATION.md`
+- Architecture patterns: `docs/Agents Ecosystem/ARCHITECTURE.md`
+- Quality gates: `docs/Agents Ecosystem/QUALITY-GATES-SPECIFICATION.md`
+- Report templates: `docs/Agents Ecosystem/REPORT-TEMPLATE-STANDARD.md`
+
+## Active Technologies
+- File system - markdown documents in `specs/001-landing-n8n-improvements/` directory (001-landing-n8n-improvements)
+
+## Recent Changes
+- 001-landing-n8n-improvements: Added File system - markdown documents in `specs/001-landing-n8n-improvements/` directory
