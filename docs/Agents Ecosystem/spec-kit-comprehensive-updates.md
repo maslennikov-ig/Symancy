@@ -25,14 +25,14 @@
    - Identify dependencies between tasks
 
 2. **Subagent Assignment**:
-   - Map each task to appropriate subagent from existing base
-   - Document executor in task annotation: `[EXECUTOR: subagent-name]` or `[EXECUTOR: MAIN]`
-   - Main agent handles only trivial tasks (1-2 line fixes, simple imports, single dependency install)
+   - `[EXECUTOR: MAIN]` - ONLY for trivial tasks (1-2 line fixes, simple imports, single dependency install)
+   - For complex tasks: thoroughly examine existing subagents, assign only if 100% match
+   - If no 100% match: assign FUTURE agent name (to be created) - `[EXECUTOR: future-agent-name]`
 
 3. **Missing Subagents**:
-   - If no suitable subagent exists for a task, create meta-agent task
-   - Add to planning phase: `Create [subagent-name] using meta-agent-v3`
-   - Execute meta-agent tasks in parallel during planning
+   - After all assignments: if FUTURE agents exist, create them using meta-agent-v3 in parallel
+   - Each FUTURE agent = 1 separate meta-agent-v3 run (atomicity rule)
+   - After agent creation: ask user to restart claude-code
 
 4. **Atomicity Rule** (CRITICAL):
    - **1 Task = 1 Agent Invocation**
@@ -186,10 +186,13 @@
    ```markdown
    4. **PLANNING PHASE** (Execute Before Implementation):
       - Review all tasks and classify execution model (parallel vs sequential)
-      - Assign tasks to subagents from existing base
+      - **Subagent Assignment** (Phase 0):
+        * [EXECUTOR: MAIN] - ONLY for trivial tasks (1-2 line fixes, simple imports, single dependency install)
+        * For complex tasks: thoroughly examine existing subagents, assign only if 100% match
+        * If no 100% match: assign FUTURE agent name (to be created) - `[EXECUTOR: future-agent-name]`
+        * After all assignments: if FUTURE agents exist, create them using meta-agent-v3 in parallel
+        * After agent creation: ask user to restart claude-code
       - Annotate tasks with `[EXECUTOR: name]` and `[SEQUENTIAL]`/`[PARALLEL-GROUP-X]`
-      - If missing subagents: create meta-agent tasks for subagent creation
-      - Execute meta-agent tasks in parallel (1 task = 1 agent run)
       - Handle research tasks:
         * Simple: solve with agent tools
         * Complex: create research prompt in research/, wait for user deepresearch
@@ -253,12 +256,13 @@
 ## Phase 0: Planning
 
 ### P001: Task Analysis & Executor Assignment
-**Description**: Analyze all tasks, assign executors, determine parallel/sequential execution
+**Description**: Analyze all tasks, assign executors (MAIN for trivial, existing if 100% match, FUTURE otherwise)
 **Executor**: MAIN
 **Dependencies**: None
 **Output**:
-- All tasks annotated with [EXECUTOR: name]
+- All tasks annotated with [EXECUTOR: name] or [EXECUTOR: future-agent-name]
 - All tasks marked [SEQUENTIAL] or [PARALLEL-GROUP-X]
+- List of FUTURE agents to create (if any)
 **Artifacts**: Updated tasks.md
 
 ### P002: Research Task Resolution
@@ -271,11 +275,12 @@
 **Artifacts**: research/*.md (if complex research needed)
 
 ### P003: Meta-Agent Subagent Creation (if needed)
-**Description**: Create missing subagents using meta-agent-v3
+**Description**: Create FUTURE agents using meta-agent-v3, then ask user to restart claude-code
 **Executor**: meta-agent-v3
 **Dependencies**: P001
-**Parallelization**: 1 subagent = 1 meta-agent run
-**Tasks**: [List subagents to create]
+**Parallelization**: 1 FUTURE agent = 1 meta-agent-v3 run (in parallel)
+**Tasks**: [List FUTURE agents from P001]
+**Post-Creation**: Ask user to restart claude-code
 **Artifacts**: .claude/agents/{domain}/{type}/{name}.md
 
 ---
@@ -328,7 +333,8 @@
 
    Before implementing any tasks:
    - Analyze task execution model (parallel/sequential)
-   - Assign executors (existing subagents or meta-agent for creation)
+   - Assign executors: MAIN for trivial only, existing subagents if 100% match, FUTURE agents otherwise
+   - Create FUTURE agents with meta-agent-v3 in parallel, then ask restart
    - Resolve research questions (simple: solve now, complex: deepresearch prompt)
    - Apply atomicity rule: 1 task = 1 agent invocation
 
@@ -373,14 +379,14 @@
 ### Step 2: Update CLAUDE.md
 1. Open `CLAUDE.md`
 2. Update step 6 in "Execution Pattern"
-3. Add "Planning Phase" section
+3. Add "Planning Phase" section (with FUTURE agents logic)
 4. Update "COMMIT STRATEGY"
 5. Save file
 
 ### Step 3: Update tasks.md Template
 1. Open `.specify/templates/tasks.md`
 2. Add "Phase 0: Planning" section at top
-3. Add P001, P002, P003 tasks
+3. Add P001 (with FUTURE agents logic), P002, P003 (with restart prompt) tasks
 4. Save file
 
 ### Step 4: Update Other Commands
@@ -414,12 +420,12 @@
 After applying all updates:
 
 - [ ] `speckit.implement.md` has orchestration blockquote
-- [ ] `speckit.implement.md` has planning phase (step 4)
+- [ ] `speckit.implement.md` has planning phase with FUTURE agents logic (step 4)
 - [ ] `speckit.implement.md` commits after each task (step 7)
 - [ ] `CLAUDE.md` has updated execution pattern
-- [ ] `CLAUDE.md` has planning phase section
+- [ ] `CLAUDE.md` has planning phase section with FUTURE agents logic
 - [ ] `CLAUDE.md` has per-task commit strategy
-- [ ] `tasks.md` template has Phase 0: Planning
+- [ ] `tasks.md` template has Phase 0: Planning with P001 (FUTURE agents) and P003 (restart prompt)
 - [ ] Other commands reference research handling
 - [ ] `check-prerequisites.sh` includes research directory
 - [ ] Documentation updated with new patterns
@@ -436,6 +442,30 @@ After applying all updates:
 5. **Commits**: 1 task = 1 commit (after validation, with artifacts, via /push patch)
 6. **Context**: Gather full context before every delegation (code, docs, patterns, history, research)
 7. **Verification**: Read files + type-check + tests before accepting task completion
+
+---
+
+## Recent Updates (FUTURE Agents Logic)
+
+**Change**: Enhanced subagent assignment logic in Planning Phase (Phase 0)
+
+**Key Changes**:
+1. **Strict Assignment Rules**:
+   - `[EXECUTOR: MAIN]` - ONLY for trivial tasks (1-2 line fixes, simple imports, single dependency install)
+   - Existing subagents - ONLY if 100% match (thorough examination required)
+   - `[EXECUTOR: future-agent-name]` - If no 100% match (preferred approach)
+
+2. **FUTURE Agents Workflow**:
+   - After all task assignments complete
+   - If FUTURE agents exist: create using meta-agent-v3 in parallel (1 agent = 1 run)
+   - After creation: ask user to restart claude-code
+
+3. **Updated Documents**:
+   - `.claude/commands/speckit.implement.md` - step 4 (PLANNING PHASE)
+   - `CLAUDE.md` - Planning Phase section
+   - `docs/Agents Ecosystem/spec-kit-comprehensive-updates.md` - all relevant sections
+
+**Rationale**: Prefer creating specialized agents over forcing existing agents or main agent for non-trivial tasks. This ensures better code quality, clearer responsibilities, and easier maintenance.
 
 ---
 

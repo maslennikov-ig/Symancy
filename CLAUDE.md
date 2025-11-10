@@ -87,7 +87,8 @@ If you encounter contradictions between rules, documentation, or best practices:
 
 Before implementing any tasks:
 - Analyze task execution model (parallel/sequential)
-- Assign executors (existing subagents or meta-agent for creation)
+- Assign executors: MAIN for trivial only, existing subagents if 100% match, FUTURE agents otherwise
+- Create FUTURE agents with meta-agent-v3 in parallel, then ask restart
 - Resolve research questions (simple: solve now, complex: deepresearch prompt)
 - Apply atomicity rule: 1 task = 1 agent invocation
 
