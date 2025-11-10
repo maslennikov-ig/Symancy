@@ -30,15 +30,16 @@
    - If no 100% match: assign FUTURE agent name (to be created) - `[EXECUTOR: future-agent-name]`
 
 3. **Missing Subagents**:
-   - After all assignments: if FUTURE agents exist, create them using meta-agent-v3 in parallel
-   - Each FUTURE agent = 1 separate meta-agent-v3 run (atomicity rule)
+   - After all assignments: if FUTURE agents exist, launch N meta-agent-v3 calls in single message
+   - Each FUTURE agent = 1 separate meta-agent-v3 call (atomicity rule)
    - After agent creation: ask user to restart claude-code
 
 4. **Atomicity Rule** (CRITICAL):
    - **1 Task = 1 Agent Invocation**
    - Never give multiple tasks to one agent in single run
-   - Example: 3 parallel tasks for meta-agent → 3 separate meta-agent runs (simultaneously)
-   - Example: 5 parallel implementation tasks → 5 separate subagent runs (simultaneously)
+   - **Parallel execution**: Launch N agent calls in single message (not sequentially)
+   - Example: 3 parallel tasks for meta-agent → 3 meta-agent calls in single message
+   - Example: 5 parallel tasks for fullstack → 5 fullstack calls in single message
    - Sequential tasks: 1 agent run, wait for completion, then next agent run
 
 **Output**: Updated tasks.md with:
@@ -190,7 +191,7 @@
         * [EXECUTOR: MAIN] - ONLY for trivial tasks (1-2 line fixes, simple imports, single dependency install)
         * For complex tasks: thoroughly examine existing subagents, assign only if 100% match
         * If no 100% match: assign FUTURE agent name (to be created) - `[EXECUTOR: future-agent-name]`
-        * After all assignments: if FUTURE agents exist, create them using meta-agent-v3 in parallel
+        * After all assignments: if FUTURE agents exist, launch N meta-agent-v3 calls in single message
         * After agent creation: ask user to restart claude-code
       - Annotate tasks with `[EXECUTOR: name]` and `[SEQUENTIAL]`/`[PARALLEL-GROUP-X]`
       - Handle research tasks:
@@ -278,7 +279,7 @@
 **Description**: Create FUTURE agents using meta-agent-v3, then ask user to restart claude-code
 **Executor**: meta-agent-v3
 **Dependencies**: P001
-**Parallelization**: 1 FUTURE agent = 1 meta-agent-v3 run (in parallel)
+**Execution**: Launch N meta-agent-v3 calls in single message (1 FUTURE agent = 1 call)
 **Tasks**: [List FUTURE agents from P001]
 **Post-Creation**: Ask user to restart claude-code
 **Artifacts**: .claude/agents/{domain}/{type}/{name}.md
@@ -334,9 +335,10 @@
    Before implementing any tasks:
    - Analyze task execution model (parallel/sequential)
    - Assign executors: MAIN for trivial only, existing subagents if 100% match, FUTURE agents otherwise
-   - Create FUTURE agents with meta-agent-v3 in parallel, then ask restart
+   - Create FUTURE agents: launch N meta-agent-v3 calls in single message, then ask restart
    - Resolve research questions (simple: solve now, complex: deepresearch prompt)
    - Apply atomicity rule: 1 task = 1 agent invocation
+   - Parallel tasks: launch N agent calls in single message (not sequentially)
 
    See speckit.implement.md for detailed workflow.
    ```
@@ -421,11 +423,13 @@ After applying all updates:
 
 - [ ] `speckit.implement.md` has orchestration blockquote
 - [ ] `speckit.implement.md` has planning phase with FUTURE agents logic (step 4)
+- [ ] `speckit.implement.md` has atomicity rule with "single message" for parallel tasks
 - [ ] `speckit.implement.md` commits after each task (step 7)
 - [ ] `CLAUDE.md` has updated execution pattern
-- [ ] `CLAUDE.md` has planning phase section with FUTURE agents logic
+- [ ] `CLAUDE.md` has planning phase section with FUTURE agents and parallel tasks rule
 - [ ] `CLAUDE.md` has per-task commit strategy
-- [ ] `tasks.md` template has Phase 0: Planning with P001 (FUTURE agents) and P003 (restart prompt)
+- [ ] `tasks.md` template has Phase 0: Planning with P001 (FUTURE agents) and P003 (single message)
+- [ ] `speckit.tasks.md` mentions FUTURE agents and single message in Planning Phase
 - [ ] Other commands reference research handling
 - [ ] `check-prerequisites.sh` includes research directory
 - [ ] Documentation updated with new patterns
@@ -436,7 +440,7 @@ After applying all updates:
 ## Key Principles (Summary)
 
 1. **Planning First**: Always execute planning phase before implementation
-2. **Atomicity**: 1 task = 1 agent invocation (even for parallel tasks with same agent)
+2. **Atomicity**: 1 task = 1 agent invocation; parallel tasks = N agent calls in single message
 3. **Orchestration**: Main agent delegates complex, verifies thoroughly, re-delegates on failure
 4. **Research**: Classify simple vs complex, use deepresearch for complex unknowns
 5. **Commits**: 1 task = 1 commit (after validation, with artifacts, via /push patch)
@@ -457,11 +461,13 @@ After applying all updates:
 
 2. **FUTURE Agents Workflow**:
    - After all task assignments complete
-   - If FUTURE agents exist: create using meta-agent-v3 in parallel (1 agent = 1 run)
+   - If FUTURE agents exist: launch N meta-agent-v3 calls in single message (1 agent = 1 call)
    - After creation: ask user to restart claude-code
 
 3. **Updated Documents**:
    - `.claude/commands/speckit.implement.md` - step 4 (PLANNING PHASE)
+   - `.claude/commands/speckit.tasks.md` - Planning Phase description
+   - `.specify/templates/tasks-template.md` - Phase 0 (P001, P003)
    - `CLAUDE.md` - Planning Phase section
    - `docs/Agents Ecosystem/spec-kit-comprehensive-updates.md` - all relevant sections
 

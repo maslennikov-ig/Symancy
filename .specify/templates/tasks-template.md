@@ -47,12 +47,17 @@ description: "Task list template for feature implementation"
 ## Phase 0: Planning
 
 ### P001: Task Analysis & Executor Assignment
-**Description**: Analyze all tasks, assign executors, determine parallel/sequential execution
+**Description**: Analyze tasks, assign executors (MAIN for trivial only, existing if 100% match, FUTURE otherwise)
 **Executor**: MAIN
 **Dependencies**: None
+**Rules**:
+- [EXECUTOR: MAIN] - ONLY trivial (1-2 line fixes, simple imports, single npm install)
+- Existing subagents - ONLY if 100% match (thorough examination)
+- [EXECUTOR: future-agent-name] - If no 100% match (preferred)
 **Output**:
-- All tasks annotated with [EXECUTOR: name]
+- All tasks annotated with [EXECUTOR: name] or [EXECUTOR: future-agent-name]
 - All tasks marked [SEQUENTIAL] or [PARALLEL-GROUP-X]
+- List of FUTURE agents to create
 **Artifacts**: Updated tasks.md
 
 ### P002: Research Task Resolution
@@ -65,11 +70,12 @@ description: "Task list template for feature implementation"
 **Artifacts**: research/*.md (if complex research needed)
 
 ### P003: Meta-Agent Subagent Creation (if needed)
-**Description**: Create missing subagents using meta-agent-v3
+**Description**: Create FUTURE agents using meta-agent-v3, then ask user to restart claude-code
 **Executor**: meta-agent-v3
 **Dependencies**: P001
-**Parallelization**: 1 subagent = 1 meta-agent run
-**Tasks**: [List subagents to create]
+**Execution**: Launch N meta-agent-v3 calls in single message (1 FUTURE agent = 1 call)
+**Tasks**: [List FUTURE agents from P001]
+**Post-Creation**: Ask user to restart claude-code
 **Artifacts**: .claude/agents/{domain}/{type}/{name}.md
 
 ---

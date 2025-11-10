@@ -88,9 +88,10 @@ If you encounter contradictions between rules, documentation, or best practices:
 Before implementing any tasks:
 - Analyze task execution model (parallel/sequential)
 - Assign executors: MAIN for trivial only, existing subagents if 100% match, FUTURE agents otherwise
-- Create FUTURE agents with meta-agent-v3 in parallel, then ask restart
+- Create FUTURE agents: launch N meta-agent-v3 calls in single message, then ask restart
 - Resolve research questions (simple: solve now, complex: deepresearch prompt)
 - Apply atomicity rule: 1 task = 1 agent invocation
+- Parallel tasks: launch N agent calls in single message (not sequentially)
 
 See speckit.implement.md for detailed workflow.
 
