@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__n8n-mcp__n8n_health_check",
+      "mcp__n8n-mcp__n8n_list_workflows",
+      "mcp__n8n-mcp__n8n_get_execution",
+      "mcp__n8n-mcp__tools_documentation",
+      "mcp__n8n-mcp__n8n_get_workflow",
+      "mcp__n8n-mcp__search_nodes",
+      "mcp__n8n-mcp__get_node_essentials",
+      "mcp__n8n-mcp__get_node_info",
+      "mcp__n8n-mcp__search_node_properties",
+      "WebSearch",
+      "mcp__context7__get-library-docs",
+      "mcp__n8n-mcp__n8n_get_workflow_structure",
+      "mcp__n8n-mcp__n8n_update_partial_workflow",
+      "mcp__n8n-mcp__get_node_documentation"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo -e '\\n\\033[1;32m✅ ЗАДАЧА ЗАВЕРШЕНА!\\033[0m\\n' && date '+%Y-%m-%d %H:%M:%S - Task completed' >> ~/claude-code-log.txt && printf '\\a' && (powershell.exe -Command \"[System.Media.SystemSounds]::Exclamation.Play(); Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.MessageBox]::Show('Задача завершена!', 'Claude Code', 'OK', 'Information')\" 2>/dev/null || true)"
+          }
+        ]
+      }
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "context7",
+    "github",
+    "n8n-workflows Docs",
+    "n8n-mcp",
+    "shadcn-ui"
+  ]
+}
