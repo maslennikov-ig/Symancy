@@ -12,62 +12,57 @@ This is the DEFAULT pattern used in 95% of cases for feature development, bug fi
 
 Before delegating or implementing any task:
 - Read existing code in related files
-- Search codebase for similar patterns and implementations
-- Review relevant documentation files (specs, design docs, ADRs)
-- Check recent commits that touched related areas
+- Search codebase for similar patterns
+- Review relevant documentation (specs, design docs, ADRs)
+- Check recent commits in related areas
 - Understand dependencies and integration points
 
-NEVER delegate or implement blindly. We often have prior research, implementations, or documentation that prevents duplicate work or conflicting approaches.
+NEVER delegate or implement blindly.
 
 **2. DELEGATE TO SUBAGENTS**
 
-- Provide complete context to subagent (code snippets, file paths, patterns, documentation references)
+Before delegation:
+- Provide complete context (code snippets, file paths, patterns, docs)
 - Specify exact expected output and validation criteria
-- After subagent completes, verify results yourself (read modified files, run type-check)
-- If results incorrect, re-delegate with corrections and error context
-- If TypeScript errors after changes, re-delegate to same subagent with type errors OR delegate to typescript-types-specialist for complex type issues
 
-**3. EXECUTE DIRECTLY (MINIMAL CHANGES ONLY)**
+After delegation (CRITICAL):
+- ALWAYS verify results (read modified files, run type-check)
+- NEVER skip verification
+- If incorrect: re-delegate with corrections and errors
+- If TypeScript errors: re-delegate to same agent OR typescript-types-specialist
 
-Execute directly without subagent for trivial tasks:
-- Single dependency installation (npm install)
-- Single-line code fixes (typos, obvious bugs)
-- Simple import additions
-- Minimal configuration changes
+**3. EXECUTE DIRECTLY (MINIMAL ONLY)**
 
-For anything beyond minimal changes, delegate to appropriate subagent.
+Direct execution only for:
+- Single dependency install
+- Single-line fixes (typos, obvious bugs)
+- Simple imports
+- Minimal config changes
 
-**4. TRACK PROGRESS WITH TODOWRITE**
+Everything else: delegate.
+
+**4. TRACK PROGRESS**
 
 - Create todos at task start
-- Mark in_progress BEFORE starting each task
-- Mark completed IMMEDIATELY after validation
-- Determine task granularity yourself based on complexity
+- Mark in_progress BEFORE starting
+- Mark completed AFTER verification only
 
 **5. COMMIT STRATEGY**
 
-Run `/push patch` after EACH completed task (not batched):
+Run `/push patch` after EACH completed task:
 - Mark task [X] in tasks.md
-- Add artifacts to task description: `→ Artifacts: [file1](path), [file2](path)`
+- Add artifacts: `→ Artifacts: [file1](path), [file2](path)`
 - Update TodoWrite to completed
 - Then `/push patch`
-
-Rationale: Atomic commits, detailed history, easy rollback, better review.
-
-The `/push` command handles:
-- Version bumping (patch/minor/major)
-- Changelog generation
-- Git operations (commit, tag, push)
-- Proper commit message formatting
 
 **6. EXECUTION PATTERN**
 
 ```
 FOR EACH TASK:
 1. Read task description
-2. GATHER FULL CONTEXT (code + docs + patterns + history + research)
+2. GATHER FULL CONTEXT (code + docs + patterns + history)
 3. Delegate to subagent OR execute directly (trivial only)
-4. Verify implementation (read files + run type-check)
+4. VERIFY results (read files + run type-check) - NEVER skip
 5. Accept/reject loop (re-delegate if needed)
 6. Update TodoWrite to completed
 7. Mark task [X] in tasks.md + add artifacts
@@ -77,37 +72,30 @@ FOR EACH TASK:
 
 **7. HANDLING CONTRADICTIONS**
 
-If you encounter contradictions between rules, documentation, or best practices:
-- First, gather all relevant context
-- Analyze if you can resolve based on project patterns and conventions
-- If truly ambiguous or critical decision, ask user with specific options
-- Only ask when genuinely unable to determine best practice (rare, ~10% of cases)
+If contradictions occur:
+- Gather context, analyze project patterns
+- If truly ambiguous: ask user with specific options
+- Only ask when unable to determine best practice (rare, ~10%)
 
 ### Planning Phase (ALWAYS First)
 
-Before implementing any tasks:
-- Analyze task execution model (parallel/sequential)
-- Assign executors: MAIN for trivial only, existing subagents if 100% match, FUTURE agents otherwise
-- Create FUTURE agents: launch N meta-agent-v3 calls in single message, then ask restart
-- Resolve research questions (simple: solve now, complex: deepresearch prompt)
-- Apply atomicity rule: 1 task = 1 agent invocation
-- Parallel tasks: launch N agent calls in single message (not sequentially)
+Before implementing tasks:
+- Analyze execution model (parallel/sequential)
+- Assign executors: MAIN for trivial, existing if 100% match, FUTURE otherwise
+- Create FUTURE agents: launch N meta-agent-v3 calls in single message, ask restart
+- Resolve research (simple: solve now, complex: deepresearch prompt)
+- Atomicity: 1 task = 1 agent call
+- Parallel: launch N calls in single message (not sequentially)
 
-See speckit.implement.md for detailed workflow.
+See speckit.implement.md for details.
 
 ---
 
 ## Health Workflows Pattern (5% of cases)
 
-For automated health checks via slash commands:
-- `/health-bugs` - Bug detection and fixing
-- `/health-security` - Security vulnerability scanning
-- `/health-cleanup` - Dead code removal
-- `/health-deps` - Dependency management
+Slash commands: `/health-bugs`, `/health-security`, `/health-cleanup`, `/health-deps`
 
-These commands use agent-based orchestration with plan files and worker coordination. Follow command-specific instructions when invoked.
-
-See `docs/Agents Ecosystem/AGENT-ORCHESTRATION.md` for detailed architecture.
+Follow command-specific instructions. See `docs/Agents Ecosystem/AGENT-ORCHESTRATION.md`.
 
 ---
 
@@ -117,7 +105,7 @@ See `docs/Agents Ecosystem/AGENT-ORCHESTRATION.md` for detailed architecture.
 - Agents: `.claude/agents/{domain}/{orchestrators|workers}/`
 - Commands: `.claude/commands/`
 - Skills: `.claude/skills/{skill-name}/SKILL.md`
-- Temporary files: `.tmp/current/` (git ignored)
+- Temporary: `.tmp/current/` (git ignored)
 - Reports: `docs/reports/{domain}/{YYYY-MM}/`
 
 **Code Standards**:
@@ -126,8 +114,8 @@ See `docs/Agents Ecosystem/AGENT-ORCHESTRATION.md` for detailed architecture.
 - No hardcoded credentials
 
 **Agent Selection**:
-- Use Worker when: Plan file specifies nextAgent (health workflows only)
-- Use Skill when: Reusable utility function, no state needed, <100 lines
+- Worker: Plan file specifies nextAgent (health workflows only)
+- Skill: Reusable utility, no state, <100 lines
 
 **Supabase Operations**:
 - Use Supabase MCP when `.mcp.json` includes supabase server
@@ -137,19 +125,13 @@ See `docs/Agents Ecosystem/AGENT-ORCHESTRATION.md` for detailed architecture.
 **MCP Configuration**:
 - BASE (`.mcp.base.json`): context7 + sequential-thinking (~600 tokens)
 - FULL (`.mcp.full.json`): + supabase + playwright + n8n + shadcn (~5000 tokens)
-- Switch with `./switch-mcp.sh`
+- Switch: `./switch-mcp.sh`
 
 ---
 
 ## Reference Docs
 
-- Agent-based orchestration details: `docs/Agents Ecosystem/AGENT-ORCHESTRATION.md`
-- Architecture patterns: `docs/Agents Ecosystem/ARCHITECTURE.md`
+- Agent orchestration: `docs/Agents Ecosystem/AGENT-ORCHESTRATION.md`
+- Architecture: `docs/Agents Ecosystem/ARCHITECTURE.md`
 - Quality gates: `docs/Agents Ecosystem/QUALITY-GATES-SPECIFICATION.md`
 - Report templates: `docs/Agents Ecosystem/REPORT-TEMPLATE-STANDARD.md`
-
-## Active Technologies
-- File system - markdown documents in `specs/001-landing-n8n-improvements/` directory (001-landing-n8n-improvements)
-
-## Recent Changes
-- 001-landing-n8n-improvements: Added File system - markdown documents in `specs/001-landing-n8n-improvements/` directory
