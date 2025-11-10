@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+
+## [0.1.0] - 2025-11-10
+
+### Added
+- Integrate Google Gemini API for analysis (9266031)
+- Migrate Gemini analysis to Netlify function (15b587c)
+- Add analysis history feature (822285e)
+- Integrate Supabase for authentication and improve analysis output (933bffd)
+- Implement internationalization and enhance UI (5ecc1f7)
+- Initialize Coffee Cup Psychologist app (1292710)
+
+### Changed
+- Rebrand project from CoffeeReader to Symancy (42e0929)
+
+### Fixed
+- **ui**: Adjust button styles for better contrast (e36ea27)
 ## [2.1.0]
 
 ### Added
