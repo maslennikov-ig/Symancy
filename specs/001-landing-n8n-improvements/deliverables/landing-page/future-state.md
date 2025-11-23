@@ -1353,6 +1353,408 @@ The platform becomes a progressive web app (PWA) with offline capabilities, inst
 
 ---
 
+## 9. Monetization & Tariff Structure
+
+### 9.1 Tariff Plans
+
+**Strategic Approach**: Hybrid model combining recurring subscriptions with one-time purchases, optimized for Russian market preferences and payment behavior.
+
+#### Subscription Tiers
+
+| Tier | Russian Name | Price (Monthly) | Analysis Quota | Key Positioning |
+|------|-------------|-----------------|----------------|-----------------|
+| **FREE** | Бесплатный | 0₽ | 1 per 120 hours (5 days) | Entry point, validation hook |
+| **BASIC** | Искатель (Seeker) | 299₽/month | 1 per day | Regular self-reflection practice |
+| **ADVANCED** | Проводник (Guide) | 799₽/month | 68/month (~2 per day) | Deep psychological exploration |
+| **PREMIUM** | Кудесник (Wizard) | 3,333₽/month | 121/month + 7 Cassandra | Full mastery + prediction |
+
+**Tier Rationale**:
+
+1. **FREE Tier (0₽)**
+   - **Quota**: 1 analysis per 120 hours (approximately every 5 days)
+   - **Time-limited consideration**: Possible 2-3 month trial period before requiring upgrade
+   - **Purpose**: Low-friction entry for product validation, virality through sharing
+   - **Monetization hook**: Strategic limitations encourage upgrade when users develop habit
+
+2. **BASIC - Искатель (299₽/month)**
+   - **Quota**: 1 analysis per day (30/month)
+   - **Target user**: Regular practitioners establishing daily reflection ritual
+   - **Value proposition**: Consistent daily insights, builds habit loop
+   - **Margin analysis**: At ~10₽/analysis AI cost, healthy 66% margin
+
+3. **ADVANCED - Проводник (799₽/month)**
+   - **Quota**: 68 analyses per month (~2.2 per day)
+   - **Target user**: Power users, psychological exploration enthusiasts
+   - **Value proposition**: Multiple daily readings for deep pattern tracking
+   - **Margin analysis**: ~12₽/analysis effective cost, 90% margin
+
+4. **PREMIUM - Кудесник (3,333₽/month)**
+   - **Quota**: 121 standard analyses + 7 Cassandra predictions
+   - **Target user**: Serious practitioners, potential professional use
+   - **Value proposition**: Full access + exclusive prediction feature
+   - **Price anchoring**: Establishes value ceiling, makes ADVANCED seem reasonable
+
+---
+
+### 9.2 Block Hierarchy (REFLECT → UNDERSTAND → ACT)
+
+**Core Product Philosophy**: Analysis depth increases with tier, following psychological journey progression.
+
+```
+ОТРАЖЕНИЕ → ПОНИМАНИЕ → ДЕЙСТВИЕ
+(REFLECT  →  UNDERSTAND  →  ACT)
+```
+
+#### Block Distribution by Tier
+
+| Tier | Core Question (Russian) | Core Question (English) | Block Count | Content Depth |
+|------|------------------------|------------------------|-------------|---------------|
+| **FREE** | "Что со мной сейчас?" | "What's with me now?" | 3 blocks | Surface reflection |
+| **BASIC** | "Почему это со мной?" | "Why is this happening?" | 5+ blocks | Causal understanding |
+| **ADVANCED** | "Какие скрытые силы мной управляют?" | "What hidden forces control me?" | 7+ blocks | Deep psychological forces |
+| **PREMIUM** | "Какой план мне выполнить?" | "What plan should I execute?" | Full + Cassandra | Actionable roadmap |
+
+**Block Progression Logic**:
+
+1. **FREE (3 blocks) - REFLECTION**
+   - Block 1: Current emotional state recognition
+   - Block 2: Primary concern identification
+   - Block 3: Immediate feeling acknowledgment
+   - *Psychological value*: Validates current experience, creates awareness
+
+2. **BASIC (5+ blocks) - UNDERSTANDING**
+   - Includes all FREE blocks plus:
+   - Block 4: Pattern recognition from past
+   - Block 5: Root cause hypothesis
+   - Additional: Contextual connections
+   - *Psychological value*: Explains "why" behind current state
+
+3. **ADVANCED (7+ blocks) - DEEP INSIGHT**
+   - Includes all BASIC blocks plus:
+   - Block 6: Unconscious influence mapping
+   - Block 7: Shadow work indicators
+   - Additional: Complex symbol interpretation
+   - *Psychological value*: Reveals hidden psychological dynamics
+
+4. **PREMIUM (Full + Cassandra) - ACTION**
+   - Includes all ADVANCED blocks plus:
+   - Cassandra prediction: Future trajectory analysis
+   - Action plan: Specific recommended steps
+   - Timeline: Suggested implementation schedule
+   - *Psychological value*: Transforms insight into behavioral change
+
+**Implementation Notes**:
+- Block unlocking should feel like "revealing" deeper layers, not "withholding" content
+- Visual presentation: Show locked blocks as "Premium insight available" with preview teaser
+- Upgrade prompts: Contextual suggestions based on user engagement patterns
+
+---
+
+### 9.3 One-Time Purchases
+
+**Strategic Purpose**: Capture value from users who prefer transactional over subscription relationships.
+
+#### Product Catalog
+
+| Product | Price | Description | Subscriber Discount |
+|---------|-------|-------------|---------------------|
+| **Deep Analysis** | 500₽ | Extended 10+ block comprehensive reading | -30% (BASIC) / -50% (ADV) / -70% (PREM) |
+| **Cassandra Prediction** | 1,200₽ | AI-generated future trajectory forecast | No discount (PREMIUM includes 7/month) |
+| **Double Cup (Compatibility)** | 777₽ | Compare 2 cups for relationship dynamics | -30% for all subscribers |
+
+**Product Details**:
+
+1. **Deep Analysis (Глубокий анализ) - 500₽**
+   - One-time comprehensive reading bypassing tier limitations
+   - Includes all blocks regardless of subscription tier
+   - Use case: Special occasions, major life decisions
+   - Discount structure:
+     - FREE users: 500₽ (full price)
+     - BASIC subscribers: 350₽ (-30%)
+     - ADVANCED subscribers: 250₽ (-50%)
+     - PREMIUM subscribers: 150₽ (-70%)
+
+2. **Cassandra Prediction (Предсказание Кассандры) - 1,200₽**
+   - AI-powered future trajectory analysis
+   - 3-month horizon with key milestones
+   - Unique value: Not available through regular analyses
+   - PREMIUM subscribers receive 7 monthly as part of subscription
+
+3. **Double Cup (Двойная чашка) - 777₽**
+   - Upload 2 coffee cups for compatibility/relationship analysis
+   - Compare dynamics between two individuals
+   - Use cases: Romantic relationships, business partnerships, family dynamics
+   - Price point (777) chosen for mystical/lucky number appeal
+
+**Pricing Psychology**:
+- Deep Analysis discount structure rewards loyalty and encourages subscription
+- Cassandra premium pricing establishes "prediction" as high-value feature
+- Double Cup odd number (777) creates memorable, shareable price point
+
+---
+
+### 9.4 Features by Tier
+
+**Feature Matrix**: Comprehensive breakdown of capabilities per subscription level.
+
+| Feature Category | FREE | BASIC (Искатель) | ADVANCED (Проводник) | PREMIUM (Кудесник) |
+|------------------|------|------------------|---------------------|-------------------|
+| **Analysis Quota** | 1 per 5 days | 1 per day | 68/month | 121/month + 7 Cassandra |
+| **Block Depth** | 3 blocks | 5+ blocks | 7+ blocks | Full + Cassandra |
+| **Advertising** | Yes (ads displayed) | No ads | No ads | No ads |
+| **History Access** | Last 10 analyses | Full history | Full history | Full history |
+| **History Search** | No | Yes | Yes | Yes |
+| **Processing Priority** | Standard queue | <2 min guaranteed | <1 min priority | Instant priority |
+| **Streak Tracking** | No | Yes | Yes | Yes |
+| **PDF Export** | No | No | Yes | Yes |
+| **Compare Own Cups** | No | No | Yes | Yes |
+| **Educational Articles** | No | No | Yes | Yes |
+| **Closed Community** | No | No | Yes | Yes |
+| **Compare with Friends** | No | No | No | Yes |
+| **Exclusive Content** | No | No | No | Yes |
+| **Dream Book Access** | No | No | No | Yes |
+| **AI Personalization** | Basic | Standard | Enhanced | Full adaptive |
+| **Referral Program** | Yes (earn credits) | Yes (earn credits) | Yes (earn credits) | Yes (earn credits) |
+
+**Feature Rationale by Tier**:
+
+**FREE Tier Limitations**:
+- Ads provide alternative revenue stream from non-converting users
+- 10 history limit prevents unlimited free usage while allowing validation
+- Referral program enables organic growth regardless of tier
+- No search/export encourages upgrade for power features
+
+**BASIC Value Additions**:
+- Ad removal is primary perceived value (high user annoyance with ads)
+- Full history + search enables longitudinal self-reflection
+- Streak tracking gamifies daily practice, improves retention
+- <2 min processing reduces waiting frustration
+
+**ADVANCED Power Features**:
+- PDF export serves professional use cases (sharing with therapist, journaling)
+- Compare own cups enables pattern recognition across time
+- Educational articles add content value beyond analysis
+- Closed community creates belonging and reduces churn
+
+**PREMIUM Exclusive Features**:
+- Compare with friends enables social dimension
+- Exclusive content justifies premium pricing
+- Dream book integrates complementary psychological tool
+- Full AI personalization learns individual patterns over time
+
+---
+
+### 9.5 Payment Integration
+
+**Primary Market**: Russian Federation with focus on local payment preferences and regulatory compliance.
+
+#### Payment Processors
+
+| Processor | Commission | Use Case | Advantages |
+|-----------|------------|----------|------------|
+| **ЮKassa (YooKassa)** | 2.4-2.8% | Primary processor | Market leader, full method support, reliable |
+| **Telegram Stars** | ~30% (Apple/Google take) | Telegram Mini App | Native Telegram integration, no KYC friction |
+| **СБП (SBP)** | ~1% | Bank transfer alternative | Lowest fees, growing adoption |
+
+**Payment Method Support**:
+
+1. **Bank Cards (Visa, Mastercard, Mir)**
+   - Primary method for subscription billing
+   - Recurring payment support via ЮKassa
+   - Mir card support essential for Russian market post-sanctions
+
+2. **СБП (Система Быстрых Платежей)**
+   - QR-code based instant bank transfer
+   - ~1% commission (lowest available)
+   - Growing rapidly in Russian market
+   - Best for one-time purchases
+
+3. **Apple Pay / Google Pay**
+   - Convenience layer over card payments
+   - Same commission as card (2.4-2.8%)
+   - Required for premium mobile experience
+
+4. **Telegram Stars** (for Telegram Mini App version)
+   - In-app currency for Telegram ecosystem
+   - Higher commission (~30%) but no payment friction
+   - Ideal for impulse purchases within Telegram
+
+**Regulatory Compliance**:
+
+**54-ФЗ Requirements** (Russian fiscal law):
+- All transactions must generate fiscal receipts
+- Online cash register (онлайн-касса) integration required
+- Receipt must include:
+  - Seller INN (tax ID)
+  - Product/service description
+  - Price with VAT breakdown
+  - Unique fiscal document number
+- ЮKassa provides built-in 54-ФЗ compliance
+
+**Implementation Priorities**:
+1. Phase 1: ЮKassa integration (covers 90% of use cases)
+2. Phase 2: СБП for cost optimization
+3. Phase 3: Telegram Stars for Mini App launch
+
+---
+
+### 9.6 Pre-MVP Pricing Strategy
+
+**Purpose**: Validate market demand with simplified pricing before full tier implementation.
+
+#### Pre-MVP Product Lineup
+
+| Product | Price | Description | Strategic Purpose |
+|---------|-------|-------------|-------------------|
+| **Single Reading** | 100₽ | 1 basic analysis (5-10 min wait) | Entry validation, price sensitivity test |
+| **5-Pack Bundle** | 300₽ | 5 readings (40% discount) | Bulk purchase behavior validation |
+| **PRO Reading** | 500₽ | Single extended reading (6+ blocks) | Premium demand validation |
+| **Cassandra** | 1,000₽ | Future prediction analysis | Unique feature demand validation |
+
+**Pre-MVP Strategy Rationale**:
+
+1. **100₽ Single Reading**
+   - Psychological barrier: Low enough for impulse purchase
+   - Validation goal: Confirm willingness to pay anything (vs. free expectation)
+   - Wait time (5-10 min): Test patience for non-priority processing
+
+2. **300₽ Five-Pack (40% off)**
+   - Bundle psychology: Tests commitment beyond single transaction
+   - Discount depth: 40% is aggressive, measures price elasticity
+   - Validation goal: Identify users who want ongoing relationship
+
+3. **500₽ PRO Reading**
+   - Price anchor: Establishes "premium" tier pricing
+   - Validation goal: Measure demand for deeper analysis
+   - 6+ blocks: Tests whether depth drives conversions
+
+4. **1,000₽ Cassandra**
+   - Highest price point: Tests ceiling of willingness to pay
+   - Unique feature: Validates prediction as distinct value prop
+   - Validation goal: Size the "power user" segment
+
+**Pre-MVP Success Metrics**:
+- Conversion rate from free to paid (target: >5%)
+- Average revenue per user (target: >50₽)
+- Bundle vs. single purchase ratio (target: >30% bundles)
+- PRO/Cassandra adoption (target: >10% of paid users)
+
+**Transition to Full Pricing**:
+- Pre-MVP pricing runs for 2-3 months
+- Data informs final tier pricing adjustments
+- Early purchasers receive loyalty credits for subscription launch
+
+---
+
+### 9.7 Gamification System
+
+**Strategic Purpose**: Increase engagement, retention, and perceived value through game mechanics.
+
+#### Priority Framework
+
+| Priority | Feature | Description | Retention Impact |
+|----------|---------|-------------|------------------|
+| **P0** | Streak System | Consecutive days counter | High - habit formation |
+| **P1** | Limit Visualization | Visual quota representation | Medium - usage awareness |
+| **P2** | Achievements/Badges | Milestone recognition | Medium - collection motivation |
+| **NO** | Leaderboard | Competitive ranking | Rejected - privacy concerns |
+
+**P0: Streak System (Серия)**
+
+*Implementation*:
+- Track consecutive days with at least one analysis
+- Display streak counter prominently on dashboard
+- Streak milestones: 3, 7, 14, 30, 60, 90, 180, 365 days
+- "Streak freeze" purchasable item (preserves streak if missed day)
+
+*Mechanics*:
+- Daily reset at midnight (user's timezone)
+- Push notification: "Don't break your X-day streak!"
+- Visual celebration on milestone achievement
+- Streak history: Show longest streak achieved
+
+*Psychological Principles*:
+- Loss aversion: Users avoid breaking built streak
+- Commitment escalation: Longer streaks = stronger commitment
+- Variable reward: Milestone celebrations create dopamine hits
+
+**P1: Limit Visualization**
+
+*Visual Concepts* (client suggestions):
+- "Cup fills with steam" - Daily quota shown as steam level
+- "Coffee beans" - Discrete tokens representing remaining analyses
+- Progress ring around profile avatar
+
+*Implementation*:
+- Real-time update on each analysis
+- Regeneration visualization (quota refilling over time for FREE tier)
+- Upgrade prompt when approaching limit
+
+*Design Requirements*:
+- Warm, coffee-themed aesthetic
+- Non-punitive framing ("3 readings available" vs. "Only 3 left")
+- Celebratory animation on refill
+
+**P2: Achievements/Badges (Достижения)**
+
+*Achievement Categories*:
+1. **Milestone Badges**: First analysis, 10th, 50th, 100th
+2. **Streak Badges**: Week warrior, Month master, Year legend
+3. **Exploration Badges**: Try all focus areas, first comparison
+4. **Community Badges**: First share, helpful commenter (if community launches)
+5. **Seasonal Badges**: Holiday specials, anniversary badges
+
+*Display*:
+- Achievement showcase on profile
+- Shareable achievement cards
+- Progress toward next achievement visible
+
+**Rejected: Leaderboard**
+
+*Client Decision*: No leaderboard implementation
+
+*Rationale*:
+- Privacy concerns: Users may not want public comparison
+- Psychological analysis is personal, not competitive
+- Could create unhealthy usage patterns (gaming for rank vs. genuine reflection)
+- Alternative: Private "personal best" tracking without public comparison
+
+**Gamification Implementation Phases**:
+1. MVP: Basic streak counter only
+2. V1.1: Limit visualization
+3. V1.2: Achievement system
+4. Future: Consider community features if demand validated
+
+---
+
+### 9.8 Revenue Projections (Russian Market)
+
+**Assumptions**:
+- Target MAU: 10,000 users (Year 1 Russian market)
+- FREE to paid conversion: 8%
+- Average subscription: 60% BASIC, 30% ADVANCED, 10% PREMIUM
+- One-time purchase rate: 15% of free users
+
+**Monthly Revenue Model**:
+
+| Revenue Stream | Calculation | Monthly Revenue |
+|---------------|-------------|-----------------|
+| BASIC Subscriptions | 480 users × 299₽ | 143,520₽ |
+| ADVANCED Subscriptions | 240 users × 799₽ | 191,760₽ |
+| PREMIUM Subscriptions | 80 users × 3,333₽ | 266,640₽ |
+| One-Time Purchases | 1,500 purchases × avg 400₽ | 600,000₽ |
+| **Total Monthly** | | **~1,200,000₽** |
+
+**Annual Projection**: ~14,400,000₽ (~$160,000 USD at current rates)
+
+**Cost Structure**:
+- AI API costs: ~10% of revenue
+- Payment processing: ~3% of revenue
+- Infrastructure: ~5% of revenue
+- **Gross margin**: ~82%
+
+---
+
 ## Validation Checklist
 
 - [X] Vision aligns with business objectives (Section 1 - Vision Statement)
@@ -1397,14 +1799,17 @@ The platform becomes a progressive web app (PWA) with offline capabilities, inst
 - [X] Section 6: Business Outcomes (Revenue, positioning, growth, partnerships) ✓
 - [X] Section 7: User Research Insights (Pain points, feature requests, behavioral insights, JTBD) ✓
 - [X] Section 8: Design Principles (6 guiding principles) ✓
+- [X] Section 9: Monetization & Tariff Structure (8 subsections with Russian market focus) ✓
 
 **Deliverable Stats**:
-- **Total Sections**: 8/8 required sections complete
-- **Document Length**: ~500 lines of structured markdown
+- **Total Sections**: 9/9 sections complete (including new monetization section)
+- **Document Length**: ~700 lines of structured markdown
 - **Improvement Opportunities**: 20 identified (10 required by SC-002)
 - **Success Metrics Defined**: 35+ measurable KPIs
 - **New Features Proposed**: 10 with priority rationale
 - **Enhanced Features**: 10 existing features with UX improvements
+- **Tariff Tiers**: 4 subscription levels with detailed feature matrix
+- **Payment Integrations**: 4 Russian-market payment methods documented
 
 **Next Steps**:
 1. Stakeholder review and approval (target: single review cycle per SC-006)
