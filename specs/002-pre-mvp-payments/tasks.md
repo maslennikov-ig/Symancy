@@ -132,7 +132,7 @@
 
 ---
 
-## Phase 4: User Story 3 - Payment Webhook (Priority: P1)
+## Phase 4: User Story 3 - Payment Webhook (Priority: P1) ✓ COMPLETE
 
 **Goal**: Backend processes YooKassa webhooks to confirm payments and grant credits
 
@@ -143,21 +143,18 @@
 4. Check user_credits table - credits increased
 5. Check email inbox - confirmation email received
 
-### Backend for US3
+### Backend for US3 ✓
 
-- [ ] T024 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] [US3] Create Edge Function `supabase/functions/payment-webhook/index.ts` that:
-  - Imports CORS helper from _shared/cors.ts
-  - Verifies x-yookassa-signature header (HMAC-SHA256) per quickstart.md
-  - Parses payment.succeeded/payment.canceled events
-  - Updates purchase status in database
-  - Calls grant_credits RPC to add credits to user_credits
-  - Tracks analytics event (payment_succeeded/payment_canceled) in payment_analytics
-  - Sends email confirmation via Resend API per research.md RQ-006
-  - Returns 200 OK to acknowledge webhook receipt
-- [ ] T025 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] [US3] Deploy payment-webhook function: `supabase functions deploy payment-webhook`
-- [ ] T026 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] [US3] Document webhook URL for YooKassa dashboard configuration: `https://diqooqbuchsliypgwksu.supabase.co/functions/v1/payment-webhook`
+- [X] T024 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] [US3] Create Edge Function `supabase/functions/payment-webhook/index.ts`
+  → Artifacts: [payment-webhook/index.ts](../../supabase/functions/payment-webhook/index.ts)
+  → Features: HMAC-SHA256 verification, idempotency, grant_credits RPC, analytics, Resend email
+- [X] T025 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] [US3] Deploy payment-webhook function
+  → Deployed via Supabase MCP (version 1, ACTIVE)
+- [X] T026 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] [US3] Document webhook URL
+  → Documented in [.env.example](../../supabase/.env.example)
+  → URL: `https://diqooqbuchsliypgwksu.supabase.co/functions/v1/payment-webhook`
 
-**Checkpoint**: Payment confirmations processed automatically, credits granted
+**Checkpoint**: Payment confirmations processed automatically, credits granted ✓
 
 ---
 
