@@ -7,12 +7,15 @@ interface TariffSelectorProps {
   onClose: () => void;
   onSelectTariff: (productType: ProductType) => void;
   isLoading?: boolean;
+  /** Optional message to display above tariffs (e.g., "For analysis you need a credit") */
+  message?: string;
 }
 
 const TariffSelector: React.FC<TariffSelectorProps> = ({
   onClose,
   onSelectTariff,
   isLoading = false,
+  message,
 }) => {
   return (
     <div
@@ -44,9 +47,15 @@ const TariffSelector: React.FC<TariffSelectorProps> = ({
           >
             Выберите тариф
           </h2>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Выберите подходящий пакет для анализа кофейной гущи
-          </p>
+          {message ? (
+            <p className="text-primary mt-2 text-sm font-medium bg-primary/10 rounded-lg px-3 py-2">
+              {message}
+            </p>
+          ) : (
+            <p className="text-muted-foreground mt-2 text-sm">
+              Выберите подходящий пакет для анализа кофейной гущи
+            </p>
+          )}
         </div>
 
         {/* Tariff grid */}

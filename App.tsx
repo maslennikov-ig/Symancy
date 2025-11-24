@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import { analyzeCoffeeCup, AnalysisResponse } from './services/geminiService';
 import { saveAnalysis, HistoryItem } from './services/historyService';
 import { createPayment } from './services/paymentService';
+import { hasAvailableCredits, consumeCredit } from './services/creditService';
 import Header from './components/Header';
 import ImageUploader from './components/ImageUploader';
 import ResultDisplay from './components/ResultDisplay';
@@ -46,6 +47,8 @@ const App: React.FC = () => {
     purchaseId: string;
   } | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  // T031: Message to display in tariff selector (e.g., when credits are needed)
+  const [paymentMessage, setPaymentMessage] = useState<string>('');
 
   const t = useCallback((key: keyof typeof translations.en) => {
     return i18n_t(key, language);
@@ -103,11 +106,40 @@ const App: React.FC = () => {
       return;
     }
 
+    // T031: Check if user is authenticated
+    if (!user) {
+      // User needs to log in first - the auth modal will be shown via Header
+      setError('Войдите в аккаунт для анализа');
+      return;
+    }
+
+    // T031: Check if user has credits BEFORE analysis
+    try {
+      const hasCredits = await hasAvailableCredits();
+      if (!hasCredits) {
+        // Show tariff selector with message
+        setPaymentMessage('Для анализа нужен кредит');
+        setShowTariffSelector(true);
+        return;
+      }
+    } catch (err) {
+      console.error('Error checking credits:', err);
+      // If we can't check credits, proceed anyway (fail open for now)
+    }
+
     setIsLoading(true);
     setError(null);
     setAnalysis(null);
 
     try {
+      // T031: Consume credit BEFORE analysis
+      const consumeResult = await consumeCredit('basic');
+      if (!consumeResult.success) {
+        setError('Не удалось списать кредит. Попробуйте снова.');
+        setIsLoading(false);
+        return;
+      }
+
       const base64Image = await fileToBase64(imageFile);
       const dataUrlParts = base64Image.split(',');
       if (dataUrlParts.length !== 2) {
@@ -118,6 +150,9 @@ const App: React.FC = () => {
 
       const result = await analyzeCoffeeCup(imageData, mimeType, focusArea, language);
       setAnalysis(result);
+
+      // Log remaining credits after successful analysis
+      console.log(`Analysis complete. Credit used: ${consumeResult.credit_type}. Remaining: ${consumeResult.remaining}`);
 
       if (user) {
         // This is a non-critical operation, so we don't await or handle errors here
@@ -155,6 +190,7 @@ const App: React.FC = () => {
   // T022: Handler for opening tariff selector
   const handleOpenTariffSelector = () => {
     setPaymentError(null);
+    setPaymentMessage(''); // Clear any previous message when opening manually
     setShowTariffSelector(true);
   };
 
@@ -310,9 +346,13 @@ const App: React.FC = () => {
       {/* T022: TariffSelector Modal */}
       {showTariffSelector && (
         <TariffSelector
-          onClose={() => setShowTariffSelector(false)}
+          onClose={() => {
+            setShowTariffSelector(false);
+            setPaymentMessage(''); // Clear message on close
+          }}
           onSelectTariff={handleSelectTariff}
           isLoading={isPaymentLoading}
+          message={paymentMessage}
         />
       )}
 

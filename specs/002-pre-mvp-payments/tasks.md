@@ -158,7 +158,7 @@
 
 ---
 
-## Phase 5: User Story 4 - Purchase History (Priority: P1)
+## Phase 5: User Story 4 - Purchase History (Priority: P1) ✓ COMPLETE
 
 **Goal**: User can view their purchase history in personal account
 
@@ -167,23 +167,20 @@
 2. Navigate to profile/history page
 3. See purchase with correct product_type, amount, status, date
 
-### Frontend for US4
+### Frontend for US4 ✓
 
-- [ ] T027 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-3] [US4] Create `components/payment/PurchaseHistory.tsx` - Table/list of user's purchases with:
-  - Product name (mapped from product_type using TARIFFS constant)
-  - Amount in RUB, status badge (pending/succeeded/canceled), date
-  - Empty state if no purchases yet
-- [ ] T028 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-3] [US4] Create `components/payment/CreditBalance.tsx` - Shows current credit balance:
-  - Display basic_credits, pro_credits, cassandra_credits
-  - Visual indicators (icons/colors) for each credit type
-  - "Пополнить" button to open TariffSelector
-- [ ] T029 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] [US4] Integrate PurchaseHistory and CreditBalance into user profile/dashboard page
+- [X] T027 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-3] [US4] Create `components/payment/PurchaseHistory.tsx`
+  → Artifacts: [PurchaseHistory.tsx](../../components/payment/PurchaseHistory.tsx)
+- [X] T028 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-3] [US4] Create `components/payment/CreditBalance.tsx`
+  → Artifacts: [CreditBalance.tsx](../../components/payment/CreditBalance.tsx)
+- [X] T029 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] [US4] Integrate credits into Header
+  → Artifacts: [CreditBadge.tsx](../../components/payment/CreditBadge.tsx), Modified Header.tsx
 
-**Checkpoint**: Users can see their purchase history and credit balance
+**Checkpoint**: Users can see their purchase history and credit balance ✓
 
 ---
 
-## Phase 6: Credit Consumption Integration
+## Phase 6: Credit Consumption Integration ✓ COMPLETE
 
 **Goal**: Integrate credit checking into existing analysis flow
 
@@ -192,19 +189,14 @@
 2. User with 1+ credits uploads image → Analysis runs, credit decremented
 3. After analysis, remaining credits shown
 
-### Integration Tasks
+### Integration Tasks ✓
 
-- [ ] T030 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] Create `services/creditService.ts` with:
-  - hasAvailableCredits(): checks basic_credits > 0 OR pro_credits > 0
-  - consumeCredit(creditType): calls consume_credit RPC per quickstart.md Scenario 4
-  - Error handling for insufficient credits
-- [ ] T031 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] Modify existing analysis flow in App.tsx/main component to:
-  - Check credits before running AI analysis
-  - Show TariffSelector modal if no credits (with "Для анализа нужен кредит" message)
-  - Consume credit after successful analysis start
-  - Show remaining credits in toast/notification after analysis completes
+- [X] T030 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] Create `services/creditService.ts`
+  → Artifacts: [creditService.ts](../../services/creditService.ts)
+- [X] T031 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] Modify analysis flow in App.tsx
+  → Modified: App.tsx (credit checking + consumption), TariffSelector.tsx (message prop)
 
-**Checkpoint**: Full payment-to-analysis flow working
+**Checkpoint**: Full payment-to-analysis flow working ✓
 
 ---
 

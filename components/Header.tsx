@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { LogoutIcon } from './auth/LogoutIcon';
 import { HistoryIcon } from './HistoryIcon';
 import { CoffeeIcon } from './CoffeeIcon';
+import { CreditBadge } from './payment/CreditBadge';
 
 interface HeaderProps {
     logoComponent: React.FC<React.SVGProps<SVGSVGElement>>;
@@ -94,7 +95,11 @@ const Header: React.FC<HeaderProps> = ({ logoComponent: LogoComponent, onToggleT
                             </h1>
                         </div>
                     </div>
-                    <div className="flex-1 flex justify-end items-center">
+                    <div className="flex-1 flex justify-end items-center gap-2">
+                        {/* T029: Credit balance display for logged-in users */}
+                        {user && (
+                            <CreditBadge onClick={handleBuyCreditsClick} />
+                        )}
                         <div className="relative" ref={menuRef}>
                             <Button onClick={() => setIsMenuOpen(prev => !prev)} variant="ghost" size="icon" aria-label="Open user menu">
                                 {user ? <UserAvatar /> : <ProfileIcon className="h-6 w-6" />}
