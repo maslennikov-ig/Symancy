@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.2.0] - 2025-11-24
+
+### Added
+- **002**: Complete Phase 7-8 - Analytics + Documentation (e443fe2)
+- **002**: Complete Phase 5-6 - History UI + Credit consumption (4f896ad)
+- **002**: Complete Phase 4 - Payment webhook handler (396d62a)
+- **002**: Complete Phase 3 - Payment flow frontend (MVP) (9e42353)
+- **002**: Complete Phase 2 - Database schema for payments (0678faa)
+- **002**: Complete Phase 1 - Setup project initialization (9af2377)
+- **002**: Initialize Pre-MVP payment integration feature (e46fb64)
+
 ## [0.1.5] - 2025-11-23
 
 ## [0.1.4] - 2025-11-14
