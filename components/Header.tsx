@@ -7,6 +7,7 @@ import AuthModal from './auth/AuthModal';
 import { useAuth } from '../contexts/AuthContext';
 import { LogoutIcon } from './auth/LogoutIcon';
 import { HistoryIcon } from './HistoryIcon';
+import { CoffeeIcon } from './CoffeeIcon';
 
 interface HeaderProps {
     logoComponent: React.FC<React.SVGProps<SVGSVGElement>>;
@@ -16,6 +17,7 @@ interface HeaderProps {
     setLanguage: (lang: Lang) => void;
     t: (key: string) => string;
     onShowHistory: () => void;
+    onBuyCredits?: () => void;
 }
 
 const languages: { code: Lang, name: string }[] = [
@@ -24,7 +26,7 @@ const languages: { code: Lang, name: string }[] = [
     { code: 'zh', name: '中文' },
 ];
 
-const Header: React.FC<HeaderProps> = ({ logoComponent: LogoComponent, onToggleTheme, currentTheme, language, setLanguage, t, onShowHistory }) => {
+const Header: React.FC<HeaderProps> = ({ logoComponent: LogoComponent, onToggleTheme, currentTheme, language, setLanguage, t, onShowHistory, onBuyCredits }) => {
     const { user, signOut } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -56,6 +58,13 @@ const Header: React.FC<HeaderProps> = ({ logoComponent: LogoComponent, onToggleT
         onShowHistory();
         setIsMenuOpen(false);
     }
+
+    const handleBuyCreditsClick = () => {
+        if (onBuyCredits) {
+            onBuyCredits();
+        }
+        setIsMenuOpen(false);
+    };
 
     const handleLogout = async () => {
         await signOut();
@@ -102,6 +111,12 @@ const Header: React.FC<HeaderProps> = ({ logoComponent: LogoComponent, onToggleT
                                                 <HistoryIcon className="w-4 h-4 mr-2" />
                                                 {t('menu.myHistory')}
                                             </button>
+                                            {onBuyCredits && (
+                                                <button role="menuitem" className="w-full text-left px-4 py-2 text-sm rounded-sm transition-colors hover:bg-accent focus:outline-none focus:bg-accent flex items-center font-medium text-primary" onClick={handleBuyCreditsClick}>
+                                                    <CoffeeIcon className="w-4 h-4 mr-2" />
+                                                    Купить анализ
+                                                </button>
+                                            )}
                                             <div className="border-t border-border -mx-2 my-1"></div>
                                         </>
                                     ) : (
