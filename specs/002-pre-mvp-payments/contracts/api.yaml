@@ -1,0 +1,438 @@
+openapi: 3.0.3
+info:
+  title: Symancy Payment API
+  description: Pre-MVP Payment Integration for Symancy Coffee Psychologist
+  version: 1.0.0
+  contact:
+    name: Symancy Development Team
+
+servers:
+  - url: https://diqooqbuchsliypgwksu.supabase.co/functions/v1
+    description: Supabase Edge Functions (Production)
+  - url: http://localhost:54321/functions/v1
+    description: Local Supabase Development
+
+paths:
+  /create-payment:
+    post:
+      summary: Create YooKassa payment
+      description: |
+        Creates a new payment in YooKassa and returns the confirmation_token
+        needed to initialize the YooMoney Checkout Widget.
+      operationId: createPayment
+      tags:
+        - Payments
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+            examples:
+              basicTariff:
+                summary: Basic tariff purchase
+                value:
+                  product_type: basic
+              pack5Tariff:
+                summary: Pack of 5 analyses
+                value:
+                  product_type: pack5
+      responses:
+        '200':
+          description: Payment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatePaymentResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Invalid or missing JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: YooKassa API error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /payment-webhook:
+    post:
+      summary: YooKassa webhook handler
+      description: |
+        Receives webhook notifications from YooKassa about payment status changes.
+        Verifies signature and updates purchase status in database.
+      operationId: paymentWebhook
+      tags:
+        - Webhooks
+      security: []
+      parameters:
+        - name: x-yookassa-signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: HMAC-SHA256 signature from YooKassa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/YooKassaWebhookPayload'
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '400':
+          description: Invalid signature or payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /credits:
+    get:
+      summary: Get user credits
+      description: Returns current credit balance for the authenticated user.
+      operationId: getCredits
+      tags:
+        - Credits
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User credits retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCredits'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /consume-credit:
+    post:
+      summary: Consume a credit for analysis
+      description: |
+        Atomically consumes one credit from user's balance.
+        Priority: basic_credits → pro_credits (for regular analysis).
+        Cassandra credits only used when credit_type='cassandra'.
+      operationId: consumeCredit
+      tags:
+        - Credits
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                credit_type:
+                  type: string
+                  enum: [basic, cassandra]
+                  default: basic
+                  description: Type of credit to consume
+      responses:
+        '200':
+          description: Credit consumption result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsumeCreditsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /analytics:
+    post:
+      summary: Track analytics event
+      description: |
+        Records conversion funnel events for payment analytics.
+        Used to calculate SM-002 metric (landing → payment > 1%).
+      operationId: trackAnalytics
+      tags:
+        - Analytics
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyticsEventRequest'
+      responses:
+        '200':
+          description: Event recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '400':
+          description: Invalid event type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /purchases:
+    get:
+      summary: Get purchase history
+      description: Returns purchase history for the authenticated user.
+      operationId: getPurchases
+      tags:
+        - Purchases
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+          description: Maximum number of purchases to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of purchases to skip
+      responses:
+        '200':
+          description: Purchase history retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  purchases:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Purchase'
+                  total:
+                    type: integer
+                    description: Total number of purchases
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase JWT token from auth session
+
+  schemas:
+    CreatePaymentRequest:
+      type: object
+      required:
+        - product_type
+      properties:
+        product_type:
+          type: string
+          enum: [basic, pack5, pro, cassandra]
+          description: Type of product to purchase
+        return_url:
+          type: string
+          format: uri
+          description: URL to redirect after payment (optional, defaults to origin)
+
+    CreatePaymentResponse:
+      type: object
+      properties:
+        confirmation_token:
+          type: string
+          description: Token for YooMoney Checkout Widget initialization
+        purchase_id:
+          type: string
+          format: uuid
+          description: Internal purchase ID for tracking
+
+    YooKassaWebhookPayload:
+      type: object
+      properties:
+        type:
+          type: string
+          example: notification
+        event:
+          type: string
+          enum: [payment.succeeded, payment.canceled, payment.waiting_for_capture]
+          description: Payment event type
+        object:
+          type: object
+          properties:
+            id:
+              type: string
+              description: YooKassa payment ID
+            status:
+              type: string
+              enum: [pending, waiting_for_capture, succeeded, canceled]
+            amount:
+              type: object
+              properties:
+                value:
+                  type: string
+                  example: "100.00"
+                currency:
+                  type: string
+                  example: RUB
+            metadata:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                  format: uuid
+                product_type:
+                  type: string
+                purchase_id:
+                  type: string
+                  format: uuid
+
+    UserCredits:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        basic_credits:
+          type: integer
+          minimum: 0
+        pro_credits:
+          type: integer
+          minimum: 0
+        cassandra_credits:
+          type: integer
+          minimum: 0
+        updated_at:
+          type: string
+          format: date-time
+
+    Purchase:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        product_type:
+          type: string
+          enum: [basic, pack5, pro, cassandra]
+        amount_rub:
+          type: integer
+          enum: [100, 300, 500, 1000]
+        yukassa_payment_id:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, succeeded, canceled]
+        credits_granted:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ConsumeCreditsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether credit was consumed successfully
+        credit_type:
+          type: string
+          nullable: true
+          enum: [basic, pro, cassandra]
+          description: Type of credit that was consumed
+        remaining:
+          type: integer
+          minimum: 0
+          description: Remaining credits of the consumed type
+
+    AnalyticsEventRequest:
+      type: object
+      required:
+        - event
+      properties:
+        event:
+          type: string
+          enum: [tariff_view, payment_started, payment_succeeded, payment_canceled]
+          description: Event type to track
+        product_type:
+          type: string
+          enum: [basic, pack5, pro, cassandra]
+          description: Product type (for payment events)
+        amount_rub:
+          type: integer
+          description: Amount in rubles (for payment events)
+        metadata:
+          type: object
+          description: Additional event metadata
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code for programmatic handling
+          enum:
+            - INVALID_PRODUCT_TYPE
+            - UNAUTHORIZED
+            - INVALID_SIGNATURE
+            - YUKASSA_ERROR
+            - INVALID_EVENT_TYPE
+            - NO_CREDITS
+            - INTERNAL_ERROR
+
+tags:
+  - name: Payments
+    description: Payment creation and management
+  - name: Webhooks
+    description: External webhook handlers
+  - name: Credits
+    description: User credit balance and consumption
+  - name: Purchases
+    description: Purchase history
+  - name: Analytics
+    description: Conversion funnel tracking
