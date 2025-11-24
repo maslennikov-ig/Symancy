@@ -1,12 +1,16 @@
-
-
 import React, { useState, useCallback, useEffect } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { analyzeCoffeeCup, AnalysisResponse } from './services/geminiService';
 import { saveAnalysis, HistoryItem } from './services/historyService';
+import { createPayment } from './services/paymentService';
 import Header from './components/Header';
 import ImageUploader from './components/ImageUploader';
 import ResultDisplay from './components/ResultDisplay';
 import HistoryDisplay from './components/HistoryDisplay';
+import TariffSelector from './components/payment/TariffSelector';
+import { PaymentWidget } from './components/payment/PaymentWidget';
+import PaymentSuccess from './pages/PaymentSuccess';
+import PaymentResult from './pages/PaymentResult';
 import { LoaderIcon } from './components/LoaderIcon';
 import { MysticalBackground } from './components/MysticalCoffeeCupIllustration';
 import { OfficialLogo } from './components/logos/OfficialLogo';
@@ -17,6 +21,7 @@ import { Button } from './components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from './components/ui/toggle-group';
 import { CoffeeIcon } from './components/CoffeeIcon';
 import { translations, Lang, detectInitialLanguage, t as i18n_t } from './lib/i18n';
+import type { ProductType } from './types/payment';
 
 type Theme = 'light' | 'dark';
 type FocusArea = 'wellbeing' | 'career' | 'relationships';
@@ -32,6 +37,15 @@ const App: React.FC = () => {
   const [focusArea, setFocusArea] = useState<FocusArea>('wellbeing');
   const [language, setLanguage] = useState<Lang>(detectInitialLanguage);
   const [currentView, setCurrentView] = useState<View>('uploader');
+
+  // Payment state (T022 & T023)
+  const [showTariffSelector, setShowTariffSelector] = useState(false);
+  const [isPaymentLoading, setIsPaymentLoading] = useState(false);
+  const [paymentData, setPaymentData] = useState<{
+    confirmationToken: string;
+    purchaseId: string;
+  } | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const t = useCallback((key: keyof typeof translations.en) => {
     return i18n_t(key, language);
@@ -137,7 +151,51 @@ const App: React.FC = () => {
       setIsLoading(false);
       setCurrentView('uploader');
   };
-  
+
+  // T022: Handler for opening tariff selector
+  const handleOpenTariffSelector = () => {
+    setPaymentError(null);
+    setShowTariffSelector(true);
+  };
+
+  // T023: Handler for tariff selection -> creates payment
+  const handleSelectTariff = async (productType: ProductType) => {
+    setIsPaymentLoading(true);
+    setPaymentError(null);
+    try {
+      const result = await createPayment(productType);
+      setPaymentData({
+        confirmationToken: result.confirmation_token,
+        purchaseId: result.purchase_id,
+      });
+      setShowTariffSelector(false);
+    } catch (err) {
+      console.error('Payment creation failed:', err);
+      setPaymentError(err instanceof Error ? err.message : 'Ошибка создания платежа');
+    } finally {
+      setIsPaymentLoading(false);
+    }
+  };
+
+  // T023: Handler for closing payment widget
+  const handleClosePaymentWidget = () => {
+    setPaymentData(null);
+    setPaymentError(null);
+  };
+
+  // T023: Handler for payment completion
+  const handlePaymentComplete = () => {
+    setPaymentData(null);
+    // Could refresh user credits here if needed
+  };
+
+  // T023: Handler for payment error
+  const handlePaymentError = (errorMsg: string) => {
+    console.error('Payment widget error:', errorMsg);
+    setPaymentData(null);
+    setPaymentError(errorMsg);
+  };
+
   const isUploaderVisible = !isLoading && !error && !analysis && !imageUrl && currentView === 'uploader';
 
   const renderContent = () => {
@@ -216,17 +274,19 @@ const App: React.FC = () => {
     return <ImageUploader onImageSelect={handleImageSelect} t={t} />;
   }
 
-  return (
+  // Main app content (used in Routes)
+  const mainAppContent = (
     <div className={`min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-8 font-sans bg-background text-foreground transition-colors duration-300 relative ${isUploaderVisible ? 'state-uploader' : ''}`}>
       <MysticalBackground />
-      <Header 
+      <Header
         logoComponent={OfficialLogo}
-        onToggleTheme={toggleTheme} 
-        currentTheme={theme} 
-        language={language} 
+        onToggleTheme={toggleTheme}
+        currentTheme={theme}
+        language={language}
         setLanguage={setLanguage}
         t={t}
         onShowHistory={() => setCurrentView('history')}
+        onBuyCredits={handleOpenTariffSelector}
       />
       <main className="w-full max-w-4xl mx-auto flex-grow flex flex-col items-center z-10">
         {currentView === 'history' ? (
@@ -246,7 +306,68 @@ const App: React.FC = () => {
           <p className="mt-1">{t('footer.disclaimer')}</p>
         </footer>
       </main>
+
+      {/* T022: TariffSelector Modal */}
+      {showTariffSelector && (
+        <TariffSelector
+          onClose={() => setShowTariffSelector(false)}
+          onSelectTariff={handleSelectTariff}
+          isLoading={isPaymentLoading}
+        />
+      )}
+
+      {/* T023: PaymentWidget Modal */}
+      {paymentData && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={handleClosePaymentWidget}
+        >
+          <div
+            className="bg-popover rounded-lg shadow-2xl p-6 w-full max-w-lg relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={handleClosePaymentWidget}
+              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground p-2 rounded-full text-2xl leading-none"
+              aria-label="Закрыть"
+            >
+              &times;
+            </button>
+            <h2 className="text-xl font-display font-bold mb-4 text-center">
+              Оплата
+            </h2>
+            <PaymentWidget
+              confirmationToken={paymentData.confirmationToken}
+              purchaseId={paymentData.purchaseId}
+              onComplete={handlePaymentComplete}
+              onError={handlePaymentError}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Payment error toast */}
+      {paymentError && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-destructive text-destructive-foreground px-4 py-3 rounded-lg shadow-lg flex items-center gap-3">
+          <span>{paymentError}</span>
+          <button
+            onClick={() => setPaymentError(null)}
+            className="text-destructive-foreground/80 hover:text-destructive-foreground"
+          >
+            &times;
+          </button>
+        </div>
+      )}
     </div>
+  );
+
+  return (
+    <Routes>
+      <Route path="/" element={mainAppContent} />
+      <Route path="/payment/success" element={<PaymentSuccess />} />
+      <Route path="/payment/result" element={<PaymentResult />} />
+    </Routes>
   );
 };
 

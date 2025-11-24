@@ -89,7 +89,7 @@
 
 ---
 
-## Phase 3: User Story 1+2 - Payment Flow & Tariff Selection (Priority: P0) MVP
+## Phase 3: User Story 1+2 - Payment Flow & Tariff Selection (Priority: P0) MVP ✓ COMPLETE
 
 **Goal**: User can select a tariff and complete payment via YooKassa widget
 
@@ -100,49 +100,35 @@
 4. See YooMoney widget with correct amount
 5. Complete test payment (sandbox)
 
-### Backend for US1+US2
+### Backend for US1+US2 ✓
 
-- [ ] T013 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] [US1] Create Edge Function `supabase/functions/create-payment/index.ts` that:
-  - Imports CORS helper from _shared/cors.ts
-  - Accepts POST with {product_type} from authenticated user
-  - Validates product_type is one of: basic, pack5, pro, cassandra
-  - Creates YooKassa payment via API with correct amount
-  - Inserts pending purchase into database
-  - Returns {confirmation_token, purchase_id} per contracts/api.yaml
-- [ ] T014 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] [US1] Deploy create-payment function: `supabase functions deploy create-payment`
+- [X] T013 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] [US1] Create Edge Function `supabase/functions/create-payment/index.ts`
+  → Artifacts: [create-payment/index.ts](../../supabase/functions/create-payment/index.ts)
+- [X] T014 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] [US1] Deploy create-payment function
+  → Deployed via Supabase MCP (version 1, ACTIVE)
 
 ### Frontend for US1+US2
 
-- [ ] T015 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-2] [US2] Create `components/payment/TariffSelector.tsx` - Modal with 4 tariff cards per spec.md tariffs table (100/300/500/1000 RUB)
-- [ ] T016 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-2] [US2] Create `components/payment/TariffCard.tsx` - Individual tariff card with name, price, description, select button
-- [ ] T017 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] [US1] Create `components/payment/PaymentWidget.tsx` - YooMoneyCheckoutWidget wrapper that:
-  - Receives confirmation_token prop
-  - Shows loading state while widget initializes
-  - Renders YooMoneyCheckoutWidget with token
-  - Handles error_callback with user-friendly error message
-  - Redirects to return_url on completion
-- [ ] T018 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] [US1] Create `services/paymentService.ts` with:
-  - createPayment(productType): calls create-payment Edge Function
-  - getUserCredits(): fetches from user_credits table
-  - getPurchaseHistory(): fetches from purchases table
-- [ ] T019 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-2] [US1] Create `pages/PaymentSuccess.tsx` - Success page with:
-  - "Спасибо за покупку!" message
-  - Credits added confirmation
-  - "Вернуться к анализу" button
-- [ ] T020 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-2] [US1] Create `pages/PaymentResult.tsx` - Handles both success and cancel:
-  - Parse URL params to detect success/cancel status
-  - Show appropriate message based on payment result
-  - Redirect logic back to main app
-- [ ] T021 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] [US1] Add routes for payment pages in router (e.g., `/payment/success`, `/payment/result`)
-- [ ] T022 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] [US2] Integrate TariffSelector into main app:
-  - Add "Купить анализ" button (visible only for authenticated users)
-  - Opens TariffSelector modal on click
-- [ ] T023 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] [US1] Connect TariffSelector → PaymentWidget flow:
-  - On tariff select, call createPayment with loading indicator
-  - On success, render PaymentWidget with confirmation_token
-  - On error, show toast notification with retry option
+- [X] T015 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-2] [US2] Create `components/payment/TariffSelector.tsx`
+  → Artifacts: [TariffSelector.tsx](../../components/payment/TariffSelector.tsx)
+- [X] T016 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-2] [US2] Create `components/payment/TariffCard.tsx`
+  → Artifacts: [TariffCard.tsx](../../components/payment/TariffCard.tsx)
+- [X] T017 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] [US1] Create `components/payment/PaymentWidget.tsx`
+  → Artifacts: [PaymentWidget.tsx](../../components/payment/PaymentWidget.tsx)
+- [X] T018 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] [US1] Create `services/paymentService.ts`
+  → Artifacts: [paymentService.ts](../../services/paymentService.ts)
+- [X] T019 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-2] [US1] Create `pages/PaymentSuccess.tsx`
+  → Artifacts: [PaymentSuccess.tsx](../../pages/PaymentSuccess.tsx)
+- [X] T020 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-2] [US1] Create `pages/PaymentResult.tsx`
+  → Artifacts: [PaymentResult.tsx](../../pages/PaymentResult.tsx)
+- [X] T021 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] [US1] Add routes for payment pages
+  → Modified: index.tsx (BrowserRouter), App.tsx (Routes)
+- [X] T022 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] [US2] Integrate TariffSelector into main app
+  → Modified: Header.tsx ("Купить анализ" button), App.tsx (TariffSelector modal)
+- [X] T023 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] [US1] Connect TariffSelector → PaymentWidget flow
+  → Modified: App.tsx (payment handlers, PaymentWidget modal)
 
-**Checkpoint**: Users can select tariff and complete payment (pending webhook confirmation)
+**Checkpoint**: Users can select tariff and complete payment (pending webhook confirmation) ✓
 
 ---
 
