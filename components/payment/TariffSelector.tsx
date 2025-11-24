@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { TARIFFS, ProductType } from '../../types/payment';
 import { TariffCard } from './TariffCard';
 import { LoaderIcon } from '../LoaderIcon';
+import { trackTariffView, trackPaymentStarted } from '../../services/analyticsService';
 
 interface TariffSelectorProps {
   onClose: () => void;
@@ -17,6 +18,20 @@ const TariffSelector: React.FC<TariffSelectorProps> = ({
   isLoading = false,
   message,
 }) => {
+  // Track tariff view on modal mount
+  useEffect(() => {
+    trackTariffView();
+  }, []);
+
+  // Handle tariff selection with analytics tracking
+  const handleSelectTariff = (productType: ProductType) => {
+    const tariff = TARIFFS.find((t) => t.type === productType);
+    if (tariff) {
+      trackPaymentStarted(productType, tariff.price);
+    }
+    onSelectTariff(productType);
+  };
+
   return (
     <div
       className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -64,7 +79,7 @@ const TariffSelector: React.FC<TariffSelectorProps> = ({
             <TariffCard
               key={tariff.type}
               tariff={tariff}
-              onSelect={() => onSelectTariff(tariff.type)}
+              onSelect={() => handleSelectTariff(tariff.type)}
               disabled={isLoading}
             />
           ))}

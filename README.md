@@ -49,10 +49,10 @@ symancy/
 - **Supabase** - аутентификация и БД
 
 ### Backend
-- **n8n** - автоматизация
+- **Supabase Edge Functions** - serverless функции (Deno)
 - **Supabase PostgreSQL** - основная БД
-- **Redis** - кеш
-- **Netlify Functions** - serverless функции
+- **YooKassa (ЮKassa)** - платёжный шлюз
+- **Resend** - email уведомления
 
 ### AI/ML
 - **Google Gemini API** - AI анализ
@@ -65,13 +65,38 @@ symancy/
 - **WhatsApp Business API**
 - **Web-приложение**
 
+## 💳 Платёжная интеграция
+
+### Тарифы
+| Тариф | Цена | Кредиты | Описание |
+|-------|------|---------|----------|
+| Новичок | 100₽ | 1 базовый | 1 базовая расшифровка |
+| Любитель | 300₽ | 5 базовых | 5 расшифровок (скидка 40%) |
+| Внутренний мудрец | 500₽ | 1 PRO | 1 PRO расшифровка (6+ блоков) |
+| Кассандра | 1000₽ | 1 Кассандра | Эзотерическое предсказание |
+
+### Настройка YooKassa
+1. Получите credentials в личном кабинете YooKassa
+2. Установите секреты Supabase:
+   ```bash
+   supabase secrets set YUKASSA_SHOP_ID=xxx YUKASSA_SECRET_KEY=xxx YUKASSA_WEBHOOK_SECRET=xxx
+   ```
+3. Настройте webhook URL в YooKassa:
+   `https://diqooqbuchsliypgwksu.supabase.co/functions/v1/payment-webhook`
+4. Выберите события: `payment.succeeded`, `payment.canceled`
+
+### Email уведомления (опционально)
+```bash
+supabase secrets set RESEND_API_KEY=re_xxx
+```
+
 ## 🚀 Run Locally
 
-**Prerequisites:** Node.js
+**Prerequisites:** Node.js, pnpm
 
 1. Install dependencies:
    ```bash
-   npm install
+   pnpm install
    ```
 
 2. Set the `GEMINI_API_KEY` in `.env.local`:
@@ -83,7 +108,7 @@ symancy/
 
 4. Run the app:
    ```bash
-   npm run dev
+   pnpm dev
    ```
 
 ## 💰 Варианты MVP

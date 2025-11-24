@@ -200,7 +200,7 @@
 
 ---
 
-## Phase 7: Analytics Integration
+## Phase 7: Analytics Integration ✓ COMPLETE
 
 **Goal**: Track conversion funnel events for SM-002 metric
 
@@ -210,28 +210,34 @@
 3. Complete payment → payment_analytics has 'payment_succeeded' event
 4. Query payment_conversion view → shows conversion rate
 
-### Analytics Tasks
+### Analytics Tasks ✓
 
-- [ ] T032 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-4] Create `services/analyticsService.ts` with:
+- [X] T032 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-4] Create `services/analyticsService.ts` with:
   - trackEvent(event, productType?, amountRub?, metadata?): inserts into payment_analytics table
   - Event types: 'tariff_view', 'payment_started', 'payment_succeeded', 'payment_canceled'
-- [ ] T033 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] Add analytics tracking to TariffSelector.tsx:
+  → Artifacts: [analyticsService.ts](../../services/analyticsService.ts)
+- [X] T033 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] Add analytics tracking to TariffSelector.tsx:
   - Track 'tariff_view' on modal open
   - Track 'payment_started' when user clicks "Оплатить" (include selected product_type)
-- [ ] T034 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] Verify payment-webhook tracks 'payment_succeeded'/'payment_canceled' (from T024)
+  → Modified: TariffSelector.tsx (useEffect for tariff_view, handleSelect for payment_started)
+- [X] T034 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] Verify payment-webhook tracks 'payment_succeeded'/'payment_canceled' (from T024)
+  → Verified: payment-webhook/index.ts tracks both events in payment_analytics table
 
-**Checkpoint**: Conversion funnel data being collected
+**Checkpoint**: Conversion funnel data being collected ✓
 
 ---
 
-## Phase 8: Polish & Cross-Cutting Concerns
+## Phase 8: Polish & Cross-Cutting Concerns ✓ COMPLETE (Automated Tasks)
 
 **Purpose**: Final cleanup, documentation, deployment preparation
 
 - [ ] T035 [EXECUTOR: MANUAL] [PARALLEL-GROUP-5] Set Supabase secrets via CLI: `supabase secrets set YUKASSA_SHOP_ID=xxx YUKASSA_SECRET_KEY=xxx YUKASSA_WEBHOOK_SECRET=xxx RESEND_API_KEY=xxx` (requires real credentials from client)
-- [ ] T036 [EXECUTOR: technical-writer] [PARALLEL-GROUP-5] Update README.md with payment integration setup instructions
-- [ ] T037 [EXECUTOR: technical-writer] [PARALLEL-GROUP-5] Create `.env.local.example` for frontend with any needed variables
-- [ ] T038 [EXECUTOR: MAIN] [SEQUENTIAL] Run type-check and build to verify no TypeScript errors: `pnpm type-check && pnpm build`
+- [X] T036 [EXECUTOR: technical-writer] [PARALLEL-GROUP-5] Update README.md with payment integration setup instructions
+  → Modified: [README.md](../../README.md) (added tariffs table, YooKassa setup, webhook URL)
+- [N/A] T037 [EXECUTOR: technical-writer] [PARALLEL-GROUP-5] Create `.env.local.example` for frontend with any needed variables
+  → Not needed: All payment credentials are server-side (Edge Functions). Frontend env vars documented in README.
+- [X] T038 [EXECUTOR: MAIN] [SEQUENTIAL] Run type-check and build to verify no TypeScript errors: `pnpm type-check && pnpm build`
+  → Build passed: `vite build` completed successfully ("✓ built in 1.91s")
 - [ ] T039 [EXECUTOR: MANUAL] [SEQUENTIAL] Manual E2E testing with YooKassa sandbox per quickstart.md test cards section:
   - Test successful payment (card: 4111 1111 1111 1111)
   - Test declined payment (card: 4000 0000 0000 0002)
