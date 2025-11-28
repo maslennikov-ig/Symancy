@@ -247,6 +247,80 @@
 
 ---
 
+## Phase 9: Legal Pages for YooKassa ✓ COMPLETE
+
+**Goal**: Create required legal pages for YooKassa approval
+
+**YooKassa Requirements**:
+- Товары/услуги с ценами ✅
+- Способ получения услуги ✅
+- Оферта/Пользовательское соглашение
+- Контакты и реквизиты ИП
+
+### Legal Pages Tasks ✓
+
+- [X] T041 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-6] Create `pages/Pricing.tsx` - тарифы с ценами и описанием
+  → Artifacts: [Pricing.tsx](../../pages/Pricing.tsx)
+- [X] T042 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-6] Create `pages/Terms.tsx` - пользовательское соглашение (оферта)
+  → Artifacts: [Terms.tsx](../../pages/Terms.tsx)
+- [X] T043 [EXECUTOR: react-vite-specialist] [PARALLEL-GROUP-6] Create `pages/Contacts.tsx` - контакты и реквизиты ИП
+  → Artifacts: [Contacts.tsx](../../pages/Contacts.tsx)
+- [X] T044 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] Add routes for legal pages in App.tsx
+  → Modified: App.tsx (routes: /pricing, /terms, /contacts)
+- [X] T045 [EXECUTOR: react-vite-specialist] [SEQUENTIAL] Add footer with links to legal pages
+  → Modified: App.tsx (footer nav links)
+
+**Data Source**: `specs/002-pre-mvp-payments/legal-pages-draft.md`
+
+**Checkpoint**: YooKassa can approve the site for payment processing ✓
+
+---
+
+## Phase 10: Telegram Native Payments
+
+**Goal**: Add native Telegram Payments via YooKassa provider for better UX in Telegram
+
+**Why**:
+- Нативный UX внутри Telegram (не WebView виджет)
+- Больше доверия пользователей
+- Без дополнительной комиссии (YooKassa стандартная ~3%)
+- Уже есть webhook — переиспользуем
+
+**Flow**:
+```
+User in Telegram → Bot sends Invoice →
+→ Native Telegram payment form →
+→ YooKassa processes payment →
+→ Telegram sends pre_checkout_query →
+→ Bot confirms → payment.succeeded webhook
+```
+
+### Telegram Payments Tasks
+
+- [ ] T046 [EXECUTOR: MANUAL] [SEQUENTIAL] Configure YooKassa as payment provider in BotFather:
+  - `/mybots` → Select bot → Payments → Connect YooKassa
+  - Get `provider_token` for YooKassa
+- [ ] T047 [EXECUTOR: typescript-types-specialist] [SEQUENTIAL] Add Telegram payment types to `types/payment.ts`:
+  - TelegramInvoice, PreCheckoutQuery, SuccessfulPayment
+- [ ] T048 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] Create Edge Function `supabase/functions/telegram-bot-webhook/index.ts`:
+  - Handle `/buy` command → send invoice
+  - Handle `pre_checkout_query` → validate and confirm
+  - Handle `successful_payment` → call grant_credits RPC
+- [ ] T049 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] Deploy telegram-bot-webhook function
+- [ ] T050 [EXECUTOR: MANUAL] [SEQUENTIAL] Set bot webhook URL in Telegram:
+  - `https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://diqooqbuchsliypgwksu.supabase.co/functions/v1/telegram-bot-webhook`
+- [ ] T051 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] Add Telegram secrets:
+  - `TELEGRAM_BOT_TOKEN`
+  - `TELEGRAM_PAYMENT_PROVIDER_TOKEN`
+- [ ] T052 [EXECUTOR: MANUAL] [SEQUENTIAL] Test Telegram payments in sandbox:
+  - Send `/buy` to bot
+  - Complete test payment
+  - Verify credits granted
+
+**Checkpoint**: Users can pay natively inside Telegram
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -259,6 +333,8 @@
 - **Credit Integration (Phase 6)**: Depends on US1+US2 and US3
 - **Analytics (Phase 7)**: Depends on US1+US2
 - **Polish (Phase 8)**: Depends on all previous phases
+- **Legal Pages (Phase 9)**: Can run parallel to Phase 8 - Required for YooKassa approval
+- **Telegram Payments (Phase 10)**: Depends on Phase 8 (YooKassa configured) + Telegram bot exists
 
 ### User Story Dependencies
 
@@ -345,16 +421,19 @@ Recommended order:
 | Integration | 2 | T030-T031 | react-vite(2) | Credit consumption |
 | Analytics | 3 | T032-T034 | react-vite(3) | Conversion tracking |
 | Polish | 6 | T035-T040 | MANUAL(3), technical-writer(2), MAIN(1) | Documentation, testing |
+| Legal Pages | 5 | T041-T045 | react-vite(5) | Required pages for YooKassa |
+| Telegram Payments | 7 | T046-T052 | MANUAL(3), typescript-types(1), supabase-edge(3) | Native Telegram payments |
 
-**Total**: 40 tasks
+**Total**: 52 tasks
 **Executor Distribution**:
 - `MAIN`: 3 tasks (T001, T005, T038)
 - `database-architect`: 7 tasks (T006-T012)
-- `typescript-types-specialist`: 1 task (T002)
-- `supabase-edge-functions-specialist`: 7 tasks (T003-T004, T013-T014, T024-T026)
-- `react-vite-specialist`: 17 tasks (T015-T023, T027-T034)
+- `typescript-types-specialist`: 2 tasks (T002, T047)
+- `supabase-edge-functions-specialist`: 10 tasks (T003-T004, T013-T014, T024-T026, T048-T049, T051)
+- `react-vite-specialist`: 22 tasks (T015-T023, T027-T034, T041-T045)
 - `technical-writer`: 2 tasks (T036-T037)
-- `MANUAL`: 3 tasks (T035, T039-T040)
+- `MANUAL`: 6 tasks (T035, T039-T040, T046, T050, T052)
 
-**MVP Scope**: Phases 1-3 (23 tasks: T001-T023)
-**Full Scope**: All phases (40 tasks)
+**MVP Scope**: Phases 1-3 (23 tasks: T001-T023) ✅ COMPLETE
+**Full Scope**: All phases (52 tasks)
+**Current Progress**: Phases 1-9 complete (45/52 tasks)
