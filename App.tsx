@@ -12,6 +12,9 @@ import TariffSelector from './components/payment/TariffSelector';
 import { PaymentWidget } from './components/payment/PaymentWidget';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentResult from './pages/PaymentResult';
+import Pricing from './pages/Pricing';
+import Terms from './pages/Terms';
+import Contacts from './pages/Contacts';
 import { LoaderIcon } from './components/LoaderIcon';
 import { MysticalBackground } from './components/MysticalCoffeeCupIllustration';
 import { OfficialLogo } from './components/logos/OfficialLogo';
@@ -338,6 +341,11 @@ const App: React.FC = () => {
           </Card>
         )}
         <footer className="text-center mt-auto pt-8 text-muted-foreground text-sm z-10">
+          <nav className="mb-3 flex flex-wrap justify-center gap-4">
+            <a href="/pricing" className="hover:text-foreground transition-colors">Тарифы</a>
+            <a href="/terms" className="hover:text-foreground transition-colors">Оферта</a>
+            <a href="/contacts" className="hover:text-foreground transition-colors">Контакты</a>
+          </nav>
           <p>{t('footer.copyright').replace('{year}', new Date().getFullYear().toString())}</p>
           <p className="mt-1">{t('footer.disclaimer')}</p>
         </footer>
@@ -405,8 +413,11 @@ const App: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={mainAppContent} />
+      <Route path="/pricing" element={<Pricing />} />
       <Route path="/payment/success" element={<PaymentSuccess />} />
       <Route path="/payment/result" element={<PaymentResult />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/contacts" element={<Contacts />} />
     </Routes>
   );
 };
