@@ -31,10 +31,10 @@ const Contacts: React.FC = () => {
               Email
             </h2>
             <a
-              href="mailto:1094242@list.ru"
+              href="mailto:support@symancy.ru"
               className="text-foreground hover:text-primary transition-colors underline"
             >
-              1094242@list.ru
+              support@symancy.ru
             </a>
           </div>
 
@@ -65,23 +65,6 @@ const Contacts: React.FC = () => {
             <div className="font-mono text-muted-foreground space-y-1">
               <p>ИНН: 771976259033</p>
               <p>ОГРНИП: 316774600413540</p>
-            </div>
-
-            <div className="text-muted-foreground">
-              <p className="font-medium mb-1">Юридический адрес:</p>
-              <p>105484, РФ, г. Москва,</p>
-              <p>ул. 15-я Парковая, д. 39, кв. 28</p>
-            </div>
-
-            <div className="border-t border-border pt-3 mt-4">
-              <p className="font-medium text-foreground mb-2">
-                Банковские реквизиты:
-              </p>
-              <div className="font-mono text-xs text-muted-foreground space-y-1 bg-muted p-3 rounded-md">
-                <p>Расчётный счёт: 40802810438000037254</p>
-                <p>Банк: ПАО «СБЕРБАНК РОССИИ»</p>
-                <p>БИК: 044525225</p>
-              </div>
             </div>
           </div>
         </div>

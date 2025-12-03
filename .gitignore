@@ -51,3 +51,4 @@ build/
 # Backup files
 *.bak
 *~
+.deploy/
