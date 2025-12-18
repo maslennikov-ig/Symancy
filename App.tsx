@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
-import { analyzeCoffeeCup, AnalysisResponse } from './services/geminiService';
+import imageCompression from 'browser-image-compression';
+import ChatOnboarding from './components/ChatOnboarding';
+import { analyzeCoffeeCup, AnalysisResponse, UserData } from './services/analysisService';
 import { saveAnalysis, HistoryItem } from './services/historyService';
 import { createPayment } from './services/paymentService';
-import { hasAvailableCredits, consumeCredit } from './services/creditService';
 import Header from './components/Header';
 import ImageUploader from './components/ImageUploader';
 import ResultDisplay from './components/ResultDisplay';
@@ -41,8 +42,9 @@ const App: React.FC = () => {
   const [focusArea, setFocusArea] = useState<FocusArea>('wellbeing');
   const [language, setLanguage] = useState<Lang>(detectInitialLanguage);
   const [currentView, setCurrentView] = useState<View>('uploader');
+  const [userData, setUserData] = useState<UserData | null>(null);
 
-  // Payment state (T022 & T023)
+  // Payment state
   const [showTariffSelector, setShowTariffSelector] = useState(false);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [paymentData, setPaymentData] = useState<{
@@ -50,7 +52,6 @@ const App: React.FC = () => {
     purchaseId: string;
   } | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  // T031: Message to display in tariff selector (e.g., when credits are needed)
   const [paymentMessage, setPaymentMessage] = useState<string>('');
 
   const t = useCallback((key: keyof typeof translations.en) => {
@@ -95,39 +96,10 @@ const App: React.FC = () => {
     });
   };
 
-  const handleImageSelect = (file: File) => {
-    setImageFile(file);
-    const objectUrl = URL.createObjectURL(file);
-    setImageUrl(objectUrl);
-    setAnalysis(null);
-    setError(null);
-  };
-
-  const handleAnalyzeClick = useCallback(async () => {
-    if (!imageFile) {
-      setError(t('error.selectImage'));
-      return;
-    }
-
-    // T031: Check if user is authenticated
+  const performAnalysis = async (file: File, data: UserData) => {
     if (!user) {
-      // User needs to log in first - the auth modal will be shown via Header
-      setError('Войдите в аккаунт для анализа');
-      return;
-    }
-
-    // T031: Check if user has credits BEFORE analysis
-    try {
-      const hasCredits = await hasAvailableCredits();
-      if (!hasCredits) {
-        // Show tariff selector with message
-        setPaymentMessage('Для анализа нужен кредит');
-        setShowTariffSelector(true);
+        setError('Войдите в аккаунт для анализа');
         return;
-      }
-    } catch (err) {
-      console.error('Error checking credits:', err);
-      // If we can't check credits, proceed anyway (fail open for now)
     }
 
     setIsLoading(true);
@@ -135,41 +107,60 @@ const App: React.FC = () => {
     setAnalysis(null);
 
     try {
-      // T031: Consume credit BEFORE analysis
-      const consumeResult = await consumeCredit('basic');
-      if (!consumeResult.success) {
-        setError('Не удалось списать кредит. Попробуйте снова.');
-        setIsLoading(false);
-        return;
-      }
+        // Compress image
+        const options = {
+            maxSizeMB: 0.3,
+            maxWidthOrHeight: 1024,
+            useWebWorker: true,
+            fileType: 'image/webp' as const,
+            initialQuality: 0.7
+        };
 
-      const base64Image = await fileToBase64(imageFile);
-      const dataUrlParts = base64Image.split(',');
-      if (dataUrlParts.length !== 2) {
-        throw new Error('Invalid base64 string format');
-      }
-      const mimeType = dataUrlParts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
-      const imageData = dataUrlParts[1];
+        let compressedFile = file;
+        try {
+            console.log(`Original file size: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+            compressedFile = await imageCompression(file, options);
+            console.log(`Compressed file size: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
+        } catch (compressionError) {
+            console.error('Image compression failed, using original:', compressionError);
+        }
 
-      const result = await analyzeCoffeeCup(imageData, mimeType, focusArea, language);
-      setAnalysis(result);
+        const base64Image = await fileToBase64(compressedFile);
+        const dataUrlParts = base64Image.split(',');
+        if (dataUrlParts.length !== 2) {
+            throw new Error('Invalid base64 string format');
+        }
+        const mimeType = dataUrlParts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+        const imageData = dataUrlParts[1];
 
-      // Log remaining credits after successful analysis
-      console.log(`Analysis complete. Credit used: ${consumeResult.credit_type}. Remaining: ${consumeResult.remaining}`);
+        const result = await analyzeCoffeeCup(imageData, mimeType, data, 'psychologist', language);
+        setAnalysis(result);
 
-      if (user) {
-        // This is a non-critical operation, so we don't await or handle errors here
-        // to avoid blocking the user from seeing their result.
-        saveAnalysis(user.id, result, focusArea);
-      }
+        console.log('Analysis complete.');
+
+        if (user) {
+            saveAnalysis(user.id, result, data.intent || 'wellbeing');
+        }
 
     } catch (err) {
-      console.error(err);
-      setError(t('error.analyzeFailed'));
+        console.error(err);
+        // Handle insufficient credits error from Edge Function
+        if (err instanceof Error && err.message === 'INSUFFICIENT_CREDITS') {
+            setPaymentMessage('Для анализа нужен кредит');
+            setShowTariffSelector(true);
+        } else {
+            setError(t('error.analyzeFailed'));
+        }
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  }, [imageFile, focusArea, language, t, user]);
+  };
+
+  const handleAnalysisReady = useCallback(async (file: File, data: UserData) => {
+    setImageFile(file);
+    setUserData(data);
+    await performAnalysis(file, data);
+  }, [user, language, t]);
 
   const handleReset = () => {
     setImageFile(null);
@@ -178,6 +169,7 @@ const App: React.FC = () => {
     setError(null);
     setIsLoading(false);
     setFocusArea('wellbeing');
+    setUserData(null);
     setCurrentView('uploader');
   };
 
@@ -190,14 +182,12 @@ const App: React.FC = () => {
       setCurrentView('uploader');
   };
 
-  // T022: Handler for opening tariff selector
   const handleOpenTariffSelector = () => {
     setPaymentError(null);
-    setPaymentMessage(''); // Clear any previous message when opening manually
+    setPaymentMessage(''); 
     setShowTariffSelector(true);
   };
 
-  // T023: Handler for tariff selection -> creates payment
   const handleSelectTariff = async (productType: ProductType) => {
     setIsPaymentLoading(true);
     setPaymentError(null);
@@ -216,19 +206,15 @@ const App: React.FC = () => {
     }
   };
 
-  // T023: Handler for closing payment widget
   const handleClosePaymentWidget = () => {
     setPaymentData(null);
     setPaymentError(null);
   };
 
-  // T023: Handler for payment completion
   const handlePaymentComplete = () => {
     setPaymentData(null);
-    // Could refresh user credits here if needed
   };
 
-  // T023: Handler for payment error
   const handlePaymentError = (errorMsg: string) => {
     console.error('Payment widget error:', errorMsg);
     setPaymentData(null);
@@ -273,35 +259,12 @@ const App: React.FC = () => {
                     <img src={imageUrl} alt="Uploaded coffee cup" className="w-full h-auto object-cover" />
                 </div>
                  <div className="mb-6 w-full max-w-sm">
-                    <h3 className="text-lg font-medium text-foreground mb-3">{t('imageReady.focus.title')}</h3>
-                    <ToggleGroup
-                        type="single"
-                        defaultValue={focusArea}
-                        value={focusArea}
-                        onValueChange={(value) => { if(value) setFocusArea(value as FocusArea) }}
-                        aria-label="Focus Area"
-                    >
-                        <ToggleGroupItem value="wellbeing" aria-label="Focus on General well-being">
-                            {t('imageReady.focus.wellbeing')}
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="career" aria-label="Focus on Career">
-                            {t('imageReady.focus.career')}
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="relationships" aria-label="Focus on Relationships">
-                            {t('imageReady.focus.relationships')}
-                        </ToggleGroupItem>
-                    </ToggleGroup>
+                    <p className="text-muted-foreground italic">
+                        {userData?.intent ? `Ваш запрос: "${userData.intent}"` : ''}
+                    </p>
                 </div>
             </CardContent>
             <CardFooter className="flex-col sm:flex-row gap-4">
-                 <Button onClick={handleAnalyzeClick} disabled={isLoading} size="lg">
-                    {isLoading ? (
-                        <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                        <CoffeeIcon className="mr-2 h-4 w-4" />
-                    )}
-                    {t('button.analyze')}
-                </Button>
                 <Button onClick={handleReset} variant="outline" size="lg">
                     {t('button.reset')}
                 </Button>
@@ -310,10 +273,17 @@ const App: React.FC = () => {
       );
     }
 
-    return <ImageUploader onImageSelect={handleImageSelect} t={t} />;
-  }
+    return (
+        <div className="w-full h-full flex flex-col">
+            <ChatOnboarding 
+                onAnalysisReady={handleAnalysisReady} 
+                language={language}
+                t={t}
+            />
+        </div>
+    );
+  };
 
-  // Main app content (used in Routes)
   const mainAppContent = (
     <div className={`min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-8 font-sans bg-background text-foreground transition-colors duration-300 relative ${isUploaderVisible ? 'state-uploader' : ''}`}>
       <MysticalBackground />

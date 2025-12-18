@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
-import { AnalysisResponse } from './geminiService';
+import { AnalysisResponse } from './analysisService';
 
 export interface HistoryItem {
   id: string;
