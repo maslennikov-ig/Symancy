@@ -9,7 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.1.0",
+    "@chatscope/chat-ui-kit-react": "^2.1.1",
+    "@refinedev/antd": "^6.0.3",
+    "@refinedev/core": "^5.0.7",
+    "@refinedev/supabase": "^6.0.1",
     "@supabase/supabase-js": "^2.45.0",
+    "antd": "^5.29.3",
+    "browser-image-compression": "^2.0.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-markdown": "^9.0.1",

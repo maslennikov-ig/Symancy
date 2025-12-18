@@ -100,6 +100,11 @@ export const translations = {
     'payment.loading.widget': 'Loading payment form...',
     'payment.error.widget': 'Error loading payment form',
     'payment.error.retry': 'Try Again',
+    'chat.placeholder': 'Type your answer...',
+    'chat.arina.greeting': 'Hello! I am Arina. I will help you look deep into yourself through coffee patterns. How may I address you?',
+    'chat.arina.askIntent': 'Nice to meet you, {name}. What worries or interests you today? What shall we ask the cup?',
+    'chat.arina.askUpload': 'I hear you. Let\'s see what the symbols say. Please upload a photo of your cup.',
+    'chat.typing': 'Arina is typing...',
   },
   ru: {
     'header.title': 'Кофейный Психолог',
@@ -202,6 +207,11 @@ export const translations = {
     'payment.loading.widget': 'Загрузка платёжной формы...',
     'payment.error.widget': 'Ошибка при загрузке платёжной формы',
     'payment.error.retry': 'Попробовать снова',
+    'chat.placeholder': 'Напишите ответ...',
+    'chat.arina.greeting': 'Привет! Я Арина. Я помогу тебе заглянуть вглубь себя через кофейные узоры. Как я могу к тебе обращаться?',
+    'chat.arina.askIntent': 'Очень приятно, {name}. Что тебя тревожит или интересует сегодня? О чем будем спрашивать чашку?',
+    'chat.arina.askUpload': 'Я тебя услышала. Давай посмотрим, что скажут символы. Загрузи фото своей чашки.',
+    'chat.typing': 'Арина печатает...',
   },
   zh: {
     'header.title': '咖啡心理学家',
@@ -304,6 +314,11 @@ export const translations = {
     'payment.loading.widget': '正在加载付款表格...',
     'payment.error.widget': '加载付款表格时出错',
     'payment.error.retry': '再试一次',
+    'chat.placeholder': '输入你的答案...',
+    'chat.arina.greeting': '你好！我是 Arina。我将通过咖啡图案帮助你深入了解自己。我该如何称呼你？',
+    'chat.arina.askIntent': '很高兴见到你，{name}。今天有什么让你担心或感兴趣的事吗？我们要问杯子什么？',
+    'chat.arina.askUpload': '我明白了。让我们看看符号怎么说。请上传你的杯子照片。',
+    'chat.typing': 'Arina 正在输入...',
   },
 };
 
