@@ -1038,6 +1038,11 @@ main() {
     echo "  • Create GitHub Release from tag (optional)"
     echo "  • Notify team if applicable"
     echo ""
+
+    # Send Windows notification if available
+    if [ -f "$SCRIPT_DIR/notify_windows.sh" ]; then
+        bash "$SCRIPT_DIR/notify_windows.sh" "Release v$NEW_VERSION successfully completed." "Release Finished"
+    fi
 }
 
 # Run main function
