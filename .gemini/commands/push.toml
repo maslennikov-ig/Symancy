@@ -1,0 +1,6 @@
+description = "Automated release management with version bumping and changelog updates"
+prompt = """
+Running release automation...
+
+!{cd "$(git rev-parse --show-toplevel)" && bash .gemini/scripts/release.sh {{args}} --yes}
+"""
