@@ -53,3 +53,4 @@ build/
 *.bak
 *~
 .deploy/
+settings.local.json
