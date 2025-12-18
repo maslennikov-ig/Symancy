@@ -215,7 +215,7 @@
       {
         "parameters": {
           "method": "POST",
-          "url": "https://api.telegram.org/bot8130526654:AAFyKVRCFnFNIXsqvNnqdUyJm5ZNpMMQec0/sendChatAction",
+          "url": "https://api.telegram.org/botYOUR_BOT_TOKEN_HERE/sendChatAction",
           "sendBody": true,
           "specifyBody": "json",
           "jsonBody": "={\n  \"chat_id\":{{ $('question').item.json.message.from.id }} ,\n  \"action\": \"typing\"\n}",
@@ -295,7 +295,7 @@
       {
         "parameters": {
           "method": "POST",
-          "url": "https://api.telegram.org/bot8130526654:AAFyKVRCFnFNIXsqvNnqdUyJm5ZNpMMQec0/sendChatAction",
+          "url": "https://api.telegram.org/botYOUR_BOT_TOKEN_HERE/sendChatAction",
           "sendBody": true,
           "specifyBody": "json",
           "jsonBody": "={\n  \"chat_id\":{{ $('question').item.json.message.from.id }} ,\n  \"action\": \"typing\"\n}",
