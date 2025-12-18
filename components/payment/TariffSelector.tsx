@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { TARIFFS, ProductType } from '../../types/payment';
 import { TariffCard } from './TariffCard';
 import { LoaderIcon } from '../LoaderIcon';
 import { trackTariffView, trackPaymentStarted } from '../../services/analyticsService';
+import { translations, Lang, detectInitialLanguage, t as i18n_t } from '../../lib/i18n';
 
 interface TariffSelectorProps {
   onClose: () => void;
@@ -18,6 +19,20 @@ const TariffSelector: React.FC<TariffSelectorProps> = ({
   isLoading = false,
   message,
 }) => {
+  const [language, setLanguage] = useState<Lang>(detectInitialLanguage);
+
+  useEffect(() => {
+     // Sync language with local storage
+     const savedLang = localStorage.getItem('language');
+     if (savedLang && translations.hasOwnProperty(savedLang)) {
+        setLanguage(savedLang as Lang);
+     }
+  }, []);
+
+  const t = useCallback((key: keyof typeof translations.en) => {
+    return i18n_t(key, language);
+  }, [language]);
+
   // Track tariff view on modal mount
   useEffect(() => {
     trackTariffView();
@@ -48,7 +63,7 @@ const TariffSelector: React.FC<TariffSelectorProps> = ({
         <button
           onClick={onClose}
           className="absolute top-2 right-2 text-muted-foreground hover:text-foreground p-2 rounded-full text-2xl leading-none"
-          aria-label="Закрыть"
+          aria-label={t('payment.selector.close')}
           disabled={isLoading}
         >
           &times;
@@ -60,7 +75,7 @@ const TariffSelector: React.FC<TariffSelectorProps> = ({
             id="tariff-selector-title"
             className="text-2xl font-display font-bold"
           >
-            Выберите тариф
+            {t('payment.selector.title')}
           </h2>
           {message ? (
             <p className="text-primary mt-2 text-sm font-medium bg-primary/10 rounded-lg px-3 py-2">
@@ -68,7 +83,7 @@ const TariffSelector: React.FC<TariffSelectorProps> = ({
             </p>
           ) : (
             <p className="text-muted-foreground mt-2 text-sm">
-              Выберите подходящий пакет для анализа кофейной гущи
+              {t('payment.selector.subtitle')}
             </p>
           )}
         </div>
@@ -81,6 +96,8 @@ const TariffSelector: React.FC<TariffSelectorProps> = ({
               tariff={tariff}
               onSelect={() => handleSelectTariff(tariff.type)}
               disabled={isLoading}
+              language={language}
+              t={t}
             />
           ))}
         </div>
@@ -91,7 +108,7 @@ const TariffSelector: React.FC<TariffSelectorProps> = ({
             <div className="flex flex-col items-center gap-3">
               <LoaderIcon className="h-8 w-8 animate-spin text-primary" />
               <span className="text-sm text-muted-foreground">
-                Создание платежа...
+                {t('payment.loading.creating')}
               </span>
             </div>
           </div>

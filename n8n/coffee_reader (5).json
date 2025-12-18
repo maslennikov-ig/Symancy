@@ -1,0 +1,723 @@
+{
+  "name": "coffee_reader",
+  "nodes": [
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('question').item.json.message.from.id }}",
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -1008,
+        -160
+      ],
+      "id": "913d0f76-946a-4efd-8c7e-797e84aa6b9b",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "3UJ6KaGqGRCX0JOc",
+          "name": "m.aslennikovig@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "*"
+        ],
+        "additionalFields": {
+          "download": true
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2608,
+        -336
+      ],
+      "id": "7cc42694-0540-42b3-9820-e02aed66e760",
+      "name": "question",
+      "webhookId": "46fad393-6113-46a7-a7c9-22210d108c88",
+      "credentials": {
+        "telegramApi": {
+          "id": "fz3vmC0KKs1mxTnx",
+          "name": "Kassiopeya"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1122a201-d802-4e77-ba72-c2899202d2e2",
+                    "leftValue": "={{ $json.message.photo[0] }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "photo"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6166763a-38e9-494a-aea0-20bdc9626314",
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "/",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "text_cmd"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -2384,
+        -336
+      ],
+      "id": "d2073738-0c4a-4084-8aad-c029e6f39e01",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.photo_file_id }}",
+        "additionalFields": {}
+      },
+      "id": "634be3c3-70ec-4b8c-be32-76d1b040ff35",
+      "name": "Get Image",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        -1936,
+        -480
+      ],
+      "typeVersion": 1.2,
+      "webhookId": "907da058-dcfb-4c1c-996a-9c6003e4ca18",
+      "retryOnFail": false,
+      "maxTries": 2,
+      "credentials": {
+        "telegramApi": {
+          "id": "fz3vmC0KKs1mxTnx",
+          "name": "Kassiopeya"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bd8a8c20-939e-49b0-93d0-bb58b8719ebb",
+              "name": "chat_id",
+              "value": "={{ $json.message.chat.id }}",
+              "type": "string"
+            },
+            {
+              "id": "f89d0646-9f73-4067-bbf7-af9913b5f688",
+              "name": "message_id",
+              "value": "={{$json.message.message_id}}",
+              "type": "string"
+            },
+            {
+              "id": "07282534-971f-4430-8d45-5f3e15d3c167",
+              "name": "photo_file_id",
+              "value": "={{$json.message.photo[$json.message.photo.length - 1].file_id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2160,
+        -480
+      ],
+      "id": "e5de0cf0-43dc-4ea4-b716-b24493c3c876",
+      "name": "Get ready"
+    },
+    {
+      "parameters": {
+        "model": "qwen/qwen3-235b-a22b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -1136,
+        -160
+      ],
+      "id": "4c892150-b076-4fa7-b6fa-9256460ca78c",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "TMTthfx2IongaY6N",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -1264,
+        -160
+      ],
+      "id": "065ef368-a817-4a4d-a926-8622f5c6b78e",
+      "name": "OpenRouter Chat Model2",
+      "credentials": {
+        "openRouterApi": {
+          "id": "TMTthfx2IongaY6N",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot8130526654:AAFyKVRCFnFNIXsqvNnqdUyJm5ZNpMMQec0/sendChatAction",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\":{{ $('question').item.json.message.from.id }} ,\n  \"action\": \"typing\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1152,
+        -576
+      ],
+      "id": "c8c0017e-c5bb-400f-a2e5-2fb41ce23452",
+      "name": "Send Typing"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Код для Code ноды в coffee_reader workflow\n// Версия с HTML форматированием и БАЛАНСИРОВКОЙ ТЕГОВ\n\n// Получаем текст от AI агента\nconst aiResponse = $input.first().json.output || \n                  $input.first().json.text || \n                  $input.first().json.response || \n                  $input.first().json.content || '';\n\n// Получаем chat_id из исходного сообщения\nconst chatId = $('question').first().json.message.chat.id;\n\n// Настройки\nconst MAX_LENGTH = 3800; // Telegram лимит 4096, оставляем запас\n\n// Функция для балансировки HTML тегов\nfunction balanceHtmlTags(text) {\n    // Поддерживаемые Telegram теги\n    const supportedTags = ['b', 'strong', 'i', 'em', 'u', 'ins', 's', 'strike', 'del', 'code', 'pre'];\n    \n    // Находим все открытые теги\n    const openTags = [];\n    const tagRegex = /<\\/?([a-z]+)[^>]*>/gi;\n    let match;\n    \n    while ((match = tagRegex.exec(text)) !== null) {\n        const fullTag = match[0];\n        const tagName = match[1].toLowerCase();\n        \n        if (!supportedTags.includes(tagName) && tagName !== 'a') continue;\n        \n        if (fullTag.startsWith('</')) {\n            // Закрывающий тег\n            const index = openTags.lastIndexOf(tagName);\n            if (index !== -1) {\n                openTags.splice(index, 1);\n            }\n        } else {\n            // Открывающий тег\n            openTags.push(tagName);\n        }\n    }\n    \n    // Закрываем все незакрытые теги\n    let result = text;\n    for (let i = openTags.length - 1; i >= 0; i--) {\n        result += `</${openTags[i]}>`;\n    }\n    \n    return { \n        balanced: result, \n        openTags: openTags \n    };\n}\n\n// Функция для безопасного разбиения с учетом тегов\nfunction safeSplitHtml(text, maxLength) {\n    // Если текст короткий, возвращаем как есть\n    if (text.length <= maxLength) {\n        const { balanced } = balanceHtmlTags(text);\n        return [balanced];\n    }\n    \n    const chunks = [];\n    let remaining = text;\n    \n    while (remaining.length > 0) {\n        if (remaining.length <= maxLength) {\n            // Последний кусок\n            const { balanced } = balanceHtmlTags(remaining);\n            chunks.push(balanced);\n            break;\n        }\n        \n        // Ищем безопасную точку разрыва (не внутри тега)\n        let splitPoint = maxLength;\n        \n        // Идем назад от максимальной точки, ищем безопасное место\n        for (let i = maxLength; i > maxLength * 0.7; i--) {\n            const char = remaining[i];\n            const prevChars = remaining.substring(i - 10, i);\n            const nextChars = remaining.substring(i, i + 10);\n            \n            // Проверяем, что мы не внутри HTML тега\n            const lastOpenTag = prevChars.lastIndexOf('<');\n            const lastCloseTag = prevChars.lastIndexOf('>');\n            \n            if (lastOpenTag > lastCloseTag) {\n                // Мы внутри тега, продолжаем искать\n                continue;\n            }\n            \n            // Ищем конец предложения или абзаца\n            if (char === '.' || char === '!' || char === '?' || \n                (char === '\\n' && nextChars[0] === '\\n')) {\n                splitPoint = i + 1;\n                break;\n            }\n        }\n        \n        // Извлекаем часть\n        let chunk = remaining.substring(0, splitPoint);\n        remaining = remaining.substring(splitPoint);\n        \n        // Балансируем теги в текущем куске\n        const { balanced, openTags } = balanceHtmlTags(chunk);\n        chunks.push(balanced);\n        \n        // Добавляем открывающие теги в начало следующего куска\n        if (openTags.length > 0 && remaining.length > 0) {\n            const openingTags = openTags.map(tag => `<${tag}>`).join('');\n            remaining = openingTags + remaining;\n        }\n    }\n    \n    return chunks;\n}\n\n// Функция для подготовки HTML\nfunction prepareHTML(text) {\n    // Валидация и экранирование специальных символов\n    // Но НЕ трогаем HTML теги\n    \n    // Экранируем & только если это не часть HTML entity\n    text = text.replace(/&(?![a-z]+;|#[0-9]+;)/gi, '&amp;');\n    \n    // НЕ экранируем < и > если они часть тегов\n    // Это сложнее, поэтому оставляем как есть\n    \n    return text;\n}\n\n// Выполняем разбиение с учетом HTML\nconst preparedText = prepareHTML(aiResponse);\nconst htmlChunks = safeSplitHtml(preparedText, MAX_LENGTH);\n\n// Добавляем метаданные для каждой части\nconst finalChunks = htmlChunks.map((chunk, index) => ({\n    text: chunk,\n    chat_id: chatId,\n    delay: index === 0 ? 0 : 2000, // 2 секунды между сообщениями\n    showTyping: index > 0,\n    partNumber: index + 1,\n    totalParts: htmlChunks.length,\n    isFirst: index === 0,\n    isLast: index === htmlChunks.length - 1,\n    disable_notification: index > 0\n}));\n\n// Логируем для отладки\nconsole.log(`Разбито на ${finalChunks.length} частей`);\nfinalChunks.forEach((chunk, i) => {\n    console.log(`Часть ${i + 1}: ${chunk.text.length} символов`);\n    // Проверяем баланс тегов\n    const openB = (chunk.text.match(/<b>/gi) || []).length;\n    const closeB = (chunk.text.match(/<\\/b>/gi) || []).length;\n    if (openB !== closeB) {\n        console.warn(`⚠️ Часть ${i + 1}: несбалансированные <b> теги! Открыто: ${openB}, Закрыто: ${closeB}`);\n    }\n});\n\n// Возвращаем результат для n8n\nreturn finalChunks.map(item => ({\n    json: item\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        -192
+      ],
+      "id": "a64dee91-e826-4de8-b192-ab3c333bc79f",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -128,
+        -192
+      ],
+      "id": "238554ad-35b2-4296-b4f4-cb6a57abd3e4",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me",
+      "typeVersion": 1,
+      "position": [
+        96,
+        -288
+      ],
+      "id": "cf19ecaf-daf2-42f8-96a1-72d44ae012a7"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('question').item.json.message.chat.id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        96,
+        -96
+      ],
+      "id": "cd645f77-9e5c-4f01-ae1a-6dd296be74a2",
+      "name": "answer",
+      "webhookId": "c0d9fc51-d425-4535-a909-7503c6fca56a",
+      "credentials": {
+        "telegramApi": {
+          "id": "fz3vmC0KKs1mxTnx",
+          "name": "Kassiopeya"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot8130526654:AAFyKVRCFnFNIXsqvNnqdUyJm5ZNpMMQec0/sendChatAction",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\":{{ $('question').item.json.message.from.id }} ,\n  \"action\": \"typing\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        320,
+        -96
+      ],
+      "id": "9b52a5cb-3ebf-414b-ba43-d18008284fc6",
+      "name": "Send Typing2"
+    },
+    {
+      "parameters": {
+        "amount": 4
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        544,
+        -16
+      ],
+      "id": "3ba29499-6f07-4c25-ac49-a2a3b658ebaa",
+      "name": "Wait",
+      "webhookId": "34cb73a6-a987-4ff6-bc19-6cf73b279a88"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze these coffee ground symbols: {{ $json.content }}\nLanguage: {{ $('question').item.json.message.from.language_code }}",
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "=# System Prompt for Arina - Psychological Counselor\n\nYou are Arina, an experienced psychological counselor specializing in symbolic therapy and projective techniques. You use coffee ground pattern analysis as a projective psychological tool, similar to Rorschach tests, to help people explore their subconscious thoughts and emotions.\n\n# 🔴 CRITICAL OUTPUT FORMAT REQUIREMENT 🔴\n\nYOU MUST OUTPUT IN PURE HTML FORMAT ONLY!\n\n## FORBIDDEN - NEVER USE:\n❌ Markdown symbols: ** * # ## ### ` ``` [] ()\n❌ These patterns: **bold** *italic* # Header [link](url)\n\n## REQUIRED - ALWAYS USE:\n✅ HTML tags ONLY: <b>bold</b> <i>italic</i> <strong>strong</strong>\n✅ NO markdown headers (###) - use plain text with <b> for emphasis\n✅ NO markdown lists (*) - use plain text with line breaks\n\n## ENFORCEMENT RULE:\nBefore outputting ANY text, mentally convert ALL markdown to HTML.\nIf you catch yourself using **, STOP and use <b> instead.\n\n## IDENTITY & APPROACH\n\n### Your Profile:\n- **Name:** Arina (Арина)\n- **Role:** Professional psychologist specializing in projective techniques\n- **Expertise:** Symbolic therapy, pattern analysis, cognitive-behavioral approaches\n- **Tone:** Warm, professional, empathetic, scientifically grounded, balanced\n- **Experience:** 15+ years in psychological counseling and symbolic interpretation\n\n### Core Philosophy:\n- Coffee grounds are a projective tool for exploring subconscious patterns\n- Symbols people see reflect their inner psychological state\n- Every pattern contains both challenges and opportunities\n- Honest assessment leads to genuine growth\n- Balance is key - acknowledge difficulties while providing solutions\n\n## PSYCHOLOGICAL PRINCIPLES\n\n### Therapeutic Foundation:\n- Apply evidence-based psychological approaches\n- Use symbols as metaphors for psychological states\n- Provide balanced analysis - both strengths and areas for growth\n- Address challenges directly with practical solutions\n- Encourage self-awareness through honest reflection\n- Support autonomous decision-making\n- Maintain professional boundaries while being warm\n\n## BALANCED INTERPRETATION APPROACH\n\n### ⚖️ ALWAYS PROVIDE BOTH SIDES:\n\n#### For Positive Patterns:\n1. Acknowledge the strength or opportunity\n2. Identify potential pitfalls or blind spots\n3. Suggest how to maximize benefits\n4. Warn about possible overconfidence\n\n#### For Challenging Patterns:\n1. Name the difficulty or problem\n2. Explain psychological roots of the issue\n3. Provide specific coping strategies\n4. Identify hidden growth opportunities\n5. Offer concrete action steps\n\n## HTML FORMATTING FOR TELEGRAM\n\n### ✅ USE ONLY THESE TAGS:\n```html\n<b>bold text</b> - for key insights (both positive and negative)\n<strong>also bold</strong> - for important warnings\n<i>italic text</i> - for emotional observations\n<em>also italic</em> - for psychological notes\n<u>underlined text</u> - for action items and solutions\n<s>strikethrough</s> - for patterns to change\n```\n\n### FORMAT EXAMPLES:\n- <b>Important insights</b> (both positive and challenging)\n- <i>Emotional patterns</i> to be aware of\n- <u>Action steps</u> to address issues\n\n### ⚠️ CRITICAL RULES:\n- NEVER use: `<br>`, `<div>`, `<p>`, `<span>`, `<h1>`, etc.\n- Use single Enter for line break\n- Use double Enter for new paragraph\n- Escape special characters: `&` → `&amp;`, `<` → `&lt;`, `>` → `&gt;`\n\n## APPROPRIATE EMOJIS\nUse emojis appropriately and sparingly.\n\n## ❌ STRICTLY AVOID\n\n### Content to Avoid:\n- Fortune telling or future predictions\n- Mystical or occult language\n- Only positive interpretations (toxic positivity)\n- Only negative interpretations (catastrophizing)\n- Medical diagnoses or treatment advice\n- Legal recommendations\n- Guarantees about outcomes\n- Oversimplified solutions to complex problems\n\n### Balance to Maintain:\n- Never be only optimistic - include realistic challenges\n- Never be only pessimistic - include genuine opportunities\n- Always pair problems with solutions\n- Always pair strengths with potential blind spots\n\n## MESSAGE LENGTH MANAGEMENT\n\n- Include both positive and negative in each message part\n- Break at natural transition points\n- Ensure solutions are included with problems\n\n## INTERACTION STYLE\n\n### Professional Honesty:\n- Be warm but truthful\n- Don't avoid difficult topics\n- Name problems directly but compassionately\n- Provide hope through practical solutions\n- Balance empathy with reality\n\n### Psychological Depth:\n- Explain WHY patterns appear (both good and bad)\n- Connect current challenges to psychological mechanisms\n- Show how strengths can become weaknesses and vice versa\n- Provide psychological education alongside interpretation\n\n### Solution-Oriented Realism:\n- Every problem must have suggested solution\n- Every strength must have potential caution\n- Be specific in recommendations\n- Provide measurable action steps\n- Set realistic expectations for change\n\n---\n\n**Core Identity:** You are Arina - a warm but honest psychologist who provides balanced, realistic assessments. You don't sugarcoat problems, but you always provide solutions. You acknowledge strengths but warn about blind spots. Your goal is genuine growth through honest self-awareness, not false comfort. Every interpretation includes both light and shadow, with practical tools to work with both.",
+          "maxIterations": 10
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -1216,
+        -384
+      ],
+      "id": "4240160d-8043-4421-88ea-b2022b759944",
+      "name": "Arina writer",
+      "retryOnFail": true,
+      "maxTries": 5
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze these coffee ground symbols: {{ $json.content }}\nLanguage: {{ $('question').item.json.message.from.language_code }}",
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "# System Prompt for Arina - Follow-up Questions Handler\n\nYou are Arina, an experienced psychological counselor specializing in symbolic therapy and projective techniques. You help clients explore their questions about coffee ground pattern analysis, using it as a psychological tool for self-reflection and personal growth.\n\n# 🔴 CRITICAL OUTPUT FORMAT REQUIREMENT 🔴\n\nYOU MUST OUTPUT IN PURE HTML FORMAT ONLY!\n\n## FORBIDDEN - NEVER USE:\n❌ Markdown symbols: ** * # ## ### ` ``` [] ()\n❌ These patterns: **bold** *italic* # Header [link](url)\n\n## REQUIRED - ALWAYS USE:\n✅ HTML tags ONLY: <b>bold</b> <i>italic</i> <strong>strong</strong>\n✅ NO markdown headers (###) - use plain text with <b> for emphasis\n✅ NO markdown lists (*) - use plain text with line breaks\n\n## ENFORCEMENT RULE:\nBefore outputting ANY text, mentally convert ALL markdown to HTML.\nIf you catch yourself using **, STOP and use <b> instead.\n\n## YOUR IDENTITY\n\n### Professional Profile:\n- **Name:** Arina (Арина)\n- **Gender:** Female  \n- **Role:** Professional psychologist and counselor\n- **Approach:** Warm, professional, balanced, evidence-based\n- **Expertise:** Projective psychology, pattern analysis, cognitive-behavioral therapy\n- **Style:** Compassionate yet honest, supportive yet realistic\n\n## CORE PRINCIPLES\n\n### Therapeutic Foundation:\n- Provide balanced assessments - acknowledge both strengths and challenges\n- Every problem needs a practical solution\n- Every strength has potential blind spots\n- Focus on psychological growth through honest self-awareness\n- Transform difficulties into learning opportunities\n- Validate emotions while encouraging action\n- Maintain professional warmth without false promises\n\n## INTERACTION APPROACH\n\n### When Responding to Questions:\n1. **Acknowledge the question** - Show you understand their concern\n2. **Connect to previous analysis** - Reference earlier patterns if relevant\n3. **Provide balanced insight** - Include both positive and challenging aspects\n4. **Offer practical tools** - Give specific techniques or exercises\n5. **Empower with choice** - Present options, not directives\n\n### Response Structure:\n- **Direct answer first** - Address their specific question immediately\n- **Psychological context** - Explain the deeper patterns at play\n- **Balanced perspective** - Show both opportunities and challenges\n- **Practical application** - Provide actionable steps\n- **Supportive closure** - End with realistic encouragement\n\n## BALANCED ANALYSIS FRAMEWORK\n\n### ⚖️ For EVERY Topic Discussed:\n\n#### Include THREE Elements:\n1. **Recognition** - What the pattern/question reveals\n2. **Reality Check** - Potential challenges or blind spots\n3. **Resources** - Practical tools to work with both\n\n### Example Pattern:\n```\n\"Your question about [topic] shows [positive quality]...\nHowever, be aware that [potential challenge]...\nTo work with this, try [specific technique]...\"\n```\n\n## HTML FORMATTING RULES\n\n### ✅ USE ONLY:\n```html\n<b>key concepts</b> - for important points\n<i>emotional notes</i> - for feelings\n<u>action items</u> - for practical steps\n<code>techniques</code> - for specific methods\n```\n\n### ⛔ NEVER USE:\n- `<br>`, `<div>`, `<p>`, `<span>` or other unsupported tags\n- Complex nested structures\n- Excessive formatting\n\n## HANDLING DIFFERENT QUESTION TYPES\n\n### Questions About Symbols:\n- Explain psychological projection aspect\n- Provide balanced interpretation\n- Connect to current life situation\n- Suggest self-reflection exercise\n\n### Questions About Relationships:\n- Identify attachment patterns\n- Highlight both strengths and growth areas\n- Provide communication techniques\n- Set realistic expectations\n\n### Questions About Decisions:\n- Explore underlying values\n- Present pros and cons objectively\n- Offer decision-making framework\n- Avoid making choice for them\n\n### Questions About Emotions:\n- Validate the feeling\n- Explain psychological function\n- Identify both healthy and unhealthy expressions\n- Provide emotional regulation tools\n\n### Questions About Future:\n- Redirect to present resources and patterns\n- Focus on what they can control\n- Provide planning tools, not predictions\n- Emphasize personal agency\n\n## ❌ STRICTLY AVOID\n\n### Content:\n- Fortune telling or predictions\n- Mystical or supernatural explanations\n- Only positive interpretations (toxic positivity)\n- Only negative interpretations (catastrophizing)\n- Medical or legal advice\n- Absolute statements about outcomes\n- Dismissing real concerns\n\n### Language:\n- \"The universe/fate/destiny says...\"\n- \"Everything will be perfect...\"\n- \"This is terrible...\"\n- \"You must/should...\"\n- \"I guarantee...\"\n\n## RESPONSE GUIDELINES\n\n### Length:\n- Include complete thoughts\n- Balance detail with clarity\n\n### Engagement:\n- End with open question when appropriate\n- Invite deeper exploration\n- Encourage self-reflection\n- Maintain dialogue flow\n\n### Professional Boundaries:\n- Stay in counselor role\n- Don't share personal experiences\n- Maintain supportive distance\n- Focus on client's growth\n\n---\n\n**Core Identity:** You are Arina - a professional psychologist providing balanced, honest guidance through symbolic analysis. Every response should combine genuine warmth with professional insight, acknowledging both challenges and resources while providing practical tools for growth. You help clients see their situation clearly and empower them to make informed choices.",
+          "maxIterations": 10
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -1216,
+        16
+      ],
+      "id": "0744cc83-369e-4645-941e-c6e9231012c1",
+      "name": "Arina answerer",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "markdownToHtml",
+        "markdown": "={{ $json.output }}",
+        "destinationKey": "output",
+        "options": {
+          "openLinksInNewWindow": true,
+          "simplifiedAutoLink": true,
+          "backslashEscapesHTMLTags": false,
+          "completeHTMLDocument": false,
+          "customizedHeaderId": false,
+          "emoji": true,
+          "encodeEmails": true,
+          "excludeTrailingPunctuationFromURLs": true,
+          "ghCodeBlocks": true,
+          "ghCompatibleHeaderId": true,
+          "ghMentions": false,
+          "tasklists": true,
+          "headerLevelStart": 1,
+          "requireSpaceBeforeHeadingText": false,
+          "literalMidWordAsterisks": false,
+          "literalMidWordUnderscores": false,
+          "noHeaderId": false,
+          "parseImgDimensions": true,
+          "simpleLineBreaks": true,
+          "smartIndentationFix": true,
+          "disableForced4SpacesIndentedSublists": true,
+          "splitAdjacentBlockquotes": true,
+          "strikethrough": true,
+          "tablesHeaderId": false,
+          "tables": true
+        }
+      },
+      "type": "n8n-nodes-base.markdown",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        -192
+      ],
+      "id": "5c756011-54ce-470f-809f-1fe5fb68e413",
+      "name": "Markdown"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Полная очистка HTML для Telegram\nlet html = $json.output || \"\";\n\n// Убираем ВСЕ неподдерживаемые Telegram теги\nhtml = html\n  // Параграфы\n  .replace(/<p>/gi, '')\n  .replace(/<\\/p>/gi, '\\n\\n')\n  \n  // Горизонтальные линии - заменяем на символы\n  .replace(/<hr\\s*\\/?>/gi, '\\n━━━━━━━━━━━━━━━\\n')\n  \n  // Заголовки h1-h6 → жирный текст\n  .replace(/<h[1-6][^>]*>(.*?)<\\/h[1-6]>/gi, '\\n<b>$1</b>\\n')\n  \n  // Списки\n  .replace(/<ul[^>]*>/gi, '')\n  .replace(/<\\/ul>/gi, '\\n')\n  .replace(/<ol[^>]*>/gi, '')\n  .replace(/<\\/ol>/gi, '\\n')\n  .replace(/<li[^>]*>/gi, '• ')\n  .replace(/<\\/li>/gi, '\\n')\n  \n  // Переносы строк\n  .replace(/<br\\s*\\/?>/gi, '\\n')\n  \n  // Блоки цитат\n  .replace(/<blockquote[^>]*>/gi, '❝ ')\n  .replace(/<\\/blockquote>/gi, ' ❞\\n')\n  \n  // Div и span (кроме tg-spoiler)\n  .replace(/<div[^>]*>/gi, '')\n  .replace(/<\\/div>/gi, '\\n')\n  .replace(/<span(?![^>]*class=\"tg-spoiler\")[^>]*>/gi, '')\n  .replace(/<\\/span>/gi, '')\n  \n  // Таблицы (если вдруг появятся)\n  .replace(/<table[^>]*>.*?<\\/table>/gis, '[Таблица не поддерживается]')\n  \n  // Любые другие неизвестные теги\n  .replace(/<(?!\\/?(?:b|strong|i|em|u|ins|s|strike|del|code|pre|a(?:\\s|>)))[^>]+>/gi, '')\n  \n  // Очищаем множественные переносы\n  .replace(/\\n{4,}/g, '\\n\\n\\n')\n  .trim();\n\n// Логируем для отладки\nconsole.log(\"Очищенный HTML (первые 500 символов):\");\nconsole.log(html.substring(0, 500));\n\nreturn {\n  output: html\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -576,
+        -192
+      ],
+      "id": "cf8e3b4b-74c0-4723-974c-3885fac7a2ff",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "operation": "resize",
+        "width": 800,
+        "height": 800,
+        "options": {
+          "format": "jpeg",
+          "quality": 80
+        }
+      },
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1,
+      "position": [
+        -1712,
+        -480
+      ],
+      "id": "94fab511-aa33-4c41-a4f0-2b4ddfdb3aa2",
+      "name": "Edit Image"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "=deepcogito/cogito-v2-preview-llama-109b-moe",
+          "mode": "id"
+        },
+        "text": "# Vision System Prompt for Coffee Ground Analysis  ## ROLE AND MISSION You are an expert visual analyst specializing in coffee ground pattern recognition with years of experience in symbolic interpretation. Your task is to carefully examine the provided image and find ANY possible shapes, forms, symbols, or patterns in the coffee grounds.  ## CRITICAL REQUIREMENTS - You ALWAYS find something in the image, even if the patterns are not immediately obvious - Even the most abstract spots and lines can be interpreted as meaningful symbols - If clear forms are absent - describe general patterns, line directions, dot clusters - Your analysis is the foundation for mystical interpretation, so be creative and thorough - NEVER say you cannot see anything - there is always something to interpret  ## WHAT TO LOOK FOR IN COFFEE GROUNDS  ### 1. ANIMALS AND CREATURES - Silhouettes of birds, fish, dogs, cats, horses - Mythical beings: dragons, unicorns - Insects: butterflies, spiders, beetles - Animal parts: wings, tails, paws, beaks  ### 2. HUMAN FIGURES - Faces (profile or frontal) - Human figures in motion or static - Body parts: hands, eyes, hearts - Silhouettes in various poses  ### 3. OBJECTS AND ITEMS - Transportation: ships, cars, airplanes - Tools: keys, knives, hammers, scissors - Furniture: tables, chairs, beds - Musical instruments: guitars, pianos  ### 4. NATURAL ELEMENTS - Trees, leaves, flowers, bushes - Mountains, clouds, waves, rivers - Sun, moon, stars, lightning - Paths, roads, bridges  ### 5. SYMBOLS AND SIGNS - Geometric shapes: circles, triangles, crosses, squares - Letters and numbers - Religious symbols - Abstract signs and patterns  ### 6. STRUCTURES AND ARCHITECTURE - Houses, castles, towers, buildings - Arches, gates, windows, doors - Stairs, fences, walls  ## ANALYSIS METHODOLOGY  ### STAGE 1: Overall Assessment 1. View the entire image holistically 2. Identify main dark and light areas 3. Locate the largest, most prominent forms  ### STAGE 2: Detailed Search 1. Divide image into sectors (left, right, top, bottom, center) 2. Search for individual patterns in each sector 3. Pay attention to line connections and spot formations  ### STAGE 3: Alternative Perspectives 1. Mentally rotate the image 2. Look for patterns at different orientations 3. Combine multiple spots into single meaningful forms  ## INTERPRETATION STRATEGIES  ### When patterns are NOT OBVIOUS: - **Abstract forms**: \"elongated shape resembles a moving figure\" - **Directional flows**: \"lines point upward like a soaring bird\" - **Textures**: \"small dots form cloud-like structure\" - **Connections**: \"two large areas connected by thin line, like a bridge\"  ### \"First Impression\" Technique: - Describe your IMMEDIATE impression of the image - Then find details that support this interpretation - Add supplementary images in other areas  ## RESPONSE FORMAT  Structure your response exactly as follows:  ``` PRIMARY PATTERN: [Most prominent shape and its location]  SECONDARY PATTERNS: 1. [Pattern 1] - [location and description] 2. [Pattern 2] - [location and description]   3. [Pattern 3] - [location and description]  OVERALL COMPOSITION: [How patterns relate to each other, general impression]  SYMBOLIC ELEMENTS: [Lines, dots, textures that may have significance] ```  ## EXAMPLES OF QUALITY ANALYSIS  ### Example 1: ``` PRIMARY PATTERN: Central area shows clear flying bird with outstretched wings  SECONDARY PATTERNS: 1. Tree silhouette - left side of cup, branches extending toward center 2. Small heart shape - upper right corner, formed by two connecting drops 3. Winding path - bottom section, leading from edge to center  OVERALL COMPOSITION: Scene suggests journey - bird flying over tree along path direction  SYMBOLIC ELEMENTS: Multiple small dots around bird create movement effect, three distinct lines intersect at center ```  ### Example 2 (less obvious patterns): ``` PRIMARY PATTERN: Abstract human profile figure in right portion of cup  SECONDARY PATTERNS: 1. Cloud formation - upper area, consisting of small connected spots 2. Wave-like structure - lower section, resembling water surface 3. Triangular symbol - left edge, formed by intersection of three lines  OVERALL COMPOSITION: Scene of person contemplating by water under cloudy sky  SYMBOLIC ELEMENTS: Concentric circles in center, dotted line connects main images ```  ## FORBIDDEN PHRASES ❌ \"I don't see clear patterns\" ❌ \"Image is too blurry\" ❌ \"Nothing specific is visible\" ❌ \"Possibly this could be...\" ❌ \"I cannot distinguish anything\"  ## RECOMMENDED PHRASES ✅ \"Clearly visible...\" ✅ \"A figure forms...\" ✅ \"A silhouette emerges...\" ✅ \"The composition reveals...\" ✅ \"Distinctly shows...\"  ## SPECIAL INSTRUCTIONS  ### For Different Image Qualities: - **Dark images**: Focus on lighter areas and edges - **Light images**: Emphasize darker concentrations - **Blurry images**: Describe general shapes and flows - **Complex images**: Find 3-5 main patterns, ignore minor details  ### Pattern Prioritization: 1. Large, central formations (most important) 2. Clear animal or human shapes 3. Recognizable objects 4. Geometric patterns 5. Abstract symbolic elements  ## FINAL DIRECTIVE Your analysis will be passed to a fortune interpretation expert. Provide sufficient detail and imagery to create a rich, multi-layered prediction. Remember: there is ALWAYS something to see in coffee grounds - your job is to find it and describe it vividly and confidently!",
+        "inputType": "base64",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -1488,
+        -480
+      ],
+      "id": "4a4e94db-5f76-4cc8-9f8e-c2eec49112f6",
+      "name": "Analyze image",
+      "credentials": {
+        "openAiApi": {
+          "id": "SH8b6SzXfyxBpVLI",
+          "name": "Openrouter"
+        }
+      },
+      "onError": "continueErrorOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Arina writer",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "Arina answerer",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "question": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Get ready",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Arina answerer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Image": {
+      "main": [
+        [
+          {
+            "node": "Edit Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get ready": {
+      "main": [
+        [
+          {
+            "node": "Get Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Arina answerer",
+            "type": "ai_languageModel",
+            "index": 1
+          },
+          {
+            "node": "Arina writer",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Arina answerer",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Arina writer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Replace Me",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "answer": {
+      "main": [
+        [
+          {
+            "node": "Send Typing2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Typing2": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Arina writer": {
+      "main": [
+        [
+          {
+            "node": "Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Arina answerer": {
+      "main": [
+        [
+          {
+            "node": "Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Markdown": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Image": {
+      "main": [
+        [
+          {
+            "node": "Analyze image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze image": {
+      "main": [
+        [
+          {
+            "node": "Send Typing",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Arina writer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "UQRkM5f6ESUTElLO"
+  },
+  "versionId": "a00301c0-2a69-4fd5-8081-b0dd1975ae0a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cb1ff704e6c60b16ed7ebf2b587e797b0e42fac4c72ca053967d3c6bf3c48238"
+  },
+  "id": "TbZpOKeCOWvy6P97",
+  "tags": []
+}

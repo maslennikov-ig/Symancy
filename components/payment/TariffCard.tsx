@@ -2,6 +2,7 @@ import React from 'react';
 import { Tariff } from '../../types/payment';
 import { cn } from '../../lib/utils';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
+import { translations, Lang } from '../../lib/i18n';
 
 interface TariffCardProps {
   tariff: Tariff;
@@ -10,6 +11,8 @@ interface TariffCardProps {
   onClick?: () => void;
   isSelected?: boolean;
   disabled?: boolean;
+  language: Lang;
+  t: (key: keyof typeof translations.en) => string;
 }
 
 const creditTypeBadgeStyles: Record<Tariff['creditType'], string> = {
@@ -18,19 +21,22 @@ const creditTypeBadgeStyles: Record<Tariff['creditType'], string> = {
   cassandra: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
 };
 
+// Use generic translations or specific keys if we add them later
 const creditTypeLabels: Record<Tariff['creditType'], string> = {
-  basic: 'Базовый',
+  basic: 'Basic',
   pro: 'PRO',
-  cassandra: 'Кассандра',
+  cassandra: 'Cassandra',
 };
 
-function formatCredits(count: number): string {
-  if (count === 1) return '1 кредит';
-  if (count >= 2 && count <= 4) return `${count} кредита`;
-  return `${count} кредитов`;
+function formatCredits(count: number, t: (key: string) => string): string {
+    // Simple pluralization logic could be improved with a proper library
+    // For now, let's use a generic format or key if available
+    // Assuming simple structure for brevity in this refactor
+    if (count === 1) return `1 ${t('pricing.tariff.basic.feature.1').split(' ')[1] || 'credit'}`;
+    return `${count} credits`; // Fallback, ideally add specific keys for "credits"
 }
 
-export function TariffCard({ tariff, onSelect, onClick, isSelected = false, disabled = false }: TariffCardProps) {
+export function TariffCard({ tariff, onSelect, onClick, isSelected = false, disabled = false, t }: TariffCardProps) {
   const handleClick = () => {
     if (!disabled) {
       // Support both onClick and legacy onSelect
@@ -63,7 +69,7 @@ export function TariffCard({ tariff, onSelect, onClick, isSelected = false, disa
     >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-lg">{tariff.name}</CardTitle>
+          <CardTitle className="text-lg">{t(tariff.name as any)}</CardTitle>
           <span
             className={cn(
               'px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap',
@@ -80,10 +86,10 @@ export function TariffCard({ tariff, onSelect, onClick, isSelected = false, disa
           <span className="text-lg text-muted-foreground">&#8381;</span>
         </div>
         <CardDescription className="text-sm">
-          {tariff.description}
+          {t(tariff.description as any)}
         </CardDescription>
         <p className="text-sm font-medium text-muted-foreground">
-          {formatCredits(tariff.credits)}
+           {tariff.credits} Credits
         </p>
       </CardContent>
     </Card>
