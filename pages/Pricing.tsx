@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import {
@@ -8,40 +8,60 @@ import {
   CardDescription,
   CardContent,
 } from '../components/ui/card';
+import { translations, Lang, detectInitialLanguage, t as i18n_t } from '../lib/i18n';
 
 interface Tariff {
-  name: string;
+  nameKey: string;
   price: string;
-  description: string;
-  features: string[];
+  descriptionKey: string;
+  featureKeys: string[];
   highlighted?: boolean;
 }
 
 const TARIFFS: Tariff[] = [
   {
-    name: 'Новичок',
-    price: '100 руб.',
-    description: '1 базовая расшифровка (3-4 блока анализа)',
-    features: ['1 анализ', 'Базовые блоки', 'История анализов'],
+    nameKey: 'pricing.tariff.basic.name',
+    price: '100 ₽',
+    descriptionKey: 'pricing.tariff.basic.description',
+    featureKeys: [
+      'pricing.tariff.basic.feature.1',
+      'pricing.tariff.basic.feature.2',
+      'pricing.tariff.basic.feature.3'
+    ],
   },
   {
-    name: 'Любитель',
-    price: '300 руб.',
-    description: '5 базовых расшифровок (скидка 40%)',
-    features: ['5 анализов', 'Экономия 40%', 'Базовые блоки', 'История анализов'],
+    nameKey: 'pricing.tariff.pack5.name',
+    price: '300 ₽',
+    descriptionKey: 'pricing.tariff.pack5.description',
+    featureKeys: [
+      'pricing.tariff.pack5.feature.1',
+      'pricing.tariff.pack5.feature.2',
+      'pricing.tariff.pack5.feature.3',
+      'pricing.tariff.pack5.feature.4'
+    ],
     highlighted: true,
   },
   {
-    name: 'Внутренний мудрец',
-    price: '500 руб.',
-    description: '1 PRO расшифровка (6+ блоков, глубокий анализ)',
-    features: ['1 PRO анализ', '6+ блоков', 'Глубокий анализ', 'История анализов'],
+    nameKey: 'pricing.tariff.pro.name',
+    price: '500 ₽',
+    descriptionKey: 'pricing.tariff.pro.description',
+    featureKeys: [
+      'pricing.tariff.pro.feature.1',
+      'pricing.tariff.pro.feature.2',
+      'pricing.tariff.pro.feature.3',
+      'pricing.tariff.pro.feature.4'
+    ],
   },
   {
-    name: 'Кассандра',
-    price: '1 000 руб.',
-    description: '1 эзотерическое предсказание (уникальный формат)',
-    features: ['Эзотерика', 'Уникальный формат', 'Предсказание', 'История анализов'],
+    nameKey: 'pricing.tariff.cassandra.name',
+    price: '1 000 ₽',
+    descriptionKey: 'pricing.tariff.cassandra.description',
+    featureKeys: [
+      'pricing.tariff.cassandra.feature.1',
+      'pricing.tariff.cassandra.feature.2',
+      'pricing.tariff.cassandra.feature.3',
+      'pricing.tariff.cassandra.feature.4'
+    ],
   },
 ];
 
@@ -52,6 +72,20 @@ const TARIFFS: Tariff[] = [
  */
 const Pricing: React.FC = () => {
   const navigate = useNavigate();
+  const [language, setLanguage] = useState<Lang>(detectInitialLanguage);
+
+  useEffect(() => {
+     // Sync language with local storage if it was changed in the main app
+     const savedLang = localStorage.getItem('language');
+     if (savedLang && translations.hasOwnProperty(savedLang)) {
+        setLanguage(savedLang as Lang);
+     }
+  }, []);
+
+  const t = useCallback((key: keyof typeof translations.en) => {
+    return i18n_t(key, language);
+  }, [language]);
+
 
   const handleReturnHome = () => {
     navigate('/');
@@ -63,10 +97,10 @@ const Pricing: React.FC = () => {
         {/* Page header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4 text-foreground">
-            Тарифы Symancy
+            {t('pricing.title')}
           </h1>
           <p className="text-lg text-muted-foreground">
-            Выберите подходящий тариф для анализа кофейной гущи с помощью AI
+            {t('pricing.subtitle')}
           </p>
         </div>
 
@@ -74,7 +108,7 @@ const Pricing: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {TARIFFS.map((tariff) => (
             <Card
-              key={tariff.name}
+              key={tariff.nameKey}
               className={
                 tariff.highlighted
                   ? 'border-2 border-primary shadow-lg'
@@ -82,23 +116,23 @@ const Pricing: React.FC = () => {
               }
             >
               <CardHeader>
-                <CardTitle className="text-xl">{tariff.name}</CardTitle>
+                <CardTitle className="text-xl">{t(tariff.nameKey as any)}</CardTitle>
                 <CardDescription className="text-2xl font-bold text-foreground mt-2">
                   {tariff.price}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
-                  {tariff.description}
+                  {t(tariff.descriptionKey as any)}
                 </p>
                 <ul className="space-y-2">
-                  {tariff.features.map((feature, index) => (
+                  {tariff.featureKeys.map((featureKey, index) => (
                     <li
                       key={index}
                       className="text-sm flex items-start gap-2"
                     >
                       <span className="text-primary">✓</span>
-                      <span>{feature}</span>
+                      <span>{t(featureKey as any)}</span>
                     </li>
                   ))}
                 </ul>
@@ -110,31 +144,31 @@ const Pricing: React.FC = () => {
         {/* How it works section */}
         <div className="bg-card rounded-lg border p-8 mb-12">
           <h2 className="text-2xl font-bold mb-6 text-foreground">
-            Как это работает
+             {t('pricing.howItWorks.title')}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="text-center">
               <div className="text-3xl mb-3">1️⃣</div>
               <p className="text-sm text-muted-foreground">
-                Выберите тариф и оплатите
+                 {t('pricing.howItWorks.step1.text')}
               </p>
             </div>
             <div className="text-center">
               <div className="text-3xl mb-3">2️⃣</div>
               <p className="text-sm text-muted-foreground">
-                На ваш аккаунт начисляются кредиты
+                 {t('pricing.howItWorks.step2.text')}
               </p>
             </div>
             <div className="text-center">
               <div className="text-3xl mb-3">3️⃣</div>
               <p className="text-sm text-muted-foreground">
-                Загрузите фото кофейной гущи
+                 {t('pricing.howItWorks.step3.text')}
               </p>
             </div>
             <div className="text-center">
               <div className="text-3xl mb-3">4️⃣</div>
               <p className="text-sm text-muted-foreground">
-                Получите персональную расшифровку от AI
+                 {t('pricing.howItWorks.step4.text')}
               </p>
             </div>
           </div>
@@ -143,25 +177,25 @@ const Pricing: React.FC = () => {
         {/* Delivery information */}
         <div className="bg-card rounded-lg border p-8 mb-8">
           <h2 className="text-2xl font-bold mb-4 text-foreground">
-            Способ получения услуги
+             {t('pricing.delivery.title')}
           </h2>
           <p className="text-muted-foreground mb-4">
-            Услуга предоставляется <strong>мгновенно</strong> после оплаты:
+             {t('pricing.delivery.instant')}
           </p>
           <ul className="space-y-2 text-muted-foreground">
             <li className="flex items-start gap-2">
               <span className="text-primary">✓</span>
-              <span>Кредиты зачисляются автоматически</span>
+              <span>{t('pricing.delivery.point1')}</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary">✓</span>
               <span>
-                Результат анализа доступен сразу после обработки (1-2 минуты)
+                 {t('pricing.delivery.point2')}
               </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary">✓</span>
-              <span>История всех расшифровок сохраняется в личном кабинете</span>
+              <span>{t('pricing.delivery.point3')}</span>
             </li>
           </ul>
         </div>
@@ -173,7 +207,7 @@ const Pricing: React.FC = () => {
             size="lg"
             className="min-w-[200px]"
           >
-            Вернуться на главную
+             {t('pricing.button.return')}
           </Button>
         </div>
       </div>

@@ -3,6 +3,7 @@ import YooWidget from 'react-yoomoneycheckoutwidget';
 import { LoaderIcon } from '../LoaderIcon';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
+import { translations, Lang, detectInitialLanguage, t as i18n_t } from '../../lib/i18n';
 
 interface PaymentWidgetProps {
   confirmationToken: string;
@@ -22,6 +23,19 @@ export function PaymentWidget({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [widgetKey, setWidgetKey] = useState(0);
+  const [language, setLanguage] = useState<Lang>(detectInitialLanguage);
+
+  useEffect(() => {
+     // Sync language with local storage
+     const savedLang = localStorage.getItem('language');
+     if (savedLang && translations.hasOwnProperty(savedLang)) {
+        setLanguage(savedLang as Lang);
+     }
+  }, []);
+
+  const t = useCallback((key: keyof typeof translations.en) => {
+    return i18n_t(key, language);
+  }, [language]);
 
   // Compute the return URL
   const computedReturnUrl =
@@ -42,12 +56,12 @@ export function PaymentWidget({
   const handleError = useCallback(
     (widgetError: unknown) => {
       console.error('Payment widget error:', widgetError);
-      const errorMessage = 'Ошибка при загрузке платёжной формы';
+      const errorMessage = t('payment.error.widget');
       setError(errorMessage);
       setIsLoading(false);
       onError?.(errorMessage);
     },
-    [onError]
+    [onError, t]
   );
 
   // Handle payment completion
@@ -82,7 +96,7 @@ export function PaymentWidget({
         <div className="flex items-center justify-center py-8">
           <LoaderIcon className="w-8 h-8 animate-spin text-primary" />
           <span className="ml-2 text-muted-foreground">
-            Загрузка платёжной формы...
+            {t('payment.loading.widget')}
           </span>
         </div>
       )}
@@ -92,7 +106,7 @@ export function PaymentWidget({
         <div className="flex flex-col items-center justify-center py-4 space-y-4">
           <p className="text-destructive text-center">{error}</p>
           <Button onClick={handleRetry} variant="outline">
-            Попробовать снова
+            {t('payment.error.retry')}
           </Button>
         </div>
       )}
