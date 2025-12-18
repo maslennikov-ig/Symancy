@@ -2,6 +2,7 @@
 .mcp.json
 mcp.json
 *.mcp.json
+.mcp.local.json
 
 # Claude settings
 .claude/
