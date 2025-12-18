@@ -43,10 +43,10 @@ const Contacts: React.FC = () => {
               Телефон
             </h2>
             <a
-              href="tel:+79623677443"
+              href="tel:+79957675765"
               className="text-foreground hover:text-primary transition-colors underline"
             >
-              +7 (962) 367-74-43
+              +7 (995) 767-57-65
             </a>
           </div>
         </div>
