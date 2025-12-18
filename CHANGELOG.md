@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.3.3] - 2025-12-18
+
+### Fixed
+- fix(gemini): use robust background process detachment for windows notifications (1b76f44)
+
+### Other
+- docs: update documentation\n\nAuto-committed 13 file(s) before creating release.\n\nFiles changed:\n  A	.gemini/scripts/debug_notify.sh   D	.gemini/tests/captured_cmd.txt   D	.gemini/tests/wrapper.sh   M	components/payment/PaymentWidget.tsx   M	components/payment/TariffCard.tsx   M	components/payment/TariffSelector.tsx   A	docs/BACKEND_MIGRATION_SPEC.md   A	docs/MASTER_SPECIFICATION.md   A	docs/ROADMAP_IMPLEMENTATION.md   M	lib/i18n.ts   A	n8n/coffee_reader (5).json   M	pages/Pricing.tsx   M	types/payment.ts\n\n🤖 Generated with Gemini CLI\n\nCo-Authored-By: Gemini <noreply@google.com> (ea204c3)
+- chore: security cleanup - untrack secrets and sanitize workflow (25e3f82)
+
 ## [0.3.2] - 2025-12-18
 
 ### Other
