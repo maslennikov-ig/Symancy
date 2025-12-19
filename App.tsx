@@ -383,12 +383,12 @@ const App: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={mainAppContent} />
-      <Route path="/pricing" element={<Pricing />} />
+      <Route path="/pricing" element={<Pricing language={language} t={t} />} />
       <Route path="/payment/success" element={<PaymentSuccess />} />
       <Route path="/payment/result" element={<PaymentResult />} />
-      <Route path="/offer" element={<Terms />} />
-      <Route path="/terms" element={<Terms />} />
-      <Route path="/contacts" element={<Contacts />} />
+      <Route path="/offer" element={<Terms language={language} t={t} />} />
+      <Route path="/terms" element={<Terms language={language} t={t} />} />
+      <Route path="/contacts" element={<Contacts language={language} t={t} />} />
     </Routes>
   );
 };
