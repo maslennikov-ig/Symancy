@@ -2,7 +2,12 @@
 // Creates YooKassa payment and returns confirmation_token for widget initialization
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "npm:@supabase/supabase-js@2"
-import { corsHeaders } from "../_shared/cors.ts"
+
+// CORS headers (inlined to avoid shared module issues in deployment)
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 // Types
 type ProductType = 'basic' | 'pack5' | 'pro' | 'cassandra'

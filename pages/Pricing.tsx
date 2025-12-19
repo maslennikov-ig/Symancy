@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import {
@@ -8,7 +8,7 @@ import {
   CardDescription,
   CardContent,
 } from '../components/ui/card';
-import { translations, Lang, detectInitialLanguage, t as i18n_t } from '../lib/i18n';
+import { translations, Lang, t as i18n_t } from '../lib/i18n';
 
 interface Tariff {
   nameKey: string;
@@ -16,6 +16,11 @@ interface Tariff {
   descriptionKey: string;
   featureKeys: string[];
   highlighted?: boolean;
+}
+
+interface PricingProps {
+  language?: Lang;
+  t?: (key: keyof typeof translations.en) => string;
 }
 
 const TARIFFS: Tariff[] = [
@@ -70,22 +75,12 @@ const TARIFFS: Tariff[] = [
  *
  * URL: /pricing
  */
-const Pricing: React.FC = () => {
+const Pricing: React.FC<PricingProps> = ({ language: propLanguage, t: propT }) => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState<Lang>(detectInitialLanguage);
-
-  useEffect(() => {
-     // Sync language with local storage if it was changed in the main app
-     const savedLang = localStorage.getItem('language');
-     if (savedLang && translations.hasOwnProperty(savedLang)) {
-        setLanguage(savedLang as Lang);
-     }
-  }, []);
-
-  const t = useCallback((key: keyof typeof translations.en) => {
-    return i18n_t(key, language);
-  }, [language]);
-
+  
+  // Fallback
+  const language = propLanguage || 'en';
+  const t = propT || ((key: any) => i18n_t(key, language));
 
   const handleReturnHome = () => {
     navigate('/');

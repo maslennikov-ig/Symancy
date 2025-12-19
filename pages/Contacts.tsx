@@ -1,14 +1,24 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
+import { translations, Lang, t as i18n_t } from '../lib/i18n';
+
+interface ContactsProps {
+  language?: Lang;
+  t?: (key: keyof typeof translations.en) => string;
+}
 
 /**
  * Contacts page - displays contact information and legal entity details
  *
  * URL: /contacts
  */
-const Contacts: React.FC = () => {
+const Contacts: React.FC<ContactsProps> = ({ language: propLanguage, t: propT }) => {
   const navigate = useNavigate();
+  
+  // Fallback
+  const language = propLanguage || 'en';
+  const t = propT || ((key: any) => i18n_t(key, language));
 
   const handleReturnHome = () => {
     navigate('/');
@@ -20,7 +30,7 @@ const Contacts: React.FC = () => {
         {/* Page Title */}
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-2 text-foreground">
-            Контакты
+            {t('contacts.title')}
           </h1>
         </div>
 
@@ -28,7 +38,7 @@ const Contacts: React.FC = () => {
         <div className="space-y-4">
           <div>
             <h2 className="text-sm font-medium text-muted-foreground mb-2">
-              Email
+              {t('contacts.email')}
             </h2>
             <a
               href="mailto:support@symancy.ru"
@@ -40,7 +50,7 @@ const Contacts: React.FC = () => {
 
           <div>
             <h2 className="text-sm font-medium text-muted-foreground mb-2">
-              Телефон
+              {t('contacts.phone')}
             </h2>
             <a
               href="tel:+79957675765"
@@ -54,17 +64,17 @@ const Contacts: React.FC = () => {
         {/* Legal Entity Details */}
         <div className="border-t border-border pt-6">
           <h2 className="text-lg font-semibold mb-4 text-foreground">
-            Реквизиты
+            {t('contacts.details')}
           </h2>
 
           <div className="space-y-3 text-sm">
             <p className="text-foreground">
-              ИП Вознесенская Анна Юрьевна
+              {t('contacts.details.name')}
             </p>
 
             <div className="font-mono text-muted-foreground space-y-1">
-              <p>ИНН: 771976259033</p>
-              <p>ОГРНИП: 316774600413540</p>
+              <p>{t('contacts.details.inn')}</p>
+              <p>{t('contacts.details.ogrn')}</p>
             </div>
           </div>
         </div>
@@ -76,7 +86,7 @@ const Contacts: React.FC = () => {
             size="lg"
             className="w-full"
           >
-            Вернуться на главную
+            {t('contacts.button.return')}
           </Button>
         </div>
       </div>

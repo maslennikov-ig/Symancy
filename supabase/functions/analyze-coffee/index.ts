@@ -1,8 +1,13 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "npm:@supabase/supabase-js@2"
-import { corsHeaders } from "../_shared/cors.ts"
 import { ARINA_SYSTEM_PROMPT, CASSANDRA_SYSTEM_PROMPT, VISION_SYSTEM_PROMPT } from "./prompts.ts"
+
+// CORS headers (inlined to avoid shared module issues in deployment)
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY")
 const SITE_URL = Deno.env.get("SITE_URL") || "https://symancy.ru"
