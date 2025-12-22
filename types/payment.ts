@@ -68,3 +68,66 @@ export const TARIFFS: Tariff[] = [
     description: 'pricing.tariff.cassandra.description',
   },
 ];
+
+// Telegram Payments Types (Phase 10)
+
+export interface TelegramInvoice {
+  title: string;           // Product name (e.g., "1 анализ кофейной гущи")
+  description: string;     // Product description
+  payload: string;         // JSON string with: user_id, product_type, chat_id
+  provider_token: string;  // YooKassa provider token from BotFather
+  currency: 'RUB';         // Always RUB
+  prices: Array<{
+    label: string;
+    amount: number;        // Price in kopecks (100 RUB = 10000)
+  }>;
+}
+
+export interface PreCheckoutQuery {
+  id: string;
+  from: {
+    id: number;
+    first_name: string;
+    last_name?: string;
+    username?: string;
+  };
+  currency: string;
+  total_amount: number;    // In kopecks
+  invoice_payload: string; // Our payload JSON
+}
+
+export interface SuccessfulPayment {
+  currency: string;
+  total_amount: number;
+  invoice_payload: string;
+  telegram_payment_charge_id: string;
+  provider_payment_charge_id: string; // YooKassa payment ID
+}
+
+export interface TelegramUpdate {
+  update_id: number;
+  message?: {
+    message_id: number;
+    from: {
+      id: number;
+      first_name: string;
+      last_name?: string;
+      username?: string;
+    };
+    chat: {
+      id: number;
+      type: 'private' | 'group' | 'supergroup' | 'channel';
+    };
+    date: number;
+    text?: string;
+    successful_payment?: SuccessfulPayment;
+  };
+  pre_checkout_query?: PreCheckoutQuery;
+}
+
+export interface TelegramInvoicePayload {
+  user_id: string;         // Supabase user ID (need to link Telegram user)
+  product_type: ProductType;
+  telegram_user_id: number;
+  chat_id: number;
+}

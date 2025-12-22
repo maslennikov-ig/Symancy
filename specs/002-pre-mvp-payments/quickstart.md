@@ -12,7 +12,7 @@
 
 2. **Supabase CLI** installed and linked to project
    ```bash
-   supabase link --project-ref diqooqbuchsliypgwksu
+   supabase link --project-ref johspxgvkbrysxhilmbg
    ```
 
 3. **Local development environment**
@@ -265,7 +265,7 @@ supabase functions deploy payment-webhook
 
 In YooKassa dashboard:
 1. Go to Settings → HTTP notifications
-2. Add URL: `https://diqooqbuchsliypgwksu.supabase.co/functions/v1/payment-webhook`
+2. Add URL: `https://johspxgvkbrysxhilmbg.supabase.co/functions/v1/payment-webhook`
 3. Select events: `payment.succeeded`, `payment.canceled`
 4. Copy webhook secret to Supabase secrets
 

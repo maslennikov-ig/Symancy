@@ -62,7 +62,7 @@ secretKey: _______________ (секретный ключ, начинается с
 
 | Поле | Значение |
 |------|----------|
-| URL | `https://diqooqbuchsliypgwksu.supabase.co/functions/v1/payment-webhook` |
+| URL | `https://johspxgvkbrysxhilmbg.supabase.co/functions/v1/payment-webhook` |
 | События | ✅ payment.succeeded, ✅ payment.canceled |
 
 4. После сохранения скопируйте **Секретный ключ для подписи** и пришлите:
