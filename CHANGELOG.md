@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.3.6] - 2025-12-22
+
+### Added
+- **payments**: add Telegram bot payments (Phase 10) (5e43061)
+
 ## [0.3.5] - 2025-12-19
 
 ## [0.3.4] - 2025-12-18
