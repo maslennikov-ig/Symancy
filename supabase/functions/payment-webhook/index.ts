@@ -1,5 +1,5 @@
 // supabase/functions/payment-webhook/index.ts
-// YooKassa webhook handler with HMAC-SHA256 signature verification
+// YooKassa webhook handler with API-based payment verification
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2"
 
@@ -45,54 +45,34 @@ const TARIFFS: Record<ProductType, Tariff> = {
   cassandra: { price: 1000, credits: 1, creditType: 'cassandra', name: 'Кассандра' },
 }
 
-// HMAC-SHA256 signature verification using Web Crypto API
-async function verifySignature(
-  body: string,
-  signature: string | null,
-  secret: string
-): Promise<boolean> {
-  if (!signature) return false
-
+// Verify payment by calling YooKassa API
+// This is the recommended approach per YooKassa docs (no HMAC signature)
+async function verifyPaymentWithApi(
+  paymentId: string,
+  shopId: string,
+  secretKey: string
+): Promise<YooKassaPayment | null> {
   try {
-    const encoder = new TextEncoder()
+    const credentials = btoa(`${shopId}:${secretKey}`)
 
-    // Import secret key for HMAC
-    const key = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(secret),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    )
+    const response = await fetch(`https://api.yookassa.ru/v3/payments/${paymentId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${credentials}`,
+        'Content-Type': 'application/json',
+      },
+    })
 
-    // Generate signature from body
-    const signatureBuffer = await crypto.subtle.sign(
-      'HMAC',
-      key,
-      encoder.encode(body)
-    )
+    if (!response.ok) {
+      console.error('YooKassa API error:', response.status, await response.text())
+      return null
+    }
 
-    // Convert to base64
-    const expectedSignature = btoa(
-      String.fromCharCode(...new Uint8Array(signatureBuffer))
-    )
-
-    // Constant-time comparison to prevent timing attacks
-    return timingSafeEqual(signature, expectedSignature)
+    return await response.json()
   } catch (error) {
-    console.error('Signature verification error:', error)
-    return false
+    console.error('YooKassa API verification error:', error)
+    return null
   }
-}
-
-// Constant-time string comparison
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  let result = 0
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  }
-  return result === 0
 }
 
 // Get tariff details for a product type
@@ -313,35 +293,18 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Get raw body for signature verification
+    // Get raw body
     const body = await req.text()
 
-    // Get signature from header
-    const signature = req.headers.get('x-yookassa-signature')
+    // Get YooKassa credentials for API verification
+    const shopId = Deno.env.get('YUKASSA_SHOP_ID')
+    const secretKey = Deno.env.get('YUKASSA_SECRET_KEY')
 
-    // Get webhook secret from environment
-    const webhookSecret = Deno.env.get('YUKASSA_WEBHOOK_SECRET')
-
-    if (!webhookSecret) {
-      console.error('YUKASSA_WEBHOOK_SECRET not configured')
-      // Return 200 to prevent YooKassa retries, but log error
+    if (!shopId || !secretKey) {
+      console.error('YooKassa credentials not configured')
       return new Response(
         JSON.stringify({ ok: true }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Verify signature
-    const isValid = await verifySignature(body, signature, webhookSecret)
-
-    if (!isValid) {
-      console.error('Invalid webhook signature', {
-        signaturePresent: !!signature,
-        bodyLength: body.length
-      })
-      return new Response(
-        JSON.stringify({ error: 'Invalid signature', code: 'INVALID_SIGNATURE' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -374,6 +337,29 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ ok: true }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Verify payment exists and status matches via YooKassa API
+    // This is the recommended verification method per YooKassa docs
+    const verifiedPayment = await verifyPaymentWithApi(payment.id, shopId, secretKey)
+
+    if (!verifiedPayment) {
+      console.error('Could not verify payment with YooKassa API:', payment.id)
+      return new Response(
+        JSON.stringify({ error: 'Payment verification failed', code: 'VERIFICATION_FAILED' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (verifiedPayment.status !== payment.status) {
+      console.error('Payment status mismatch:', {
+        webhook_status: payment.status,
+        api_status: verifiedPayment.status
+      })
+      return new Response(
+        JSON.stringify({ error: 'Status mismatch', code: 'STATUS_MISMATCH' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
