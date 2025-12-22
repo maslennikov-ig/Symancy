@@ -59,7 +59,7 @@
   → Artifacts: [cors.ts](../../supabase/functions/_shared/cors.ts), [create-payment/index.ts](../../supabase/functions/create-payment/index.ts), [payment-webhook/index.ts](../../supabase/functions/payment-webhook/index.ts)
 - [X] T004 [EXECUTOR: supabase-edge-functions-specialist] Create environment variables documentation
   → Artifacts: [.env.example](../../supabase/.env.example)
-- [X] T005 [EXECUTOR: MAIN] Verify Supabase CLI is linked to project (ref: diqooqbuchsliypgwksu)
+- [X] T005 [EXECUTOR: MAIN] Verify Supabase CLI is linked to project (ref: johspxgvkbrysxhilmbg)
   → Verified via Supabase MCP connection
 
 ---
@@ -152,7 +152,7 @@
   → Deployed via Supabase MCP (version 1, ACTIVE)
 - [X] T026 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] [US3] Document webhook URL
   → Documented in [.env.example](../../supabase/.env.example)
-  → URL: `https://diqooqbuchsliypgwksu.supabase.co/functions/v1/payment-webhook`
+  → URL: `https://johspxgvkbrysxhilmbg.supabase.co/functions/v1/payment-webhook`
 
 **Checkpoint**: Payment confirmations processed automatically, credits granted ✓
 
@@ -300,18 +300,21 @@ User in Telegram → Bot sends Invoice →
 - [ ] T046 [EXECUTOR: MANUAL] [SEQUENTIAL] Configure YooKassa as payment provider in BotFather:
   - `/mybots` → Select bot → Payments → Connect YooKassa
   - Get `provider_token` for YooKassa
-- [ ] T047 [EXECUTOR: typescript-types-specialist] [SEQUENTIAL] Add Telegram payment types to `types/payment.ts`:
+- [X] T047 [EXECUTOR: typescript-types-specialist] [SEQUENTIAL] Add Telegram payment types to `types/payment.ts`:
   - TelegramInvoice, PreCheckoutQuery, SuccessfulPayment
-- [ ] T048 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] Create Edge Function `supabase/functions/telegram-bot-webhook/index.ts`:
+  → Artifacts: [types/payment.ts](../../types/payment.ts)
+- [X] T048 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] Create Edge Function `supabase/functions/telegram-bot-webhook/index.ts`:
   - Handle `/buy` command → send invoice
   - Handle `pre_checkout_query` → validate and confirm
   - Handle `successful_payment` → call grant_credits RPC
-- [ ] T049 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] Deploy telegram-bot-webhook function
+  → Artifacts: [telegram-bot-webhook/index.ts](../../supabase/functions/telegram-bot-webhook/index.ts)
+- [X] T049 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] Deploy telegram-bot-webhook function (requires MCP restart for new project)
 - [ ] T050 [EXECUTOR: MANUAL] [SEQUENTIAL] Set bot webhook URL in Telegram:
-  - `https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://diqooqbuchsliypgwksu.supabase.co/functions/v1/telegram-bot-webhook`
-- [ ] T051 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] Add Telegram secrets:
+  - `https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://johspxgvkbrysxhilmbg.supabase.co/functions/v1/telegram-bot-webhook`
+- [X] T051 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] Add Telegram secrets:
   - `TELEGRAM_BOT_TOKEN`
   - `TELEGRAM_PAYMENT_PROVIDER_TOKEN`
+  → Artifacts: [supabase/.env.example](../../supabase/.env.example)
 - [ ] T052 [EXECUTOR: MANUAL] [SEQUENTIAL] Test Telegram payments in sandbox:
   - Send `/buy` to bot
   - Complete test payment

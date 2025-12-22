@@ -29,7 +29,7 @@ pnpm build
 Создайте `.env.local`:
 
 ```env
-VITE_SUPABASE_URL=https://diqooqbuchsliypgwksu.supabase.co
+VITE_SUPABASE_URL=https://johspxgvkbrysxhilmbg.supabase.co
 VITE_SUPABASE_ANON_KEY=your_anon_key
 VITE_GEMINI_API_KEY=your_gemini_key
 ```
@@ -80,7 +80,7 @@ symancy/
    ```
 3. Настройте webhook URL в YooKassa:
    ```
-   https://diqooqbuchsliypgwksu.supabase.co/functions/v1/payment-webhook
+   https://johspxgvkbrysxhilmbg.supabase.co/functions/v1/payment-webhook
    ```
 
 ## Лицензия
