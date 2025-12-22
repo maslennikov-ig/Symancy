@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import type { ProductType, UserCredits, Purchase } from '../types/payment';
 
 // Edge Function base URL - matches the Supabase project URL
-const EDGE_FUNCTION_URL = 'https://ekdimahwukvgwmbhxolw.supabase.co/functions/v1';
+const EDGE_FUNCTION_URL = 'https://johspxgvkbrysxhilmbg.supabase.co/functions/v1';
 
 /**
  * Response from create-payment Edge Function
