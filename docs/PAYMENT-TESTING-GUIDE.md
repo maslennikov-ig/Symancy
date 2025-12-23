@@ -5,12 +5,7 @@
 ### 1. Откройте тестовую страницу
 
 ```
-https://ваш-сайт.com/test-payment
-```
-
-Или локально:
-```
-http://localhost:5173/test-payment
+https://symancy.ru/test-payment
 ```
 
 ### 2. Авторизуйтесь
