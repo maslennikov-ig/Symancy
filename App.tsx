@@ -16,6 +16,7 @@ import PaymentResult from './pages/PaymentResult';
 import Pricing from './pages/Pricing';
 import Terms from './pages/Terms';
 import Contacts from './pages/Contacts';
+import TestPayment from './pages/TestPayment';
 import { LoaderIcon } from './components/LoaderIcon';
 import { MysticalBackground } from './components/MysticalCoffeeCupIllustration';
 import { OfficialLogo } from './components/logos/OfficialLogo';
@@ -389,6 +390,7 @@ const App: React.FC = () => {
       <Route path="/offer" element={<Terms language={language} t={t} />} />
       <Route path="/terms" element={<Terms language={language} t={t} />} />
       <Route path="/contacts" element={<Contacts language={language} t={t} />} />
+      <Route path="/test-payment" element={<TestPayment />} />
     </Routes>
   );
 };
