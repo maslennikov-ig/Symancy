@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.3.11] - 2025-12-23
+
+### Added
+- feat: improve test payment page with guest mode and update documentation (b4807a3)
+
+### Fixed
+- fix: resolve react hook conflict by deduplicating react instances via pnpm overrides (0e8c37d)
+
+### Other
+- revert: remove guest mode from test payment page (6b30c43)
+
 ## [0.3.10] - 2025-12-23
 
 ### Fixed
