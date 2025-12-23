@@ -25,6 +25,7 @@ export default function TestPayment() {
     purchaseId: string;
     tariff: string;
   } | null>(null);
+  const [isGuestMode, setIsGuestMode] = useState(false);
 
   // Авторизация через magic link
   const handleLogin = async () => {
@@ -44,12 +45,20 @@ export default function TestPayment() {
     }
   };
 
+  // Гостевой режим (только для теста фронтенда)
+  const enterGuestMode = () => {
+    setIsGuestMode(true);
+    setSuccess('Включен гостевой режим. Внимание: кредиты не будут начислены в БД.');
+  };
+
   // Создание платежа
   const handleSelectTariff = async (tariff: typeof TARIFFS[0]) => {
     setIsLoading(true);
     setError(null);
     setSuccess(null);
     try {
+      // Если мы в гостевом режиме и нет реального юзера, 
+      // функция может вернуть ошибку 401. 
       const result = await createPayment(tariff.id);
       setPaymentData({
         confirmationToken: result.confirmation_token,
@@ -58,6 +67,9 @@ export default function TestPayment() {
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка создания платежа');
+      if (!user) {
+        setError('Ошибка: Для создания реального платежа через API ЮKassa нужен ID пользователя. Пожалуйста, авторизуйтесь через Email.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -155,7 +167,7 @@ export default function TestPayment() {
         )}
 
         {/* Авторизация */}
-        {!user && (
+        {!user && !isGuestMode && (
           <div style={{
             background: 'rgba(255, 255, 255, 0.05)',
             borderRadius: '12px',
@@ -166,57 +178,91 @@ export default function TestPayment() {
             <p style={{ color: '#888', marginBottom: '20px' }}>
               Для тестирования платежей нужно авторизоваться
             </p>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <input
-                type="email"
-                placeholder="Введите ваш email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #333',
-                  background: '#1a1a2e',
-                  color: '#fff',
-                  fontSize: '1rem',
-                }}
-              />
-              <button
-                onClick={handleLogin}
-                disabled={isLoading}
-                style={{
-                  padding: '12px 24px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: '#4f46e5',
-                  color: '#fff',
-                  fontSize: '1rem',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  opacity: isLoading ? 0.7 : 1,
-                }}
-              >
-                {isLoading ? 'Загрузка...' : 'Войти'}
-              </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input
+                  type="email"
+                  placeholder="Введите ваш email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #333',
+                    background: '#1a1a2e',
+                    color: '#fff',
+                    fontSize: '1rem',
+                  }}
+                />
+                <button
+                  onClick={handleLogin}
+                  disabled={isLoading}
+                  style={{
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: '#4f46e5',
+                    color: '#fff',
+                    fontSize: '1rem',
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    opacity: isLoading ? 0.7 : 1,
+                  }}
+                >
+                  {isLoading ? 'Загрузка...' : 'Войти'}
+                </button>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <button
+                  onClick={enterGuestMode}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#818cf8',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  Продолжить без входа (только тест UI)
+                </button>
+              </div>
             </div>
           </div>
         )}
 
         {/* Статус авторизации */}
-        {user && (
+        {(user || isGuestMode) && (
           <div style={{
-            background: 'rgba(40, 167, 69, 0.1)',
-            border: '1px solid rgba(40, 167, 69, 0.3)',
+            background: user ? 'rgba(40, 167, 69, 0.1)' : 'rgba(255, 193, 7, 0.1)',
+            border: `1px solid ${user ? 'rgba(40, 167, 69, 0.3)' : 'rgba(255, 193, 7, 0.3)'}`,
             borderRadius: '8px',
             padding: '15px',
             marginBottom: '30px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
           }}>
-            ✅ Авторизован: <strong>{user.email}</strong>
+            <div>
+              {user ? (
+                <>✅ Авторизован: <strong>{user.email}</strong></>
+              ) : (
+                <>⚠️ Режим: <strong>Гость</strong> (тест фронтенда)</>
+              )}
+            </div>
+            {isGuestMode && (
+              <button 
+                onClick={() => setIsGuestMode(false)}
+                style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                Вернуться к логину
+              </button>
+            )}
           </div>
         )}
 
         {/* Выбор тарифа */}
-        {user && !paymentData && (
+        {(user || isGuestMode) && !paymentData && (
           <div style={{
             background: 'rgba(255, 255, 255, 0.05)',
             borderRadius: '12px',
