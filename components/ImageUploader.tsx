@@ -25,7 +25,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect, t }) => {
     event.stopPropagation();
     dragCounter.current++;
     if (event.dataTransfer.items && event.dataTransfer.items.length > 0) {
-      const isImage = Array.from(event.dataTransfer.items).some(item => item.kind === 'file' && item.type.startsWith('image/'));
+      const isImage = Array.from(event.dataTransfer.items).some((item: DataTransferItem) => item.kind === 'file' && item.type.startsWith('image/'));
       setIsValidDrop(isImage);
       setIsDragging(true);
     }

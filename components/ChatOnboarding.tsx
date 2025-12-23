@@ -103,7 +103,7 @@ const ChatOnboarding: React.FC<ChatOnboardingProps> = ({ onAnalysisReady, langua
                   message: msg.message,
                   sentTime: "just now",
                   sender: msg.sender,
-                  direction: msg.direction,
+                  direction: msg.direction as "incoming" | "outgoing",
                   position: "single"
                 }}
               >

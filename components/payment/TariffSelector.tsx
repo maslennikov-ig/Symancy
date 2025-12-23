@@ -97,7 +97,7 @@ const TariffSelector: React.FC<TariffSelectorProps> = ({
               onSelect={() => handleSelectTariff(tariff.type)}
               disabled={isLoading}
               language={language}
-              t={t}
+              t={t as any}
             />
           ))}
         </div>

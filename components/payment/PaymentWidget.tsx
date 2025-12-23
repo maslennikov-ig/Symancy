@@ -121,7 +121,7 @@ export function PaymentWidget({
         >
           <YooWidget
             key={widgetKey}
-            config={widgetConfig}
+            config={widgetConfig as any}
             onComplete={handleComplete}
           />
         </div>

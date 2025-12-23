@@ -7,6 +7,7 @@ interface AuthContextType {
     user: User | null;
     session: Session | null;
     loading: boolean;
+    signIn: (email: string) => Promise<void>;
     signInWithProvider: (provider: Provider) => Promise<void>;
     signOut: () => Promise<void>;
 }
@@ -38,6 +39,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     }, []);
 
+    const signIn = async (email: string) => {
+        const { error } = await supabase.auth.signInWithOtp({ 
+            email,
+            options: {
+                emailRedirectTo: window.location.origin
+            }
+        });
+        if (error) throw error;
+    };
+
     const signInWithProvider = async (provider: Provider) => {
         const { error } = await supabase.auth.signInWithOAuth({ provider });
         if (error) console.error(`Error logging in with ${provider}:`, error.message);
@@ -52,6 +63,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user,
         session,
         loading,
+        signIn,
         signInWithProvider,
         signOut,
     };

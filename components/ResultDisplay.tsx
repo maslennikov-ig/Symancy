@@ -8,7 +8,7 @@ import { ShareIcon } from './ShareIcon';
 import { LoaderIcon } from './LoaderIcon';
 import { ScrollArea } from './ui/scroll-area';
 import { Button } from './ui/button';
-import { AnalysisResponse } from '../services/geminiService';
+import { AnalysisResponse } from '../services/analysisService';
 
 interface ResultDisplayProps {
   analysis: AnalysisResponse;

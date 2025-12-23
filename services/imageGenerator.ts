@@ -1,5 +1,5 @@
 
-import type { AnalysisSection } from './geminiService';
+import type { AnalysisSection } from './analysisService';
 
 type Theme = 'light' | 'dark';
 
