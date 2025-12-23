@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.3.10] - 2025-12-23
+
+### Fixed
+- fix: install missing chat styles and fix telegram bash syntax (118a3ae)
+- fix: temporary disable strict type checking and add telegram debugging (9d3f12b)
+- fix: enforce skipLibCheck in type-check script to ignore vendor errors (5fd684a)
+- fix: unblock CI/CD by suppressing library type conflicts and adding missing dependencies (a2fbb75)
+- fix: resolve typescript compilation errors for CI/CD (12200a5)
+
+### Other
+- docs: update documentation\n\nAuto-committed 1 file(s) before creating release.\n\nFiles changed:\n  M	docs/PAYMENT-TESTING-GUIDE.md\n\n🤖 Generated with Gemini CLI\n\nCo-Authored-By: Gemini <noreply@google.com> (b0a1f3e)
+- chore: update pnpm-lock.yaml to fix CI build (3571c0f)
+- chore: security cleanup - redact leaked bot token in docs and configs (edda6ac)
+
 ## [0.3.9] - 2025-12-23
 
 ### Other
