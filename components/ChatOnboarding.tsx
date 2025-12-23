@@ -41,7 +41,8 @@ const ChatOnboarding: React.FC<ChatOnboardingProps> = ({ onAnalysisReady, langua
   const [isTyping, setIsTyping] = useState(false);
   const [userData, setUserData] = useState<UserData>({});
   const [isUploading, setIsUploading] = useState(false);
-  
+  const greetingSentRef = useRef(false);
+
   // Helper to add message safely
   const addMessage = (text: string, sender: 'Arina' | 'User') => {
     setMessages(prev => [...prev, {
@@ -63,12 +64,13 @@ const ChatOnboarding: React.FC<ChatOnboardingProps> = ({ onAnalysisReady, langua
     }, delay);
   };
 
-  // Initial Greeting
+  // Initial Greeting - only once
   useEffect(() => {
-    if (step === 'GREETING') {
+    if (step === 'GREETING' && !greetingSentRef.current) {
+      greetingSentRef.current = true;
       botSpeak(t('chat.arina.greeting'), 'WAIT_NAME', 500);
     }
-  }, [step, t]); // Added t to dependencies
+  }, []); // Empty deps - run only on mount
 
   const handleSend = (text: string) => {
     addMessage(text, 'User');
@@ -91,7 +93,10 @@ const ChatOnboarding: React.FC<ChatOnboardingProps> = ({ onAnalysisReady, langua
   };
 
   return (
-    <div className="h-[600px] w-full max-w-md mx-auto border rounded-xl overflow-hidden shadow-xl bg-background">
+    <div
+      className="chat-onboarding-container w-full flex-1"
+      style={{ position: 'relative', minHeight: '300px' }}
+    >
       <MainContainer>
         <ChatContainer>
           <MessageList 

@@ -109,18 +109,24 @@ Follow command-specific instructions. See `docs/Agents Ecosystem/AGENT-ORCHESTRA
 - Reports: `docs/reports/{domain}/{YYYY-MM}/`
 
 **Code Standards**:
-- Type-check must pass before commit
-- Build must pass before commit
+- Build & Type-check must pass before commit (use `pnpm type-check` and `pnpm build`)
 - No hardcoded credentials
+- Use `pnpm` as the primary package manager
 
-**Agent Selection**:
-- Worker: Plan file specifies nextAgent (health workflows only)
-- Skill: Reusable utility, no state, <100 lines
+**Deployment & CI/CD**:
+- **Strategy**: Atomic Symlink Deployment (Zero-Downtime).
+- **Automation**: GitHub Actions via `.github/workflows/deploy.yml`.
+- **Infrastructure**: Web root points to `/var/www/symancy/current` which is a symlink to latest release in `releases/`.
+- **Notifications**: Telegram bot sends SUCCESS/FAILED alerts for all production deploys.
+
+**Critical Project Fixes**:
+- **React Deduplication**: We use `pnpm.overrides` in `package.json` to force a single React instance. This is required to fix hook errors in the YooKassa widget.
+- **TypeScript Strictness**: `skipLibCheck: true` and `// @ts-nocheck` are used in specific components (Admin, Payment) to bypass library type conflicts with React 19.
 
 **Supabase Operations**:
 - Use Supabase MCP when `.mcp.json` includes supabase server
-- Project: MegaCampusAI (ref: `johspxgvkbrysxhilmbg`)
-- Migrations: `packages/course-gen-platform/supabase/migrations/`
+- Project: Symancy / MegaCampusAI (ref: `johspxgvkbrysxhilmbg`)
+- Redirect URLs: Must include `http://localhost:5173/**` and `https://symancy.ru/**` for auth to work.
 
 **MCP Configuration**:
 - BASE (`.mcp.base.json`): context7 + sequential-thinking (~600 tokens)
@@ -135,11 +141,16 @@ Follow command-specific instructions. See `docs/Agents Ecosystem/AGENT-ORCHESTRA
 - Architecture: `docs/Agents Ecosystem/ARCHITECTURE.md`
 - Quality gates: `docs/Agents Ecosystem/QUALITY-GATES-SPECIFICATION.md`
 - Report templates: `docs/Agents Ecosystem/REPORT-TEMPLATE-STANDARD.md`
-- **Server access**: `.claude/local.md` (gitignored, SSH/Docker commands)
+- **Server access**: `.claude/local.md` (gitignored, IP: `91.132.59.194`, user: `deploy`)
 
 ## Active Technologies
-- TypeScript 5.8.2, React 19.1.1 + @supabase/supabase-js 2.45.0, YooMoney Checkout Widget (CDN), react-yoomoneycheckoutwidget (wrapper) (002-pre-mvp-payments)
-- Supabase PostgreSQL (existing: `analysis_history`, new: `purchases`, `user_credits`) (002-pre-mvp-payments)
+- TypeScript 5.8.3, React 19.2.0, pnpm 10.x.
+- @supabase/supabase-js 2.84.0, Refine (Dashboard), YooMoney Checkout Widget.
+- Supabase PostgreSQL (Tables: `profiles`, `purchases`, `user_credits`, `analysis_history`).
+
+## UI/UX Requirements
+- **Languages**: 3 (Russian, English, Chinese) - always test translations
+- **Themes**: 2 (light, dark) - always support both themes with CSS variables
 
 ## Recent Changes
 - 002-pre-mvp-payments: Added TypeScript 5.8.2, React 19.1.1 + @supabase/supabase-js 2.45.0, YooMoney Checkout Widget (CDN), react-yoomoneycheckoutwidget (wrapper)

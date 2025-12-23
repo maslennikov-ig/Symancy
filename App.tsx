@@ -275,13 +275,11 @@ const App: React.FC = () => {
     }
 
     return (
-        <div className="w-full h-full flex flex-col">
-            <ChatOnboarding 
-                onAnalysisReady={handleAnalysisReady} 
-                language={language}
-                t={t}
-            />
-        </div>
+        <ChatOnboarding
+            onAnalysisReady={handleAnalysisReady}
+            language={language}
+            t={t}
+        />
     );
   };
 

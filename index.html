@@ -198,6 +198,122 @@
         backdrop-filter: none !important;
     }
   }
+
+  /* Prevent horizontal scroll on mobile */
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  /* Chat container - MUST fill parent height */
+  .chat-onboarding-container {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .chat-onboarding-container .cs-main-container {
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    border-radius: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .chat-onboarding-container .cs-chat-container {
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .chat-onboarding-container .cs-message-list {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  .chat-onboarding-container .cs-message-input {
+    flex-shrink: 0 !important;
+  }
+
+  /* Dark theme overrides for @chatscope/chat-ui-kit */
+  .dark .cs-main-container {
+    background-color: transparent !important;
+    border-color: hsl(var(--border)) !important;
+  }
+
+  .dark .cs-chat-container {
+    background-color: transparent !important;
+  }
+
+  .dark .cs-message-list {
+    background-color: transparent !important;
+  }
+
+  .dark .cs-message--incoming .cs-message__content {
+    background-color: hsl(var(--secondary)) !important;
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .dark .cs-message--outgoing .cs-message__content {
+    background-color: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
+  }
+
+  .dark .cs-message-input {
+    background-color: hsl(var(--card)) !important;
+    border-top: 1px solid hsl(var(--border)) !important;
+  }
+
+  .dark .cs-message-input__content-editor-wrapper,
+  .dark .cs-message-input__content-editor-container,
+  .dark .cs-message-input__content-editor {
+    background-color: hsl(24 9.8% 15%) !important;
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .dark .cs-message-input__content-editor[data-placeholder]:empty:before {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  .dark .cs-button--send {
+    color: hsl(var(--primary)) !important;
+  }
+
+  .dark .cs-button--attachment {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  .dark .cs-typing-indicator {
+    background-color: hsl(var(--secondary)) !important;
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  .dark .cs-typing-indicator__dot {
+    background-color: hsl(var(--muted-foreground)) !important;
+  }
+
+  /* Light theme - transparent backgrounds to inherit card */
+  .light .cs-main-container,
+  .light .cs-chat-container,
+  .light .cs-message-list {
+    background-color: transparent !important;
+  }
+
+  /* Mobile responsive - ensure full width */
+  @media (max-width: 640px) {
+    .chat-onboarding-container {
+      min-height: 250px !important;
+    }
+
+    .chat-onboarding-container .cs-message__content {
+      max-width: 85% !important;
+    }
+  }
 </style>
 
 </head>
