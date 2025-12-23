@@ -12,6 +12,7 @@
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
     "@chatscope/chat-ui-kit-react": "^2.1.1",
+    "@chatscope/chat-ui-kit-styles": "^1.4.0",
     "@refinedev/antd": "^6.0.3",
     "@refinedev/core": "^5.0.7",
     "@refinedev/react-router-v6": "^4.6.2",

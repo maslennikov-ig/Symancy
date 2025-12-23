@@ -135,7 +135,7 @@ jobs:
           
           echo "Telegram Response: $RESPONSE"
           
-          if [[ $RESPONSE == *""ok"":true"* ]]; then
+          if [[ $RESPONSE == *"\"ok\":true"* ]]; then
             echo "Notification sent successfully!"
           else
             echo "Failed to send notification!"
