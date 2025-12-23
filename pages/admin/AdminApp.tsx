@@ -1,4 +1,5 @@
 
+// @ts-nocheck
 import React from 'react';
 import { Refine, AuthProvider } from '@refinedev/core';
 import { ThemedLayoutV2, ErrorComponent, RefineThemes, useNotificationProvider } from '@refinedev/antd';

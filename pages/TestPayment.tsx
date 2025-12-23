@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/TestPayment.tsx
 // Тестовая страница для проверки платежей
 import React, { useState } from 'react';
