@@ -151,6 +151,16 @@ https://symancy.ru/test-payment
    ```
 2. Проверьте логи `payment-webhook` в Supabase Dashboard
 
+### Настройка редиректов (Local + Prod)
+
+Чтобы ссылки из писем работали и на компьютере, и на сайте:
+
+1. Зайдите в [Supabase Dashboard](https://supabase.com/dashboard/project/johspxgvkbrysxhilmbg) -> Authentication -> URL Configuration.
+2. Установите **Site URL**: `https://symancy.ru`.
+3. В **Redirect URLs** добавьте два адреса:
+   - `https://symancy.ru/**`
+   - `http://localhost:5173/**` (для локальной разработки)
+
 ---
 
 ## Контакты
