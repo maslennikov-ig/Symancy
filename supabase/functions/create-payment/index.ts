@@ -157,6 +157,12 @@ Deno.serve(async (req: Request) => {
       )
     }
 
+    // Build return URL for 3D Secure redirect
+    const origin = return_url
+      ? new URL(return_url).origin
+      : "https://symancy.ru"
+    const paymentReturnUrl = `${origin}/payment/result?purchase_id=${purchaseId}`
+
     // Create YooKassa payment
     const yukassaPayload = {
       amount: {
@@ -165,6 +171,7 @@ Deno.serve(async (req: Request) => {
       },
       confirmation: {
         type: "embedded",
+        return_url: paymentReturnUrl, // Required for 3D Secure
       },
       capture: true,
       description: `Symancy - ${tariff.name} (${tariff.description})`,
