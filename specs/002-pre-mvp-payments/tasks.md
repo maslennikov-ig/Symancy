@@ -231,19 +231,17 @@
 
 **Purpose**: Final cleanup, documentation, deployment preparation
 
-- [ ] T035 [EXECUTOR: MANUAL] [PARALLEL-GROUP-5] Set Supabase secrets via CLI: `supabase secrets set YUKASSA_SHOP_ID=xxx YUKASSA_SECRET_KEY=xxx YUKASSA_WEBHOOK_SECRET=xxx RESEND_API_KEY=xxx` (requires real credentials from client)
+> **Note**: Ручные задачи T035, T039, T040 перенесены в [TECHNICAL-DEBT.md](../../docs/TECHNICAL-DEBT.md)
+
+- [~] T035 [EXECUTOR: MANUAL] [PARALLEL-GROUP-5] Set Supabase secrets via CLI: `supabase secrets set YUKASSA_SHOP_ID=xxx YUKASSA_SECRET_KEY=xxx YUKASSA_WEBHOOK_SECRET=xxx RESEND_API_KEY=xxx` (requires real credentials from client) → **MOVED TO TECH DEBT**
 - [X] T036 [EXECUTOR: technical-writer] [PARALLEL-GROUP-5] Update README.md with payment integration setup instructions
   → Modified: [README.md](../../README.md) (added tariffs table, YooKassa setup, webhook URL)
 - [N/A] T037 [EXECUTOR: technical-writer] [PARALLEL-GROUP-5] Create `.env.local.example` for frontend with any needed variables
   → Not needed: All payment credentials are server-side (Edge Functions). Frontend env vars documented in README.
 - [X] T038 [EXECUTOR: MAIN] [SEQUENTIAL] Run type-check and build to verify no TypeScript errors: `pnpm type-check && pnpm build`
   → Build passed: `vite build` completed successfully ("✓ built in 1.91s")
-- [ ] T039 [EXECUTOR: MANUAL] [SEQUENTIAL] Manual E2E testing with YooKassa sandbox per quickstart.md test cards section:
-  - Test successful payment (card: 4111 1111 1111 1111)
-  - Test declined payment (card: 4000 0000 0000 0002)
-  - Verify webhook updates database correctly
-  - Verify email confirmation is sent
-- [ ] T040 [EXECUTOR: MANUAL] [SEQUENTIAL] Configure YooKassa webhook URL in merchant dashboard (requires client credentials)
+- [~] T039 [EXECUTOR: MANUAL] [SEQUENTIAL] Manual E2E testing with YooKassa sandbox per PAYMENT-TESTING-GUIDE.md → **MOVED TO TECH DEBT**
+- [~] T040 [EXECUTOR: MANUAL] [SEQUENTIAL] Configure YooKassa webhook URL in merchant dashboard → **MOVED TO TECH DEBT**
 
 ---
 
@@ -276,9 +274,11 @@
 
 ---
 
-## Phase 10: Telegram Native Payments
+## Phase 10: Telegram Native Payments ✓ COMPLETE (Automated Tasks)
 
 **Goal**: Add native Telegram Payments via YooKassa provider for better UX in Telegram
+
+> **Note**: Ручные задачи T046, T050, T052 перенесены в [TECHNICAL-DEBT.md](../../docs/TECHNICAL-DEBT.md)
 
 **Why**:
 - Нативный UX внутри Telegram (не WebView виджет)
@@ -297,9 +297,7 @@ User in Telegram → Bot sends Invoice →
 
 ### Telegram Payments Tasks
 
-- [ ] T046 [EXECUTOR: MANUAL] [SEQUENTIAL] Configure YooKassa as payment provider in BotFather:
-  - `/mybots` → Select bot → Payments → Connect YooKassa
-  - Get `provider_token` for YooKassa
+- [~] T046 [EXECUTOR: MANUAL] [SEQUENTIAL] Configure YooKassa as payment provider in BotFather → **MOVED TO TECH DEBT**
 - [X] T047 [EXECUTOR: typescript-types-specialist] [SEQUENTIAL] Add Telegram payment types to `types/payment.ts`:
   - TelegramInvoice, PreCheckoutQuery, SuccessfulPayment
   → Artifacts: [types/payment.ts](../../types/payment.ts)
@@ -309,16 +307,12 @@ User in Telegram → Bot sends Invoice →
   - Handle `successful_payment` → call grant_credits RPC
   → Artifacts: [telegram-bot-webhook/index.ts](../../supabase/functions/telegram-bot-webhook/index.ts)
 - [X] T049 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] Deploy telegram-bot-webhook function (requires MCP restart for new project)
-- [ ] T050 [EXECUTOR: MANUAL] [SEQUENTIAL] Set bot webhook URL in Telegram:
-  - `https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://johspxgvkbrysxhilmbg.supabase.co/functions/v1/telegram-bot-webhook`
+- [~] T050 [EXECUTOR: MANUAL] [SEQUENTIAL] Set bot webhook URL in Telegram → **MOVED TO TECH DEBT**
 - [X] T051 [EXECUTOR: supabase-edge-functions-specialist] [SEQUENTIAL] Add Telegram secrets:
   - `TELEGRAM_BOT_TOKEN`
   - `TELEGRAM_PAYMENT_PROVIDER_TOKEN`
   → Artifacts: [supabase/.env.example](../../supabase/.env.example)
-- [ ] T052 [EXECUTOR: MANUAL] [SEQUENTIAL] Test Telegram payments in sandbox:
-  - Send `/buy` to bot
-  - Complete test payment
-  - Verify credits granted
+- [~] T052 [EXECUTOR: MANUAL] [SEQUENTIAL] Test Telegram payments in sandbox → **MOVED TO TECH DEBT**
 
 **Checkpoint**: Users can pay natively inside Telegram
 
@@ -439,4 +433,5 @@ Recommended order:
 
 **MVP Scope**: Phases 1-3 (23 tasks: T001-T023) ✅ COMPLETE
 **Full Scope**: All phases (52 tasks)
-**Current Progress**: Phases 1-9 complete (45/52 tasks)
+**Current Progress**: ✅ ALL AUTOMATED TASKS COMPLETE (46/52)
+**Tech Debt**: 6 manual tasks moved to [TECHNICAL-DEBT.md](../../docs/TECHNICAL-DEBT.md)
