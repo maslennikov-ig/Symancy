@@ -1,0 +1,53 @@
+{
+  "name": "symancy-backend",
+  "version": "0.1.0",
+  "description": "Symancy Telegram Bot Backend - Node.js migration from n8n",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/app.ts",
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "test": "vitest",
+    "test:unit": "vitest run --dir tests/unit",
+    "test:integration": "vitest run --dir tests/integration",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@langchain/community": "^0.3.57",
+    "@langchain/core": "^1.1.8",
+    "@langchain/langgraph": "^1.0.7",
+    "@langchain/langgraph-checkpoint-postgres": "^1.0.0",
+    "@langchain/openai": "^1.2.0",
+    "@supabase/supabase-js": "^2.80.0",
+    "fastify": "^5.6.2",
+    "grammy": "^1.38.4",
+    "pg": "^8.16.3",
+    "pg-boss": "^12.5.4",
+    "pino": "^10.1.0",
+    "sharp": "^0.34.5",
+    "zod": "^4.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.11",
+    "pino-pretty": "^13.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.0.5"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "langchain",
+    "langgraph",
+    "supabase"
+  ],
+  "author": "",
+  "license": "UNLICENSED",
+  "private": true
+}

@@ -1,0 +1,236 @@
+openapi: 3.1.0
+info:
+  title: Symancy Backend API
+  version: 1.0.0
+  description: |
+    Backend API for Symancy Telegram Bot.
+    Handles Telegram webhooks and provides health check endpoint.
+
+servers:
+  - url: https://api.symancy.ru
+    description: Production server
+  - url: http://localhost:3000
+    description: Development server
+
+paths:
+  /webhook/telegram:
+    post:
+      operationId: handleTelegramWebhook
+      summary: Handle Telegram Bot API webhook
+      description: |
+        Receives updates from Telegram Bot API.
+        Validates secret token and enqueues jobs for async processing.
+      security:
+        - TelegramWebhookSecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramUpdate'
+      responses:
+        '200':
+          description: Update accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '401':
+          description: Invalid or missing webhook secret
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /health:
+    get:
+      operationId: healthCheck
+      summary: Health check endpoint
+      description: |
+        Returns service health status.
+        Used by Docker healthcheck and monitoring.
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  securitySchemes:
+    TelegramWebhookSecret:
+      type: apiKey
+      in: header
+      name: X-Telegram-Bot-Api-Secret-Token
+      description: Secret token configured in Telegram webhook
+
+  schemas:
+    TelegramUpdate:
+      type: object
+      description: Telegram Bot API Update object
+      properties:
+        update_id:
+          type: integer
+          description: Unique update identifier
+        message:
+          $ref: '#/components/schemas/TelegramMessage'
+        callback_query:
+          $ref: '#/components/schemas/TelegramCallbackQuery'
+      required:
+        - update_id
+
+    TelegramMessage:
+      type: object
+      properties:
+        message_id:
+          type: integer
+        from:
+          $ref: '#/components/schemas/TelegramUser'
+        chat:
+          $ref: '#/components/schemas/TelegramChat'
+        date:
+          type: integer
+          description: Unix timestamp
+        text:
+          type: string
+        photo:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelegramPhotoSize'
+        caption:
+          type: string
+
+    TelegramUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        is_bot:
+          type: boolean
+        first_name:
+          type: string
+        last_name:
+          type: string
+        username:
+          type: string
+        language_code:
+          type: string
+      required:
+        - id
+        - is_bot
+        - first_name
+
+    TelegramChat:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        type:
+          type: string
+          enum: [private, group, supergroup, channel]
+        title:
+          type: string
+        username:
+          type: string
+      required:
+        - id
+        - type
+
+    TelegramPhotoSize:
+      type: object
+      properties:
+        file_id:
+          type: string
+        file_unique_id:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        file_size:
+          type: integer
+      required:
+        - file_id
+        - file_unique_id
+        - width
+        - height
+
+    TelegramCallbackQuery:
+      type: object
+      properties:
+        id:
+          type: string
+        from:
+          $ref: '#/components/schemas/TelegramUser'
+        message:
+          $ref: '#/components/schemas/TelegramMessage'
+        data:
+          type: string
+          description: Callback data from inline keyboard
+      required:
+        - id
+        - from
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, unhealthy]
+        version:
+          type: string
+          example: "1.0.0"
+        uptime:
+          type: integer
+          description: Uptime in seconds
+        checks:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [ok, error]
+            queue:
+              type: string
+              enum: [ok, error]
+            telegram:
+              type: string
+              enum: [ok, error]
+      required:
+        - status
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        code:
+          type: string
+      required:
+        - error
+
+tags:
+  - name: Webhook
+    description: Telegram webhook handling
+  - name: Health
+    description: Service health monitoring
