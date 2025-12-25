@@ -5,13 +5,13 @@ import { Refine, AuthProvider } from '@refinedev/core';
 import { ThemedLayoutV2, ErrorComponent, RefineThemes, useNotificationProvider } from '@refinedev/antd';
 import { dataProvider } from '@refinedev/supabase';
 import { ConfigProvider, App as AntdApp } from 'antd';
-import routerBindings, { NavigateToResource, CatchAllNavigate, UnsavedChangesNotifier } from "@refinedev/react-router-v6";
+import routerBindings, { NavigateToResource, CatchAllNavigate, UnsavedChangesNotifier } from "@refinedev/react-router";
 import { supabase } from '../../lib/supabaseClient';
 import { ConfigList } from './resources/ConfigList';
 import { ConfigEdit } from './resources/ConfigEdit';
 import { PurchaseList } from './resources/PurchaseList';
 import { UserList } from './resources/UserList';
-import { Routes, Route, Outlet } from 'react-router-dom';
+import { Routes, Route, Outlet } from 'react-router';
 import { SettingOutlined, UserOutlined, DollarOutlined } from '@ant-design/icons';
 
 // Auth Provider mapping

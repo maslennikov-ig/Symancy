@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
         rollupOptions: {
           output: {
             manualChunks: {
-              vendor_react: ['react', 'react-dom', 'react-router-dom'],
+              vendor_react: ['react', 'react-dom', 'react-router'],
               vendor_antd: ['antd', '@ant-design/icons'],
               vendor_refine: ['@refinedev/core', '@refinedev/antd', '@refinedev/supabase'],
               vendor_utils: ['browser-image-compression', '@supabase/supabase-js']

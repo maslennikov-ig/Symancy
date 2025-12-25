@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Button } from '../components/ui/button';
 import { translations, Lang, t as i18n_t } from '../lib/i18n';
 

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router';
 import imageCompression from 'browser-image-compression';
 import ChatOnboarding from './components/ChatOnboarding';
 import { analyzeCoffeeCup, AnalysisResponse, UserData } from './services/analysisService';
