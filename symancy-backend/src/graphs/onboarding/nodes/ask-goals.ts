@@ -19,9 +19,10 @@ export async function askGoals(
 ): Promise<Partial<OnboardingState>> {
   const { telegramUserId, goals } = state;
 
+  // If no goals selected yet, this is the initial call - wait for user selection
   if (!goals || goals.length === 0) {
-    logger.warn({ telegramUserId }, "askGoals called without goals in state");
-    throw new Error("Goals are required in state");
+    logger.debug({ telegramUserId }, "askGoals called without goals, waiting for user selection");
+    return { step: "ask_goals" };
   }
 
   const supabase = getSupabase();

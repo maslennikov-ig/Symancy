@@ -16,7 +16,15 @@ const logger = getLogger().child({ module: "onboarding:ask-timezone" });
 export async function askTimezone(
   state: OnboardingState
 ): Promise<Partial<OnboardingState>> {
-  const { chatId, telegramUserId, timezone } = state;
+  const { chatId, telegramUserId, timezone, goals } = state;
+
+  // Guard: Don't process if this is premature call during graph traversal
+  // Timezone is only asked if goals include "spiritual"
+  if (!goals || goals.length === 0) {
+    logger.debug({ telegramUserId }, "askTimezone called prematurely, skipping");
+    return { step: "ask_timezone" };
+  }
+
   const bot = getBotApi();
   const supabase = getSupabase();
 

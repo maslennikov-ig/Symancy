@@ -18,9 +18,11 @@ export async function askName(
 ): Promise<Partial<OnboardingState>> {
   const { chatId, telegramUserId, name } = state;
 
+  // If no name provided, this is the initial graph run after welcome
+  // Just return step without processing - handler will invoke again with name
   if (!name) {
-    logger.warn({ telegramUserId }, "askName called without name in state");
-    throw new Error("Name is required in state");
+    logger.debug({ telegramUserId }, "askName called without name, waiting for user input");
+    return { step: "ask_name" };
   }
 
   const bot = getBotApi();

@@ -19,9 +19,16 @@ const logger = getLogger().child({ module: "onboarding:complete" });
 export async function complete(
   state: OnboardingState
 ): Promise<Partial<OnboardingState>> {
-  const { chatId, telegramUserId, name } = state;
+  const { chatId, telegramUserId, name, goals } = state;
   const bot = getBotApi();
   const supabase = getSupabase();
+
+  // Guard: Don't complete if onboarding data is not collected yet
+  // This prevents premature completion during initial graph traversal
+  if (!name && (!goals || goals.length === 0)) {
+    logger.debug({ telegramUserId }, "Complete called prematurely, skipping");
+    return { step: "complete" };
+  }
 
   try {
     // Grant bonus credit
