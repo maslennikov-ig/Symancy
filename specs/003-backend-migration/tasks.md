@@ -180,9 +180,12 @@
 
 ### Prompts
 
-- [ ] T033 [EXECUTOR: prompt-engineer] [PARALLEL-GROUP-6] [US1] Create vision analysis prompt in symancy-backend/prompts/vision/analyze.txt (migrated from n8n)
-- [ ] T034 [EXECUTOR: prompt-engineer] [PARALLEL-GROUP-6] [US1] Create Arina system prompt in symancy-backend/prompts/arina/system.txt
-- [ ] T035 [EXECUTOR: prompt-engineer] [PARALLEL-GROUP-6] [US1] Create Arina interpretation prompt in symancy-backend/prompts/arina/interpretation.txt
+- [X] T033 [EXECUTOR: prompt-engineer] [PARALLEL-GROUP-6] [US1] Create vision analysis prompt in symancy-backend/prompts/vision/analyze.txt (migrated from n8n)
+  → Artifacts: [analyze.txt](symancy-backend/prompts/vision/analyze.txt)
+- [X] T034 [EXECUTOR: prompt-engineer] [PARALLEL-GROUP-6] [US1] Create Arina system prompt in symancy-backend/prompts/arina/system.txt
+  → Artifacts: [system.txt](symancy-backend/prompts/arina/system.txt)
+- [X] T035 [EXECUTOR: prompt-engineer] [PARALLEL-GROUP-6] [US1] Create Arina interpretation prompt in symancy-backend/prompts/arina/interpretation.txt
+  → Artifacts: [interpretation.txt](symancy-backend/prompts/arina/interpretation.txt)
 
 ### LangChain Chains
 
