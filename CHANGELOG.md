@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.4.0] - 2025-12-26
+
+### Added
+- **deploy**: add backend deployment configuration (T077) (a99bb02)
+- **backend**: add production hardening (Phase 8) (62cae54)
+- **backend**: implement proactive engagement module (US5) (c228947)
+- **cassandra**: implement premium mystical oracle persona (T056-T060) (9bda777)
+- **onboarding**: implement complete onboarding flow with LangGraph (T047-T055) (babf159)
+- **chat**: implement chat module with follow-up conversations (T042-T046) (8cb63aa)
+- **photo-analysis**: implement complete photo analysis module (T038-T041) (a5ec53f)
+- **backend**: implement vision and interpretation LangChain chains (T036-T037) (e6dc707)
+- **backend**: add Arina and vision prompts for photo analysis (T033-T035) (75d525c)
+
+### Fixed
+- **backend**: address code review findings (P0+P1) (b4aa88a)
+
+### Other
+- update docs (c6bb958)
+- add .env reference and models info to E2E test plan (28aa170)
+- switch to free/preview models for cost optimization (4e0b40d)
+- enhance E2E test plan and vision prompt for decorated cups (0a1c195)
+- add E2E test plan for local testing (65560b1)
+- add final code review tasks and artifacts to tasks.md (156db63)
+- mark Phase 2 tasks complete with artifacts in tasks.md (8060806)
+
 ## [0.3.16] - 2025-12-25
 
 ### Other
