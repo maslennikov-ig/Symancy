@@ -10,6 +10,12 @@ import { rateLimitMiddleware } from "./rate-limit.js";
 import { handlePhotoMessage } from "../photo-analysis/handler.js";
 import { handleTextMessage } from "../chat/handler.js";
 import {
+  handleCassandraCommand,
+  handleHelpCommand,
+  handleCreditsCommand,
+  handleHistoryCommand,
+} from "./commands.js";
+import {
   startOnboarding,
   handleOnboardingText,
   handleOnboardingCallback,
@@ -59,6 +65,18 @@ export function setupRouter(): void {
     await ctx.reply("Привет! Отправьте мне фото кофейной гущи для гадания.");
   });
 
+  // Handle /cassandra and /premium commands (premium fortune teller)
+  bot.command(["cassandra", "premium"], handleCassandraCommand);
+
+  // Handle /help command
+  bot.command("help", handleHelpCommand);
+
+  // Handle /credits command
+  bot.command("credits", handleCreditsCommand);
+
+  // Handle /history command
+  bot.command("history", handleHistoryCommand);
+
   // Handle photos - delegate to photo-analysis module
   bot.on("message:photo", handlePhotoMessage);
 
@@ -102,6 +120,18 @@ export function setupRouter(): void {
     const updateId = err.ctx?.update?.update_id;
     logger.error({ error: err.error, updateId }, "Bot error");
   });
+
+  // Set bot commands menu (fire-and-forget)
+  bot.api
+    .setMyCommands([
+      { command: "start", description: "Начать работу с ботом" },
+      { command: "cassandra", description: "Премиум гадалка Кассандра" },
+      { command: "credits", description: "Проверить баланс кредитов" },
+      { command: "history", description: "История гаданий" },
+      { command: "help", description: "Справка по командам" },
+    ])
+    .then(() => logger.info("Bot commands menu set"))
+    .catch((err) => logger.error({ error: err }, "Failed to set bot commands"));
 
   logger.info("Router setup complete");
 }

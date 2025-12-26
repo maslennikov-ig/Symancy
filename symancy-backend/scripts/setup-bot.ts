@@ -170,29 +170,29 @@ async function main(): Promise<void> {
   console.log("2. Setting bot names...");
   await setName("ru", BOT_NAMES.ru);
   await setName("en", BOT_NAMES.en);
-  // Set default (no language code) to English
-  await setName("", BOT_NAMES.en);
+  // Set default (no language code) to Russian (primary audience)
+  await setName("", BOT_NAMES.ru);
   console.log();
 
   // Set descriptions
   console.log("3. Setting bot descriptions...");
   await setDescription("ru", BOT_DESCRIPTIONS.ru);
   await setDescription("en", BOT_DESCRIPTIONS.en);
-  await setDescription("", BOT_DESCRIPTIONS.en);
+  await setDescription("", BOT_DESCRIPTIONS.ru);
   console.log();
 
   // Set short descriptions
   console.log("4. Setting short descriptions...");
   await setShortDescription("ru", SHORT_DESCRIPTIONS.ru);
   await setShortDescription("en", SHORT_DESCRIPTIONS.en);
-  await setShortDescription("", SHORT_DESCRIPTIONS.en);
+  await setShortDescription("", SHORT_DESCRIPTIONS.ru);
   console.log();
 
   // Set commands
   console.log("5. Setting bot commands...");
   await setCommands("ru", BOT_COMMANDS.ru);
   await setCommands("en", BOT_COMMANDS.en);
-  await setCommands("", BOT_COMMANDS.en);
+  await setCommands("", BOT_COMMANDS.ru);
   console.log();
 
   // Set menu button
