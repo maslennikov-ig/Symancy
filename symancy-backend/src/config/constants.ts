@@ -133,22 +133,22 @@ export const CREDIT_COST_CASSANDRA = 3;
 /**
  * Model for Arina persona (interpretation)
  */
-export const MODEL_ARINA = "anthropic/claude-3.5-sonnet";
+export const MODEL_ARINA = "xiaomi/mimo-v2-flash:free";
 
 /**
  * Model for Cassandra persona (alternative)
  */
-export const MODEL_CASSANDRA = "anthropic/claude-3.5-sonnet";
+export const MODEL_CASSANDRA = "xiaomi/mimo-v2-flash:free";
 
 /**
  * Model for general chat
  */
-export const MODEL_CHAT = "anthropic/claude-3.5-sonnet";
+export const MODEL_CHAT = "xiaomi/mimo-v2-flash:free";
 
 /**
- * Model for vision analysis
+ * Model for vision analysis (multimodal)
  */
-export const MODEL_VISION = "anthropic/claude-3.5-sonnet";
+export const MODEL_VISION = "google/gemini-3-flash-preview";
 
 // =============================================================================
 // Timeouts
