@@ -38,7 +38,7 @@ export interface ChatMessage {
 export interface UserState {
   telegram_user_id: number;
   onboarding_step: string | null;
-  onboarding_data: Record<string, unknown>;
+  onboarding_data: { goals?: string[] } | Record<string, unknown>;
   last_analysis_id: string | null;
   daily_messages_count: number;
   last_message_date: string | null;

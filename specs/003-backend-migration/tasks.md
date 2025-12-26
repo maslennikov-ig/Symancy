@@ -243,26 +243,37 @@
 
 ### LangGraph State
 
-- [ ] T047 [EXECUTOR: typescript-types-specialist] [SEQUENTIAL] [US3] Define onboarding state schema with Zod in symancy-backend/src/graphs/onboarding/state.ts
+- [X] T047 [EXECUTOR: typescript-types-specialist] [SEQUENTIAL] [US3] Define onboarding state schema with Zod in symancy-backend/src/graphs/onboarding/state.ts
+  → Artifacts: [state.ts](symancy-backend/src/graphs/onboarding/state.ts)
 
 ### LangGraph Nodes
 
-- [ ] T048 [EXECUTOR: langchain-node-specialist] [PARALLEL-GROUP-7] [US3] Implement welcome node in symancy-backend/src/graphs/onboarding/nodes/welcome.ts
-- [ ] T049 [EXECUTOR: langchain-node-specialist] [PARALLEL-GROUP-7] [US3] Implement ask-name node in symancy-backend/src/graphs/onboarding/nodes/ask-name.ts
-- [ ] T050 [EXECUTOR: langchain-node-specialist] [PARALLEL-GROUP-7] [US3] Implement ask-goals node (with conditional routing) in symancy-backend/src/graphs/onboarding/nodes/ask-goals.ts
-- [ ] T051 [EXECUTOR: langchain-node-specialist] [PARALLEL-GROUP-7] [US3] Implement complete node (grants bonus credit) in symancy-backend/src/graphs/onboarding/nodes/complete.ts
-- [ ] T051a [EXECUTOR: langchain-node-specialist] [PARALLEL-GROUP-7] [US3] Implement optional ask-timezone node (skippable, default Europe/Moscow) in symancy-backend/src/graphs/onboarding/nodes/ask-timezone.ts
+- [X] T048 [EXECUTOR: langchain-node-specialist] [PARALLEL-GROUP-7] [US3] Implement welcome node in symancy-backend/src/graphs/onboarding/nodes/welcome.ts
+  → Artifacts: [welcome.ts](symancy-backend/src/graphs/onboarding/nodes/welcome.ts)
+- [X] T049 [EXECUTOR: langchain-node-specialist] [PARALLEL-GROUP-7] [US3] Implement ask-name node in symancy-backend/src/graphs/onboarding/nodes/ask-name.ts
+  → Artifacts: [ask-name.ts](symancy-backend/src/graphs/onboarding/nodes/ask-name.ts)
+- [X] T050 [EXECUTOR: langchain-node-specialist] [PARALLEL-GROUP-7] [US3] Implement ask-goals node (with conditional routing) in symancy-backend/src/graphs/onboarding/nodes/ask-goals.ts
+  → Artifacts: [ask-goals.ts](symancy-backend/src/graphs/onboarding/nodes/ask-goals.ts)
+- [X] T051 [EXECUTOR: langchain-node-specialist] [PARALLEL-GROUP-7] [US3] Implement complete node (grants bonus credit) in symancy-backend/src/graphs/onboarding/nodes/complete.ts
+  → Artifacts: [complete.ts](symancy-backend/src/graphs/onboarding/nodes/complete.ts)
+- [X] T051a [EXECUTOR: langchain-node-specialist] [PARALLEL-GROUP-7] [US3] Implement optional ask-timezone node (skippable, default Europe/Moscow) in symancy-backend/src/graphs/onboarding/nodes/ask-timezone.ts
+  → Artifacts: [ask-timezone.ts](symancy-backend/src/graphs/onboarding/nodes/ask-timezone.ts)
 
 ### LangGraph Definition
 
-- [ ] T052 [EXECUTOR: langchain-node-specialist] [SEQUENTIAL] [US3] Implement onboarding StateGraph with edges and conditional routing in symancy-backend/src/graphs/onboarding/graph.ts
+- [X] T052 [EXECUTOR: langchain-node-specialist] [SEQUENTIAL] [US3] Implement onboarding StateGraph with edges and conditional routing in symancy-backend/src/graphs/onboarding/graph.ts
+  → Artifacts: [graph.ts](symancy-backend/src/graphs/onboarding/graph.ts), [index.ts](symancy-backend/src/graphs/onboarding/index.ts)
 
 ### Onboarding Module
 
-- [ ] T053 [EXECUTOR: telegram-handler-specialist] [PARALLEL-GROUP-8] [US3] Create inline keyboards for goals and notifications selection in symancy-backend/src/modules/onboarding/keyboards.ts
-- [ ] T053a [EXECUTOR: telegram-handler-specialist] [PARALLEL-GROUP-8] [US3] Add optional timezone selection keyboard (Москва, Екатеринбург, Новосибирск, Владивосток, пропустить) in keyboards.ts — default Europe/Moscow if skipped
-- [ ] T054 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US3] Implement onboarding handler (invokes LangGraph, handles callbacks) in symancy-backend/src/modules/onboarding/handler.ts
-- [ ] T055 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US3] Integrate onboarding handler into message router (check for /start, current_mode=onboarding) in symancy-backend/src/modules/router/index.ts
+- [X] T053 [EXECUTOR: telegram-handler-specialist] [PARALLEL-GROUP-8] [US3] Create inline keyboards for goals and notifications selection in symancy-backend/src/modules/onboarding/keyboards.ts
+  → Artifacts: [keyboards.ts](symancy-backend/src/modules/onboarding/keyboards.ts)
+- [X] T053a [EXECUTOR: telegram-handler-specialist] [PARALLEL-GROUP-8] [US3] Add optional timezone selection keyboard (Москва, Екатеринбург, Новосибирск, Владивосток, пропустить) in keyboards.ts — default Europe/Moscow if skipped
+  → Artifacts: [keyboards.ts](symancy-backend/src/modules/onboarding/keyboards.ts)
+- [X] T054 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US3] Implement onboarding handler (invokes LangGraph, handles callbacks) in symancy-backend/src/modules/onboarding/handler.ts
+  → Artifacts: [handler.ts](symancy-backend/src/modules/onboarding/handler.ts), [index.ts](symancy-backend/src/modules/onboarding/index.ts)
+- [X] T055 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US3] Integrate onboarding handler into message router (check for /start, current_mode=onboarding) in symancy-backend/src/modules/router/index.ts
+  → Artifacts: [router/index.ts](symancy-backend/src/modules/router/index.ts), [database.ts](symancy-backend/src/types/database.ts), [006_add_onboarding_data.sql](symancy-backend/migrations/006_add_onboarding_data.sql)
 
 **Checkpoint**: User Story 3 (Onboarding) is fully functional and testable independently
 

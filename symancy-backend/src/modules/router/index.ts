@@ -8,6 +8,12 @@ import { loadProfile, loadUserState, checkBanned, type BotContext } from "./midd
 import { rateLimitMiddleware } from "./rate-limit.js";
 import { handlePhotoMessage } from "../photo-analysis/handler.js";
 import { handleTextMessage } from "../chat/handler.js";
+import {
+  startOnboarding,
+  handleOnboardingText,
+  handleOnboardingCallback,
+  isInOnboarding,
+} from "../onboarding/handler.js";
 
 const logger = getLogger().child({ module: "router" });
 
@@ -29,9 +35,9 @@ export function setupRouter(): void {
     logger.info({ telegramUserId: ctx.from?.id }, "Received /start command");
 
     // Check if onboarding needed
-    if (!ctx.userState?.onboarding_step && !ctx.profile?.onboarding_completed) {
-      // TODO: Start onboarding flow (Phase 5)
-      await ctx.reply("Добро пожаловать! Давайте познакомимся...");
+    if (!ctx.profile?.onboarding_completed) {
+      // Start onboarding flow (T055)
+      await startOnboarding(ctx);
       return;
     }
 
@@ -41,10 +47,19 @@ export function setupRouter(): void {
   // Handle photos - delegate to photo-analysis module
   bot.on("message:photo", handlePhotoMessage);
 
-  // Handle text messages - delegate to chat module
-  bot.on("message:text", handleTextMessage);
+  // Handle text messages - route based on onboarding state (T055)
+  bot.on("message:text", async (ctx: BotContext) => {
+    // Check if user is in onboarding flow
+    const inOnboarding = await isInOnboarding(ctx);
 
-  // Handle callback queries (inline button presses)
+    if (inOnboarding) {
+      await handleOnboardingText(ctx);
+    } else {
+      await handleTextMessage(ctx);
+    }
+  });
+
+  // Handle callback queries (inline button presses) - T055
   bot.on("callback_query:data", async (ctx: BotContext) => {
     // Type guards
     if (!ctx.callbackQuery?.data || !ctx.from) {
@@ -57,7 +72,13 @@ export function setupRouter(): void {
       "Received callback query"
     );
 
-    // TODO: Implement callback query handling (Phase 4/5)
+    // Route onboarding callbacks
+    if (ctx.callbackQuery.data.startsWith("onboarding:")) {
+      await handleOnboardingCallback(ctx);
+      return;
+    }
+
+    // TODO: Implement other callback query handling (Phase 4)
     await ctx.answerCallbackQuery({ text: "Обрабатывается..." });
   });
 

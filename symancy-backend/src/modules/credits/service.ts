@@ -82,11 +82,35 @@ export async function getCreditBalance(telegramUserId: number): Promise<number> 
     .select("credits")
     .eq("telegram_user_id", telegramUserId)
     .single();
-  
+
   if (error || !data) {
     logger.warn({ telegramUserId, error }, "Failed to get credit balance");
     return 0;
   }
-  
+
   return data.credits;
+}
+
+/**
+ * Grant bonus credit to user (e.g., for completing onboarding)
+ * TODO: This currently updates a flag in profiles.
+ * When backend_user_credits table is created, update to grant actual credits.
+ */
+export async function grantBonusCredit(telegramUserId: number): Promise<boolean> {
+  const supabase = getSupabase();
+
+  // For now, mark bonus_credit_granted in profiles
+  // Later: use backend_user_credits table
+  const { error } = await supabase
+    .from("profiles")
+    .update({ bonus_credit_granted: true })
+    .eq("telegram_user_id", telegramUserId);
+
+  if (error) {
+    logger.error({ telegramUserId, error }, "Failed to grant bonus credit");
+    return false;
+  }
+
+  logger.info({ telegramUserId }, "Bonus credit granted");
+  return true;
 }
