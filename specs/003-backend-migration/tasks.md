@@ -164,7 +164,7 @@
 ### Code Review (Post-Phase 2)
 
 - [X] CR01 Code review of all Phase 2 implementation
-  → Artifacts: [CODE-REVIEW-PHASE2.md](symancy-backend/docs/CODE-REVIEW-PHASE2.md)
+  → Artifacts: [CODE-REVIEW-PHASE2.md](docs/reports/CODE-REVIEW-PHASE2.md)
 - [X] CR02 Fix all CRITICAL issues (5/5): race condition, middleware errors, photo validation, resource leak, router init
 - [X] CR03 Fix all HIGH issues (8/8): text validation, retry logic, rate limiting, health checks, webhook shutdown
 - [X] CR04 Fix all MEDIUM issues (12/12): config validation, queue handling, null checks, HTML escape, DB pool, SSRF protection
