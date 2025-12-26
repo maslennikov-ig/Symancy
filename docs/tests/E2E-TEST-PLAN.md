@@ -68,8 +68,10 @@ Place test photos in `/docs/tests/photos/`:
 |------|-------------|-----------------|
 | `coffee-cup-1.jpg` | Clear coffee grounds pattern | Successful analysis |
 | `coffee-cup-2.jpg` | Another coffee pattern | Successful analysis |
+| `coffee-cup-tomatoes.jpg` | Cup with tomato decorations | Focus on grounds, ignore tomatoes |
 | `coffee-cup-dark.jpg` | Dark/underexposed photo | Should still work |
 | `coffee-cup-blurry.jpg` | Slightly blurry | May affect interpretation |
+| `coffee-cup-minimal.jpg` | Very little coffee residue | Should find patterns anyway |
 | `not-coffee.jpg` | Random image (cat, food) | Should detect "not coffee" |
 | `large-photo.jpg` | >10MB file | Should reject with error |
 | `small-photo.jpg` | Very small (<100x100) | Should work but quality warning |
@@ -330,6 +332,52 @@ UPDATE profiles SET credits = 0 WHERE telegram_user_id = YOUR_ID;
 - [ ] Each gets unique interpretation
 - [ ] 3 credits consumed
 - [ ] No race conditions
+
+---
+
+#### TC-US1-007: Decorated Cup (Ignore Cup Design)
+
+**Preconditions:**
+- User has 1+ credits
+- Use photo: `docs/tests/photos/coffee-cup-tomatoes.jpg` (cup with tomato decorations)
+
+**Steps:**
+1. Send photo of coffee cup that has decorative prints (tomatoes, flowers, etc.) on the porcelain
+
+**Expected Results:**
+- [ ] Vision analysis focuses ONLY on coffee grounds (brown stains at bottom)
+- [ ] Interpretation does NOT mention tomatoes, flowers, or cup decorations
+- [ ] Interpretation describes patterns in the actual coffee residue
+- [ ] No confusion between printed decorations and coffee patterns
+
+**Why This Matters:**
+- Many cups have decorative designs printed on them
+- Model must distinguish between:
+  - Cup decoration (printed, permanent, colorful)
+  - Coffee grounds (organic, brown, irregular stains)
+
+**Verification:**
+Check the `vision_result` in database - it should NOT contain references to "tomatoes", "flowers", or other cup decorations:
+```sql
+SELECT vision_result FROM analysis_history
+WHERE telegram_user_id = YOUR_ID
+ORDER BY created_at DESC LIMIT 1;
+```
+
+---
+
+#### TC-US1-008: Cup with Minimal Grounds
+
+**Preconditions:**
+- Photo with very little coffee residue (almost clean cup)
+
+**Steps:**
+1. Send photo of cup with minimal coffee grounds
+
+**Expected Results:**
+- [ ] Model still finds patterns (per prompt requirements)
+- [ ] Interpretation is creative but based on actual residue
+- [ ] No "I cannot see anything" responses
 
 ---
 
@@ -1118,8 +1166,250 @@ pnpm dev 2>&1 | pino-pretty | grep "photo-analysis"
 
 ---
 
+## Automated Tests (For Next Context)
+
+This section describes how to implement automated tests based on this plan.
+
+### Test Framework
+
+```bash
+# Testing stack
+- Vitest (unit + integration tests)
+- Supertest (HTTP endpoint testing)
+- Test containers (PostgreSQL)
+```
+
+### Directory Structure
+
+```
+symancy-backend/tests/
+├── unit/
+│   ├── chains/
+│   │   ├── vision.chain.test.ts
+│   │   ├── interpretation.chain.test.ts
+│   │   └── chat.chain.test.ts
+│   ├── utils/
+│   │   ├── retry.test.ts
+│   │   ├── message-splitter.test.ts
+│   │   └── image-processor.test.ts
+│   └── services/
+│       ├── credits.test.ts
+│       └── config.test.ts
+├── integration/
+│   ├── handlers/
+│   │   ├── photo.handler.test.ts
+│   │   ├── chat.handler.test.ts
+│   │   └── onboarding.handler.test.ts
+│   ├── workers/
+│   │   ├── photo.worker.test.ts
+│   │   └── chat.worker.test.ts
+│   └── graphs/
+│       └── onboarding.graph.test.ts
+├── e2e/
+│   └── bot.e2e.test.ts
+├── fixtures/
+│   ├── photos/           # Test images
+│   ├── mock-responses/   # LLM mock responses
+│   └── db-seeds/         # Database fixtures
+└── setup/
+    ├── vitest.setup.ts
+    ├── test-db.ts
+    └── mocks/
+        ├── openrouter.mock.ts
+        └── telegram.mock.ts
+```
+
+### Mock Strategy
+
+#### OpenRouter API Mock
+
+```typescript
+// tests/setup/mocks/openrouter.mock.ts
+import { vi } from 'vitest';
+
+export const mockVisionResponse = {
+  content: `PRIMARY PATTERN: A bird shape in the center
+
+SECONDARY PATTERNS:
+1. Heart shape - lower left
+2. Star formation - upper right
+3. Wave pattern - along the edge
+
+OVERALL COMPOSITION: Harmonious flow from center outward`,
+};
+
+export const mockInterpretationResponse = {
+  content: `☕ В вашей чашке я вижу удивительные образы...
+
+🕊️ **Птица в центре** символизирует...`,
+};
+
+vi.mock('@langchain/openai', () => ({
+  ChatOpenAI: vi.fn().mockImplementation(() => ({
+    invoke: vi.fn().mockResolvedValue(mockVisionResponse),
+  })),
+}));
+```
+
+#### Telegram API Mock
+
+```typescript
+// tests/setup/mocks/telegram.mock.ts
+export const mockTelegramContext = {
+  from: { id: 123456789, language_code: 'ru' },
+  chat: { id: 123456789 },
+  message: {
+    photo: [{ file_id: 'test-file-id', file_size: 50000 }],
+    caption: undefined,
+  },
+  reply: vi.fn(),
+  api: {
+    editMessageText: vi.fn(),
+    getFile: vi.fn().mockResolvedValue({ file_path: 'photos/test.jpg' }),
+  },
+};
+```
+
+### Key Test Cases to Automate
+
+| Priority | Test | Type | Mock Requirements |
+|----------|------|------|-------------------|
+| P1 | Photo analysis flow | Integration | OpenRouter, Telegram |
+| P1 | Credit consumption | Unit | Database |
+| P1 | Decorated cup detection | Integration | OpenRouter (verify prompt) |
+| P1 | Rate limiting | Unit | None |
+| P2 | Onboarding graph | Integration | LangGraph checkpointer |
+| P2 | Chat with history | Integration | Database, OpenRouter |
+| P2 | Error recovery | Integration | OpenRouter (mock failures) |
+| P3 | Cassandra persona | Integration | OpenRouter |
+| P3 | Message splitting | Unit | None |
+
+### Sample Test: Decorated Cup
+
+```typescript
+// tests/integration/handlers/photo.handler.test.ts
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { handlePhotoMessage } from '../../../src/modules/photo-analysis/handler';
+import { mockTelegramContext } from '../../setup/mocks/telegram.mock';
+
+describe('Photo Handler - Decorated Cup', () => {
+  it('should ignore cup decorations and focus on coffee grounds', async () => {
+    // Arrange
+    const ctx = {
+      ...mockTelegramContext,
+      message: {
+        photo: [{ file_id: 'decorated-cup-id', file_size: 100000 }],
+        caption: undefined,
+      },
+    };
+
+    // Act
+    await handlePhotoMessage(ctx);
+
+    // Assert - verify the vision prompt was called
+    // Check that interpretation doesn't mention "tomatoes"
+    expect(ctx.reply).toHaveBeenCalled();
+
+    // Get the final response text
+    const responseText = ctx.api.editMessageText.mock.calls[0][2];
+    expect(responseText.toLowerCase()).not.toContain('tomato');
+    expect(responseText.toLowerCase()).not.toContain('помидор');
+  });
+});
+```
+
+### Running Automated Tests
+
+```bash
+# All tests
+pnpm test
+
+# Unit tests only
+pnpm test:unit
+
+# Integration tests (requires test DB)
+pnpm test:integration
+
+# With coverage
+pnpm test:coverage
+
+# Watch mode
+pnpm test:watch
+```
+
+### Test Database Setup
+
+```typescript
+// tests/setup/test-db.ts
+import { Pool } from 'pg';
+
+const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL ||
+  'postgresql://postgres:postgres@localhost:5433/symancy_test';
+
+export async function setupTestDatabase() {
+  const pool = new Pool({ connectionString: TEST_DATABASE_URL });
+
+  // Run migrations
+  await pool.query(fs.readFileSync('migrations/003_backend_tables.sql', 'utf8'));
+
+  // Seed test data
+  await pool.query(`
+    INSERT INTO profiles (telegram_user_id, name, credits, onboarding_completed)
+    VALUES (123456789, 'Test User', 10, true);
+  `);
+
+  return pool;
+}
+
+export async function cleanupTestDatabase(pool: Pool) {
+  await pool.query('DELETE FROM analysis_history');
+  await pool.query('DELETE FROM chat_messages');
+  await pool.query('DELETE FROM profiles');
+  await pool.end();
+}
+```
+
+### CI Integration
+
+```yaml
+# .github/workflows/test.yml
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: symancy_test
+        ports:
+          - 5433:5432
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - run: pnpm install
+      - run: pnpm test:unit
+      - run: pnpm test:integration
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/symancy_test
+```
+
+---
+
 ## Document History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2024-12-26 | Claude | Initial version |
+| 1.1 | 2024-12-26 | Claude | Added TC-US1-007 (decorated cup), TC-US1-008 (minimal grounds), automated tests section |
