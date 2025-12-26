@@ -384,6 +384,18 @@
 - [X] T077 [EXECUTOR: deployment-engineer] [SEQUENTIAL] Deploy to production server (91.132.59.194) and configure Telegram webhook with secret token
   → Artifacts: [ecosystem.config.cjs](../../symancy-backend/ecosystem.config.cjs), [nginx-backend.conf](../../symancy-backend/nginx-backend.conf), [deploy-backend.yml](../../.github/workflows/deploy-backend.yml), [DEPLOYMENT.md](../../symancy-backend/DEPLOYMENT.md)
 
+### Final Code Review (Post-Implementation)
+
+- [X] CR05 [EXECUTOR: code-reviewer] Comprehensive code review of full backend implementation
+  → Artifacts: [backend-review-report.md](../../docs/reports/code-review/2024-12/backend-review-report.md)
+- [X] CR06 Fix all CRITICAL (P0) issues (7/7): token exposure, credit race condition, error boundaries, scheduler errors, SQL validation, input validation, memory leak
+  → Artifacts: [worker.ts](../../symancy-backend/src/modules/photo-analysis/worker.ts), [handler.ts](../../symancy-backend/src/modules/photo-analysis/handler.ts), [router/index.ts](../../symancy-backend/src/modules/router/index.ts), [rate-limit.ts](../../symancy-backend/src/modules/router/rate-limit.ts), [queue.ts](../../symancy-backend/src/core/queue.ts)
+- [X] CR07 Fix all HIGH (P1) issues (11/12): webhook deletion, pool alerting, file size validation, prompt validation, interpretation fallback, type guards, job validation, admin alerts aggregation, jitter fix, storage validation
+  → Artifacts: [validation.ts](../../symancy-backend/src/chains/validation.ts), [job-schemas.ts](../../symancy-backend/src/types/job-schemas.ts), [interpretation.chain.ts](../../symancy-backend/src/chains/interpretation.chain.ts), [state.ts](../../symancy-backend/src/graphs/onboarding/state.ts), [telegram.ts](../../symancy-backend/src/core/telegram.ts), [database.ts](../../symancy-backend/src/core/database.ts), [retry.ts](../../symancy-backend/src/utils/retry.ts), [admin-alerts.ts](../../symancy-backend/src/utils/admin-alerts.ts), [app.ts](../../symancy-backend/src/app.ts)
+  → Skipped: P1#16 (transactions) - deemed overengineering for MVP
+- [X] QG04 [EXECUTOR: MAIN] Final type-check and build validation after code review fixes
+  → PASSED: pnpm type-check ✓, pnpm build ✓
+
 ---
 
 ## Dependencies & Execution Order
@@ -514,7 +526,8 @@ Run `/push patch` after EACH completed task:
 | Phase 6: US4 Cassandra | 5 | 2 |
 | Phase 7: US5 Proactive | 6 | 3 |
 | Phase 8: Production | 11 + QG02, QG03 | 5 |
-| **Total** | **86** | **40** |
+| Final Code Review | 3 + QG04 | 0 |
+| **Total** | **90** | **40** |
 
 ### Per User Story
 
