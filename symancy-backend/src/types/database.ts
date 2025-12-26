@@ -40,6 +40,8 @@ export interface UserState {
   onboarding_step: string | null;
   onboarding_data: Record<string, unknown>;
   last_analysis_id: string | null;
+  daily_messages_count: number;
+  last_message_date: string | null;
   updated_at: Date;
 }
 

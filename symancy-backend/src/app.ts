@@ -6,15 +6,12 @@ import Fastify from "fastify";
 import { getEnv, isApiMode, isWorkerMode } from "./config/env.js";
 import { getLogger, setupProcessErrorHandlers } from "./core/logger.js";
 import { closeDatabase, getPool } from "./core/database.js";
-import { getQueue, stopQueue, registerWorker } from "./core/queue.js";
+import { getQueue, stopQueue } from "./core/queue.js";
 import { createWebhookHandler, deleteWebhook } from "./core/telegram.js";
 import { closeCheckpointer } from "./core/langchain/index.js";
 import { setupRouter } from "./modules/router/index.js";
-import {
-  QUEUE_ANALYZE_PHOTO,
-  QUEUE_CHAT_REPLY,
-  QUEUE_SEND_MESSAGE,
-} from "./config/constants.js";
+import { registerPhotoWorker } from "./modules/photo-analysis/worker.js";
+import { registerChatWorker } from "./modules/chat/worker.js";
 
 const logger = getLogger();
 
@@ -93,24 +90,20 @@ async function startApi() {
 async function startWorkers() {
   // Initialize queue
   await getQueue();
-  
-  // Register workers (handlers will be implemented in Phase 3+)
+
   logger.info("Worker mode: registering queue handlers...");
-  
-  // Placeholder workers - will be replaced with actual handlers
-  await registerWorker(QUEUE_ANALYZE_PHOTO, async (job) => {
-    logger.info({ data: job.data }, "ANALYZE_PHOTO job received (handler not implemented)");
-  });
-  
-  await registerWorker(QUEUE_CHAT_REPLY, async (job) => {
-    logger.info({ data: job.data }, "CHAT_REPLY job received (handler not implemented)");
-  });
-  
-  await registerWorker(QUEUE_SEND_MESSAGE, async (job) => {
-    logger.info({ data: job.data }, "SEND_MESSAGE job received (handler not implemented)");
-  });
-  
-  logger.info("Workers started");
+
+  // Register photo analysis worker
+  const photoWorkerId = await registerPhotoWorker();
+  logger.info({ workerId: photoWorkerId }, "Photo analysis worker registered");
+
+  // Register chat reply worker
+  const chatWorkerId = await registerChatWorker();
+  logger.info({ workerId: chatWorkerId }, "Chat reply worker registered");
+
+  // TODO: Register scheduled message worker (Phase 4)
+
+  logger.info("All workers started");
 }
 
 /**

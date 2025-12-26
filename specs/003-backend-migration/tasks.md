@@ -217,14 +217,19 @@
 
 ### LangChain Chains
 
-- [ ] T042 [EXECUTOR: langchain-node-specialist] [SEQUENTIAL] [US2] Implement chat chain with history loading (last 20 messages) in symancy-backend/src/chains/chat.chain.ts
+- [X] T042 [EXECUTOR: langchain-node-specialist] [SEQUENTIAL] [US2] Implement chat chain with history loading (last 20 messages) in symancy-backend/src/chains/chat.chain.ts
+  → Artifacts: [chat.chain.ts](symancy-backend/src/chains/chat.chain.ts), [chat.txt](symancy-backend/prompts/arina/chat.txt)
 
 ### Chat Module
 
-- [ ] T043 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US2] Implement chat webhook handler (creates job) in symancy-backend/src/modules/chat/handler.ts
-- [ ] T044 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US2] Implement chat worker (load history, load last analysis, generate response, save, send) in symancy-backend/src/modules/chat/worker.ts
-- [ ] T045 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US2] Implement daily chat limit tracking (50 messages/day) in symancy-backend/src/modules/chat/worker.ts
-- [ ] T046 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US2] Integrate chat handler into message router in symancy-backend/src/modules/router/index.ts
+- [X] T043 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US2] Implement chat webhook handler (creates job) in symancy-backend/src/modules/chat/handler.ts
+  → Artifacts: [handler.ts](symancy-backend/src/modules/chat/handler.ts)
+- [X] T044 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US2] Implement chat worker (load history, load last analysis, generate response, save, send) in symancy-backend/src/modules/chat/worker.ts
+  → Artifacts: [worker.ts](symancy-backend/src/modules/chat/worker.ts)
+- [X] T045 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US2] Implement daily chat limit tracking (50 messages/day) in symancy-backend/src/modules/chat/worker.ts
+  → Artifacts: [worker.ts](symancy-backend/src/modules/chat/worker.ts), [004_add_daily_chat_limits.sql](symancy-backend/migrations/004_add_daily_chat_limits.sql)
+- [X] T046 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US2] Integrate chat handler into message router in symancy-backend/src/modules/router/index.ts
+  → Artifacts: [index.ts](symancy-backend/src/modules/router/index.ts)
 
 **Checkpoint**: User Story 2 (Chat) is fully functional and testable independently
 
