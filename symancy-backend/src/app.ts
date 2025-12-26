@@ -113,11 +113,15 @@ async function startWorkers() {
 
   logger.info("Worker mode: registering queue handlers...");
 
-  // Clean up stale jobs from previous crashes
-  const { cleanupStaleLocks } = await import("./core/queue.js");
-  const cleaned = await cleanupStaleLocks(5);
-  if (cleaned > 0) {
-    logger.warn({ cleaned }, "Cleaned up stale processing locks from previous crashes");
+  // Clean up stale jobs from previous crashes (non-fatal)
+  try {
+    const { cleanupStaleLocks } = await import("./core/queue.js");
+    const cleaned = await cleanupStaleLocks(5);
+    if (cleaned > 0) {
+      logger.warn({ cleaned }, "Cleaned up stale processing locks from previous crashes");
+    }
+  } catch (error) {
+    logger.warn({ error }, "Skipping stale lock cleanup (pg-boss schema may not exist yet)");
   }
 
   // Register photo analysis worker

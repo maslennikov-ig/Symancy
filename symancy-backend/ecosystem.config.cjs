@@ -15,7 +15,8 @@ module.exports = {
     {
       name: 'symancy-backend',
       script: './dist/app.js',
-      cwd: '/var/www/symancy-backend',
+      cwd: '/var/www/symancy-backend/current',
+      node_args: '--env-file=.env',
 
       // Process settings
       instances: 1,                    // Single instance (bot requires single process)

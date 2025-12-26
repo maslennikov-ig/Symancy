@@ -84,6 +84,26 @@ export const QUEUE_CHAT_REPLY = "chat-reply";
  */
 export const QUEUE_SEND_MESSAGE = "send-message";
 
+/**
+ * Queue name for inactive reminder engagement
+ */
+export const QUEUE_INACTIVE_REMINDER = "inactive-reminder";
+
+/**
+ * Queue name for weekly check-in engagement
+ */
+export const QUEUE_WEEKLY_CHECKIN = "weekly-checkin";
+
+/**
+ * Queue name for daily fortune engagement
+ */
+export const QUEUE_DAILY_FORTUNE = "daily-fortune";
+
+/**
+ * Queue name for photo cleanup
+ */
+export const QUEUE_PHOTO_CLEANUP = "photo-cleanup";
+
 // =============================================================================
 // Rate Limits
 // =============================================================================

@@ -15,6 +15,14 @@ vi.mock("../../../src/core/langchain/models.js", () => ({
       },
     }),
   })),
+  createCassandraModel: vi.fn(() => ({
+    invoke: vi.fn().mockResolvedValue({
+      content: "<b>Cassandra interpretation</b> in HTML format",
+      usage_metadata: {
+        total_tokens: 200,
+      },
+    }),
+  })),
 }));
 
 describe("interpretation.chain", () => {
@@ -59,9 +67,21 @@ describe("interpretation.chain", () => {
       generateInterpretation({
         visionResult: mockVisionResult,
         // @ts-expect-error - Testing invalid persona
-        persona: "cassandra",
+        persona: "oracle",
       })
-    ).rejects.toThrow('Persona "cassandra" is not yet supported');
+    ).rejects.toThrow('Persona "oracle" is not supported');
+  });
+
+  it("should generate interpretation with cassandra persona", async () => {
+    const result = await generateInterpretation({
+      visionResult: mockVisionResult,
+      persona: "cassandra",
+    });
+
+    expect(result).toBeDefined();
+    expect(result.text).toBe("<b>Cassandra interpretation</b> in HTML format");
+    expect(result.persona).toBe("cassandra");
+    expect(result.tokensUsed).toBe(200);
   });
 
   it("should handle token usage fallback", async () => {

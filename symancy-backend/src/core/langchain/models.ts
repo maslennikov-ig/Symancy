@@ -28,6 +28,7 @@ interface ModelOptions {
 
 /**
  * Create ChatOpenAI instance with OpenRouter configuration
+ * Uses the correct LangChain configuration pattern for OpenRouter
  */
 function createChatOpenAIInstance(
   modelName: string,
@@ -41,12 +42,12 @@ function createChatOpenAIInstance(
   } = options;
 
   return new ChatOpenAI({
-    openAIApiKey: env.OPENROUTER_API_KEY,
-    modelName,
+    model: modelName,
     temperature,
     maxRetries,
     streaming,
     configuration: {
+      apiKey: env.OPENROUTER_API_KEY,
       baseURL: OPENROUTER_BASE_URL,
     },
   });

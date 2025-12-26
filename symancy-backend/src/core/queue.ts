@@ -10,6 +10,10 @@ import {
   QUEUE_ANALYZE_PHOTO,
   QUEUE_CHAT_REPLY,
   QUEUE_SEND_MESSAGE,
+  QUEUE_INACTIVE_REMINDER,
+  QUEUE_WEEKLY_CHECKIN,
+  QUEUE_DAILY_FORTUNE,
+  QUEUE_PHOTO_CLEANUP,
   JOB_TIMEOUT_MS,
 } from "../config/constants.js";
 import {
@@ -46,6 +50,28 @@ export async function getQueue(): Promise<PgBoss> {
 
     await _boss.start();
     logger.info("pg-boss started");
+
+    // Create queues if they don't exist (required for pg-boss 12.x)
+    const queuesToCreate = [
+      QUEUE_ANALYZE_PHOTO,
+      QUEUE_CHAT_REPLY,
+      QUEUE_SEND_MESSAGE,
+      QUEUE_INACTIVE_REMINDER,
+      QUEUE_WEEKLY_CHECKIN,
+      QUEUE_DAILY_FORTUNE,
+      QUEUE_PHOTO_CLEANUP,
+    ];
+    for (const queueName of queuesToCreate) {
+      try {
+        await _boss.createQueue(queueName);
+        logger.debug({ queue: queueName }, "Queue created");
+      } catch (error: unknown) {
+        // Queue may already exist - that's fine
+        if (error instanceof Error && !error.message.includes("already exists")) {
+          logger.warn({ queue: queueName, error }, "Failed to create queue");
+        }
+      }
+    }
   }
   return _boss;
 }
