@@ -73,67 +73,102 @@
 
 ### Configuration
 
-- [ ] T008 [EXECUTOR: MAIN] [SEQUENTIAL] Implement environment validation with Zod 4.x in symancy-backend/src/config/env.ts
-- [ ] T009 [EXECUTOR: MAIN] [PARALLEL-GROUP-2] Create constants file in symancy-backend/src/config/constants.ts (TELEGRAM_LIMIT, SAFE_LIMIT, RETRY_ATTEMPTS)
+- [X] T008 [EXECUTOR: MAIN] [SEQUENTIAL] Implement environment validation with Zod 4.x in symancy-backend/src/config/env.ts
+  → Artifacts: [env.ts](symancy-backend/src/config/env.ts)
+- [X] T009 [EXECUTOR: MAIN] [PARALLEL-GROUP-2] Create constants file in symancy-backend/src/config/constants.ts (TELEGRAM_LIMIT, SAFE_LIMIT, RETRY_ATTEMPTS)
+  → Artifacts: [constants.ts](symancy-backend/src/config/constants.ts)
 
 ### Database Infrastructure
 
-- [ ] T010 [EXECUTOR: database-architect] [SEQUENTIAL] Create migration file symancy-backend/migrations/003_backend_tables.sql (chat_messages, user_states, scheduled_messages, system_config, profiles extensions)
-- [ ] T011 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Implement Supabase client + pg.Pool factory in symancy-backend/src/core/database.ts
+- [X] T010 [EXECUTOR: database-architect] [SEQUENTIAL] Create migration file symancy-backend/migrations/003_backend_tables.sql (chat_messages, user_states, scheduled_messages, system_config, profiles extensions)
+  → Artifacts: [003_backend_tables.sql](symancy-backend/migrations/003_backend_tables.sql)
+- [X] T011 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Implement Supabase client + pg.Pool factory in symancy-backend/src/core/database.ts
+  → Artifacts: [database.ts](symancy-backend/src/core/database.ts)
 
 ### Logging
 
-- [ ] T012 [EXECUTOR: MAIN] [PARALLEL-GROUP-2] Implement Pino logger with JSON format in symancy-backend/src/core/logger.ts
+- [X] T012 [EXECUTOR: MAIN] [PARALLEL-GROUP-2] Implement Pino logger with JSON format in symancy-backend/src/core/logger.ts
+  → Artifacts: [logger.ts](symancy-backend/src/core/logger.ts)
 
 ### Queue Infrastructure
 
-- [ ] T013 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Implement pg-boss wrapper with queue definitions (ANALYZE_PHOTO, CHAT_REPLY, SEND_MESSAGE) in symancy-backend/src/core/queue.ts
+- [X] T013 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Implement pg-boss wrapper with queue definitions (ANALYZE_PHOTO, CHAT_REPLY, SEND_MESSAGE) in symancy-backend/src/core/queue.ts
+  → Artifacts: [queue.ts](symancy-backend/src/core/queue.ts)
 
 ### Telegram Infrastructure
 
-- [ ] T014 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Create grammY bot instance factory in symancy-backend/src/core/telegram.ts
+- [X] T014 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Create grammY bot instance factory in symancy-backend/src/core/telegram.ts
+  → Artifacts: [telegram.ts](symancy-backend/src/core/telegram.ts)
 
 ### LangChain Infrastructure
 
-- [ ] T015 [EXECUTOR: langchain-node-specialist] [PARALLEL-GROUP-3] Implement OpenRouter-backed ChatOpenAI models factory (arina, cassandra, chat, vision) in symancy-backend/src/core/langchain/models.ts
-- [ ] T016 [EXECUTOR: langchain-node-specialist] [PARALLEL-GROUP-3] Create PostgresSaver checkpointer factory in symancy-backend/src/core/langchain/checkpointer.ts
+- [X] T015 [EXECUTOR: langchain-node-specialist] [PARALLEL-GROUP-3] Implement OpenRouter-backed ChatOpenAI models factory (arina, cassandra, chat, vision) in symancy-backend/src/core/langchain/models.ts
+  → Artifacts: [models.ts](symancy-backend/src/core/langchain/models.ts)
+- [X] T016 [EXECUTOR: langchain-node-specialist] [PARALLEL-GROUP-3] Create PostgresSaver checkpointer factory in symancy-backend/src/core/langchain/checkpointer.ts
+  → Artifacts: [checkpointer.ts](symancy-backend/src/core/langchain/checkpointer.ts)
 
 ### TypeScript Types
 
-- [ ] T017 [EXECUTOR: typescript-types-specialist] [PARALLEL-GROUP-4] Create database entity types (Profile, ChatMessage, UserState, ScheduledMessage, SystemConfig) in symancy-backend/src/types/database.ts
-- [ ] T018 [EXECUTOR: typescript-types-specialist] [PARALLEL-GROUP-4] Create Telegram-specific types in symancy-backend/src/types/telegram.ts
-- [ ] T019 [EXECUTOR: typescript-types-specialist] [PARALLEL-GROUP-4] Create LangChain chain/graph types in symancy-backend/src/types/langchain.ts
-- [ ] T020 [EXECUTOR: MAIN] [SEQUENTIAL] Create types barrel export in symancy-backend/src/types/index.ts
+- [X] T017 [EXECUTOR: typescript-types-specialist] [PARALLEL-GROUP-4] Create database entity types (Profile, ChatMessage, UserState, ScheduledMessage, SystemConfig) in symancy-backend/src/types/database.ts
+  → Artifacts: [database.ts](symancy-backend/src/types/database.ts)
+- [X] T018 [EXECUTOR: typescript-types-specialist] [PARALLEL-GROUP-4] Create Telegram-specific types in symancy-backend/src/types/telegram.ts
+  → Artifacts: [telegram.ts](symancy-backend/src/types/telegram.ts)
+- [X] T019 [EXECUTOR: typescript-types-specialist] [PARALLEL-GROUP-4] Create LangChain chain/graph types in symancy-backend/src/types/langchain.ts
+  → Artifacts: [langchain.ts](symancy-backend/src/types/langchain.ts)
+- [X] T020 [EXECUTOR: MAIN] [SEQUENTIAL] Create types barrel export in symancy-backend/src/types/index.ts
+  → Artifacts: [index.ts](symancy-backend/src/types/index.ts)
 
 ### Utilities
 
-- [ ] T021 [EXECUTOR: utility-builder] [PARALLEL-GROUP-5] Implement image download and resize (sharp 800x800 WebP) in symancy-backend/src/utils/image-processor.ts
-- [ ] T022 [EXECUTOR: utility-builder] [PARALLEL-GROUP-5] Implement HTML formatter for Telegram in symancy-backend/src/utils/html-formatter.ts
-- [ ] T023 [EXECUTOR: utility-builder] [PARALLEL-GROUP-5] Implement message splitter (4096 char limit, HTML-aware) in symancy-backend/src/utils/message-splitter.ts
-- [ ] T024 [EXECUTOR: utility-builder] [PARALLEL-GROUP-5] Implement continuous typing indicator in symancy-backend/src/utils/typing-indicator.ts
+- [X] T021 [EXECUTOR: utility-builder] [PARALLEL-GROUP-5] Implement image download and resize (sharp 800x800 WebP) in symancy-backend/src/utils/image-processor.ts
+  → Artifacts: [image-processor.ts](symancy-backend/src/utils/image-processor.ts)
+- [X] T022 [EXECUTOR: utility-builder] [PARALLEL-GROUP-5] Implement HTML formatter for Telegram in symancy-backend/src/utils/html-formatter.ts
+  → Artifacts: [html-formatter.ts](symancy-backend/src/utils/html-formatter.ts)
+- [X] T023 [EXECUTOR: utility-builder] [PARALLEL-GROUP-5] Implement message splitter (4096 char limit, HTML-aware) in symancy-backend/src/utils/message-splitter.ts
+  → Artifacts: [message-splitter.ts](symancy-backend/src/utils/message-splitter.ts)
+- [X] T024 [EXECUTOR: utility-builder] [PARALLEL-GROUP-5] Implement continuous typing indicator in symancy-backend/src/utils/typing-indicator.ts
+  → Artifacts: [typing-indicator.ts](symancy-backend/src/utils/typing-indicator.ts)
 
 ### Services
 
-- [ ] T025 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Implement credit management service (check, consume, refund) in symancy-backend/src/modules/credits/service.ts
-- [ ] T026 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Implement dynamic config service with 60s cache in symancy-backend/src/modules/config/service.ts
+- [X] T025 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Implement credit management service (check, consume, refund) in symancy-backend/src/modules/credits/service.ts
+  → Artifacts: [service.ts](symancy-backend/src/modules/credits/service.ts)
+- [X] T026 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Implement dynamic config service with 60s cache in symancy-backend/src/modules/config/service.ts
+  → Artifacts: [service.ts](symancy-backend/src/modules/config/service.ts)
 
 ### Entry Point
 
-- [ ] T027 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Create application entry point (Fastify + grammY + pg-boss initialization) in symancy-backend/src/app.ts
-- [ ] T028 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Implement health check endpoint (/health) returning status, version, uptime per contracts/api.yaml
-- [ ] T029 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Implement webhook endpoint (/webhook/telegram) with secret validation per contracts/api.yaml
+- [X] T027 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Create application entry point (Fastify + grammY + pg-boss initialization) in symancy-backend/src/app.ts
+  → Artifacts: [app.ts](symancy-backend/src/app.ts)
+- [X] T028 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Implement health check endpoint (/health) returning status, version, uptime per contracts/api.yaml
+  → Artifacts: [app.ts](symancy-backend/src/app.ts)
+- [X] T029 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Implement webhook endpoint (/webhook/telegram) with secret validation per contracts/api.yaml
+  → Artifacts: [app.ts](symancy-backend/src/app.ts)
 
 ### Message Router
 
-- [ ] T030 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Create message type detector in symancy-backend/src/modules/router/detector.ts
-- [ ] T031 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Implement auth and state loading middleware in symancy-backend/src/modules/router/middleware.ts
-- [ ] T032 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Implement main message dispatcher in symancy-backend/src/modules/router/index.ts
+- [X] T030 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Create message type detector in symancy-backend/src/modules/router/detector.ts
+  → Artifacts: [detector.ts](symancy-backend/src/modules/router/detector.ts)
+- [X] T031 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Implement auth and state loading middleware in symancy-backend/src/modules/router/middleware.ts
+  → Artifacts: [middleware.ts](symancy-backend/src/modules/router/middleware.ts)
+- [X] T032 [EXECUTOR: node-backend-specialist] [SEQUENTIAL] Implement main message dispatcher in symancy-backend/src/modules/router/index.ts
+  → Artifacts: [index.ts](symancy-backend/src/modules/router/index.ts), [rate-limit.ts](symancy-backend/src/modules/router/rate-limit.ts)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
 ### Quality Gate
 
-- [ ] QG01 [EXECUTOR: MAIN] [SEQUENTIAL] Run `pnpm type-check` and `pnpm build` — must pass before proceeding to user stories
+- [X] QG01 [EXECUTOR: MAIN] [SEQUENTIAL] Run `pnpm type-check` and `pnpm build` — must pass before proceeding to user stories
+  → Passed: type-check ✓, build ✓
+
+### Code Review (Post-Phase 2)
+
+- [X] CR01 Code review of all Phase 2 implementation
+  → Artifacts: [CODE-REVIEW-PHASE2.md](symancy-backend/docs/CODE-REVIEW-PHASE2.md)
+- [X] CR02 Fix all CRITICAL issues (5/5): race condition, middleware errors, photo validation, resource leak, router init
+- [X] CR03 Fix all HIGH issues (8/8): text validation, retry logic, rate limiting, health checks, webhook shutdown
+- [X] CR04 Fix all MEDIUM issues (12/12): config validation, queue handling, null checks, HTML escape, DB pool, SSRF protection
+  → Additional artifacts: [rate-limit.ts](symancy-backend/src/modules/router/rate-limit.ts), Supabase RPC `refund_credits`
 
 ---
 
