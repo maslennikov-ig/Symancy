@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.0] - 2025-12-26
+
+### Fixed
+- **ci**: link shared .env file during backend deployment (460b881)
+- **backend**: correct profile column names in middleware (e677a5e)
+- **ci**: correct artifact path in backend deploy (36cd136)
+
+### Other
+- update project files (2d5e9e8)
+
 ## [0.4.2] - 2025-12-26
 
 ### Other

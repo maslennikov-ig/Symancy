@@ -2,6 +2,20 @@
 
 User-facing release notes for all versions.
 
+## v0.5.0
+
+_Released on 2025-12-26_
+
+### 🐛 Bug Fixes
+
+- **CI/CD**: Link shared .env file during backend deployment
+- **backend**: Correct profile column names in middleware
+- **CI/CD**: Correct artifact path in backend deploy
+
+---
+
+_This release was automatically generated from 4 commits._
+
 ## v0.4.2
 
 _Released on 2025-12-26_
