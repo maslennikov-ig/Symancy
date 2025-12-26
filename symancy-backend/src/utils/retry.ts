@@ -75,8 +75,8 @@ function defaultRetryCondition(error: unknown): boolean {
 /**
  * Calculate delay with exponential backoff and jitter
  *
- * Formula: delay = min(baseDelay * (multiplier ^ attempt), maxDelay) + jitter
- * Jitter: Random 0-20% of delay to prevent thundering herd
+ * Formula: delay = min(baseDelay * (multiplier ^ attempt), maxDelay) * jitter
+ * Jitter: Random ±10% variation (0.9 to 1.1) to prevent thundering herd
  */
 function calculateDelay(
   attempt: number,
@@ -88,10 +88,10 @@ function calculateDelay(
   const exponentialDelay = baseDelayMs * Math.pow(backoffMultiplier, attempt);
   const cappedDelay = Math.min(exponentialDelay, maxDelayMs);
 
-  // Add jitter: 0-20% of delay
-  const jitter = cappedDelay * Math.random() * 0.2;
+  // Apply jitter: ±10% (0.9 to 1.1)
+  const jitter = 0.9 + Math.random() * 0.2;
 
-  return Math.floor(cappedDelay + jitter);
+  return Math.floor(cappedDelay * jitter);
 }
 
 /**

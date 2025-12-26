@@ -1,8 +1,9 @@
 /**
  * Rate limiting middleware for bot requests
- * Implements simple in-memory rate limiter (10 requests per minute per user)
+ * Implements LRU-based in-memory rate limiter (10 requests per minute per user)
  */
 import { type Context, type NextFunction } from "grammy";
+import { LRUCache } from "lru-cache";
 import { getLogger } from "../../core/logger.js";
 
 const logger = getLogger().child({ module: "rate-limit" });
@@ -12,7 +13,7 @@ const logger = getLogger().child({ module: "rate-limit" });
  */
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 10;
-const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_TRACKED_USERS = 10000; // Max 10K users tracked to prevent unbounded growth
 
 /**
  * User rate limit state
@@ -23,29 +24,15 @@ interface RateLimitEntry {
 }
 
 /**
- * In-memory rate limit store
- * Map<userId, RateLimitEntry>
+ * LRU cache for rate limit store
+ * Automatically evicts old entries to prevent memory leaks
  */
-const rateLimitStore = new Map<number, RateLimitEntry>();
-
-/**
- * Cleanup old entries every 5 minutes
- */
-setInterval(() => {
-  const now = Date.now();
-  let cleanedCount = 0;
-
-  for (const [userId, entry] of rateLimitStore.entries()) {
-    if (now > entry.resetAt) {
-      rateLimitStore.delete(userId);
-      cleanedCount++;
-    }
-  }
-
-  if (cleanedCount > 0) {
-    logger.debug({ cleanedCount }, "Cleaned up old rate limit entries");
-  }
-}, CLEANUP_INTERVAL_MS);
+const rateLimitStore = new LRUCache<number, RateLimitEntry>({
+  max: MAX_TRACKED_USERS, // Max 10K users tracked
+  ttl: RATE_LIMIT_WINDOW_MS, // Auto-evict after window expires
+  updateAgeOnGet: false, // Don't reset TTL on read
+  updateAgeOnHas: false,
+});
 
 /**
  * Rate limiting middleware

@@ -5,12 +5,12 @@
 import type { BotContext } from "../router/middleware.js";
 import type { PhotoAnalysisJobData } from "../../types/telegram.js";
 import { getLogger } from "../../core/logger.js";
-import { hasCredits } from "../credits/service.js";
 import { sendJob } from "../../core/queue.js";
 import { isMaintenanceMode } from "../config/service.js";
 import {
   QUEUE_ANALYZE_PHOTO,
   TELEGRAM_PHOTO_SIZE_LIMIT,
+  MAX_CAPTION_LENGTH,
 } from "../../config/constants.js";
 import { arinaStrategy } from "./personas/arina.strategy.js";
 import { cassandraStrategy } from "./personas/cassandra.strategy.js";
@@ -32,23 +32,24 @@ const PERSONA_STRATEGIES: Record<"arina" | "cassandra", PersonaStrategy> = {
  * @returns Selected persona name
  */
 function determinePersona(caption?: string): "arina" | "cassandra" {
-  if (!caption) {
-    return "arina"; // Default persona
+  // Early return for missing or too long captions
+  if (!caption || caption.length > MAX_CAPTION_LENGTH) {
+    return "arina";
   }
 
-  const lowerCaption = caption.toLowerCase();
+  // Trim and lowercase for safe comparison
+  const sanitized = caption.trim().toLowerCase();
 
   // Check for Cassandra/premium keywords
   if (
-    lowerCaption.includes("cassandra") ||
-    lowerCaption.includes("кассандра") ||
-    lowerCaption.includes("premium") ||
-    lowerCaption.includes("премиум")
+    sanitized.includes("cassandra") ||
+    sanitized.includes("кассандра") ||
+    sanitized.includes("premium") ||
+    sanitized.includes("премиум")
   ) {
     return "cassandra";
   }
 
-  // Default to warm, supportive persona
   return "arina";
 }
 
@@ -100,20 +101,27 @@ export async function handlePhotoMessage(ctx: BotContext): Promise<void> {
   }
 
   // Validate photo size (Telegram limit: 10MB)
-  if (photo.file_size && photo.file_size > TELEGRAM_PHOTO_SIZE_LIMIT) {
-    logger.warn(
-      {
-        telegramUserId,
-        fileSize: photo.file_size,
-        limit: TELEGRAM_PHOTO_SIZE_LIMIT,
-      },
-      "Photo exceeds size limit"
-    );
-    await ctx.reply(
-      "📸 Изображение слишком большое. Максимальный размер: 10 МБ.\n" +
-      "Попробуйте сжать фото или отправить другое."
-    );
-    return;
+  const fileSize = photo.file_size;
+  if (fileSize !== undefined) {
+    if (fileSize > TELEGRAM_PHOTO_SIZE_LIMIT) {
+      logger.warn(
+        {
+          telegramUserId,
+          fileSize,
+          limit: TELEGRAM_PHOTO_SIZE_LIMIT,
+        },
+        "Photo exceeds size limit"
+      );
+      await ctx.reply(
+        "📸 Изображение слишком большое. Максимальный размер: 10 МБ.\n" +
+        "Попробуйте сжать фото или отправить другое."
+      );
+      return;
+    }
+  } else {
+    // If file_size is unknown, log warning but proceed
+    // Worker will handle actual download size limits
+    logger.warn({ telegramUserId, fileId: photo.file_id }, "Photo size unknown, proceeding anyway");
   }
 
   // Determine persona from caption (if provided)
@@ -122,23 +130,9 @@ export async function handlePhotoMessage(ctx: BotContext): Promise<void> {
 
   // Get strategy for selected persona
   const strategy = PERSONA_STRATEGIES[persona];
-  const creditCost = strategy.getCreditCost();
 
-  // Check if user has enough credits
-  if (!(await hasCredits(telegramUserId, creditCost))) {
-    logger.info(
-      { telegramUserId, persona, creditsNeeded: creditCost },
-      "User has insufficient credits"
-    );
-
-    const personaLabel = persona === "cassandra" ? "премиум гадание" : "гадание";
-    await ctx.reply(
-      `💳 У вас недостаточно кредитов для ${personaLabel}.\n` +
-        `Необходимо: ${creditCost} кредит(ов)\n` +
-        "Пожалуйста, пополните баланс."
-    );
-    return;
-  }
+  // Note: Credit check moved to worker for atomic credit consumption
+  // This prevents race conditions where multiple requests can bypass credit check
 
   // Get loading message for selected persona using strategy
   const loadingText = strategy.getLoadingMessage(ctx.from.language_code || "ru");

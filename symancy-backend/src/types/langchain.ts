@@ -24,6 +24,8 @@ export interface InterpretationResult {
   text: string;
   persona: "arina" | "cassandra";
   tokensUsed: number;
+  success?: boolean;
+  error?: string;
 }
 
 /**

@@ -12,6 +12,14 @@ import {
   QUEUE_SEND_MESSAGE,
   JOB_TIMEOUT_MS,
 } from "../config/constants.js";
+import {
+  PhotoAnalysisJobSchema,
+  ChatReplyJobSchema,
+  SendMessageJobSchema,
+  type PhotoAnalysisJobData,
+  type ChatReplyJobData,
+  type SendMessageJobData,
+} from "../types/job-schemas.js";
 
 let _boss: PgBoss | null = null;
 
@@ -44,12 +52,15 @@ export async function getQueue(): Promise<PgBoss> {
 
 /**
  * Send job to analyze photo queue
- * @param data - Job data (should include chatId, messageId, photoFileId)
+ * @param data - Job data (validated against PhotoAnalysisJobSchema)
  * @returns Job ID or null if failed
  */
-export async function sendAnalyzePhotoJob(data: object): Promise<string | null> {
+export async function sendAnalyzePhotoJob(data: PhotoAnalysisJobData): Promise<string | null> {
+  // Validate job data before sending
+  const validated = PhotoAnalysisJobSchema.parse(data);
+
   const boss = await getQueue();
-  return boss.send(QUEUE_ANALYZE_PHOTO, data, {
+  return boss.send(QUEUE_ANALYZE_PHOTO, validated, {
     retryLimit: 3, // Retry up to 3 times
     retryDelay: 5, // Wait 5 seconds between retries
     expireInSeconds: JOB_TIMEOUT_MS / 1000, // Job expires after timeout
@@ -58,12 +69,15 @@ export async function sendAnalyzePhotoJob(data: object): Promise<string | null> 
 
 /**
  * Send job to chat reply queue
- * @param data - Job data (should include chatId, messageId, text)
+ * @param data - Job data (validated against ChatReplyJobSchema)
  * @returns Job ID or null if failed
  */
-export async function sendChatReplyJob(data: object): Promise<string | null> {
+export async function sendChatReplyJob(data: ChatReplyJobData): Promise<string | null> {
+  // Validate job data before sending
+  const validated = ChatReplyJobSchema.parse(data);
+
   const boss = await getQueue();
-  return boss.send(QUEUE_CHAT_REPLY, data, {
+  return boss.send(QUEUE_CHAT_REPLY, validated, {
     retryLimit: 3,
     retryDelay: 5,
     expireInSeconds: JOB_TIMEOUT_MS / 1000,
@@ -72,12 +86,15 @@ export async function sendChatReplyJob(data: object): Promise<string | null> {
 
 /**
  * Send job to send message queue
- * @param data - Job data (should include chatId, text)
+ * @param data - Job data (validated against SendMessageJobSchema)
  * @returns Job ID or null if failed
  */
-export async function sendMessageJob(data: object): Promise<string | null> {
+export async function sendMessageJob(data: SendMessageJobData): Promise<string | null> {
+  // Validate job data before sending
+  const validated = SendMessageJobSchema.parse(data);
+
   const boss = await getQueue();
-  return boss.send(QUEUE_SEND_MESSAGE, data, {
+  return boss.send(QUEUE_SEND_MESSAGE, validated, {
     retryLimit: 3,
     retryDelay: 10, // Longer delay for message sending (rate limits)
     expireInSeconds: JOB_TIMEOUT_MS / 1000,
@@ -198,6 +215,11 @@ export async function stopQueue(): Promise<void> {
  */
 export async function cleanupStaleLocks(maxAgeMinutes: number = 5): Promise<number> {
   const logger = getLogger().child({ module: "queue" });
+
+  // Validate parameter to prevent SQL injection
+  if (!Number.isInteger(maxAgeMinutes) || maxAgeMinutes <= 0 || maxAgeMinutes > 1440) {
+    throw new Error("maxAgeMinutes must be an integer between 1 and 1440 (24 hours)");
+  }
 
   try {
     // Initialize queue (needed for pool initialization)

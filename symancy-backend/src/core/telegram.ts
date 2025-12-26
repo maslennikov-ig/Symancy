@@ -53,6 +53,11 @@ export async function setWebhook(url: string): Promise<void> {
   const env = getEnv();
   const logger = getLogger().child({ module: "telegram" });
 
+  // Delete any existing webhook before setting new one
+  // This prevents issues with stale webhooks
+  await getBot().api.deleteWebhook({ drop_pending_updates: false });
+  logger.info("Deleted existing webhook");
+
   await getBot().api.setWebhook(url, {
     secret_token: env.TELEGRAM_WEBHOOK_SECRET,
     allowed_updates: ["message", "callback_query"],

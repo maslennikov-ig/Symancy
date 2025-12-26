@@ -3,6 +3,8 @@
  * Initializes Fastify server, Telegram bot, and pg-boss queue
  */
 import Fastify from "fastify";
+import { access, mkdir } from "fs/promises";
+import { constants } from "fs";
 import { getEnv, isApiMode, isWorkerMode } from "./config/env.js";
 import { getLogger, setupProcessErrorHandlers } from "./core/logger.js";
 import { closeDatabase, getPool } from "./core/database.js";
@@ -13,8 +15,25 @@ import { setupRouter } from "./modules/router/index.js";
 import { registerPhotoWorker } from "./modules/photo-analysis/worker.js";
 import { registerChatWorker } from "./modules/chat/worker.js";
 import { setupScheduler, registerEngagementWorkers } from "./modules/engagement/index.js";
+import { validatePromptsExist } from "./chains/validation.js";
 
 const logger = getLogger();
+
+/**
+ * Validate and create photo storage directory
+ */
+async function validateStorage(): Promise<void> {
+  const env = getEnv();
+  const storagePath = env.PHOTO_STORAGE_PATH;
+
+  try {
+    await access(storagePath, constants.W_OK);
+    logger.info({ path: storagePath }, "Storage directory validated");
+  } catch {
+    await mkdir(storagePath, { recursive: true });
+    logger.info({ path: storagePath }, "Created storage directory");
+  }
+}
 
 /**
  * Start API server with Fastify
@@ -151,16 +170,22 @@ async function shutdown(fastify?: Awaited<ReturnType<typeof Fastify>>) {
  */
 async function main() {
   setupProcessErrorHandlers();
-  
+
   const env = getEnv();
   logger.info({ mode: env.MODE }, "Starting application...");
-  
+
+  // Validate all prompt files exist before startup
+  await validatePromptsExist();
+
+  // Validate and create photo storage directory
+  await validateStorage();
+
   let fastify: Awaited<ReturnType<typeof Fastify>> | undefined;
-  
+
   if (isApiMode()) {
     fastify = await startApi();
   }
-  
+
   if (isWorkerMode()) {
     await startWorkers();
   }

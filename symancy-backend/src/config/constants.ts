@@ -22,6 +22,11 @@ export const TELEGRAM_SAFE_LIMIT = 4000;
  */
 export const TELEGRAM_PHOTO_SIZE_LIMIT = 10 * 1024 * 1024;
 
+/**
+ * Maximum caption length for photo messages
+ */
+export const MAX_CAPTION_LENGTH = 1000;
+
 // =============================================================================
 // Retry Configuration
 // =============================================================================

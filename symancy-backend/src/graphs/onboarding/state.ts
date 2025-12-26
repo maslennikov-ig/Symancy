@@ -40,7 +40,13 @@ export const OnboardingStateSchema = z.object({
   // Current step in the onboarding flow
   step: OnboardingStep.default("welcome").register(registry, {
     reducer: {
-      fn: (_prev, next) => next,
+      fn: (prev, next) => {
+        // Guard against undefined/null
+        if (next === undefined || next === null) {
+          return prev;
+        }
+        return next;
+      },
       schema: OnboardingStep,
     },
   }),
@@ -48,7 +54,13 @@ export const OnboardingStateSchema = z.object({
   // User's Telegram ID
   telegramUserId: z.number().positive().register(registry, {
     reducer: {
-      fn: (_prev, next) => next,
+      fn: (prev, next) => {
+        // Guard against undefined/null
+        if (next === undefined || next === null) {
+          return prev;
+        }
+        return next;
+      },
       schema: z.number().positive(),
     },
   }),
@@ -56,7 +68,13 @@ export const OnboardingStateSchema = z.object({
   // Chat ID for sending messages
   chatId: z.number().register(registry, {
     reducer: {
-      fn: (_prev, next) => next,
+      fn: (prev, next) => {
+        // Guard against undefined/null
+        if (next === undefined || next === null) {
+          return prev;
+        }
+        return next;
+      },
       schema: z.number(),
     },
   }),
@@ -68,7 +86,13 @@ export const OnboardingStateSchema = z.object({
     .default(null)
     .register(registry, {
       reducer: {
-        fn: (_prev, next) => next,
+        fn: (prev, next) => {
+          // Guard against undefined (null is valid for nullable field)
+          if (next === undefined) {
+            return prev;
+          }
+          return next;
+        },
         schema: z.string().nullable(),
       },
     }),
@@ -91,7 +115,13 @@ export const OnboardingStateSchema = z.object({
     .default("Europe/Moscow")
     .register(registry, {
       reducer: {
-        fn: (_prev, next) => next,
+        fn: (prev, next) => {
+          // Guard against undefined/null
+          if (next === undefined || next === null) {
+            return prev;
+          }
+          return next;
+        },
         schema: z.string(),
       },
     }),
@@ -99,7 +129,13 @@ export const OnboardingStateSchema = z.object({
   // Whether to send proactive messages
   notificationsEnabled: z.boolean().default(true).register(registry, {
     reducer: {
-      fn: (_prev, next) => next,
+      fn: (prev, next) => {
+        // Guard against undefined/null
+        if (next === undefined || next === null) {
+          return prev;
+        }
+        return next;
+      },
       schema: z.boolean(),
     },
   }),
@@ -107,7 +143,13 @@ export const OnboardingStateSchema = z.object({
   // Whether onboarding is finished
   completed: z.boolean().default(false).register(registry, {
     reducer: {
-      fn: (_prev, next) => next,
+      fn: (prev, next) => {
+        // Guard against undefined/null
+        if (next === undefined || next === null) {
+          return prev;
+        }
+        return next;
+      },
       schema: z.boolean(),
     },
   }),
@@ -115,7 +157,13 @@ export const OnboardingStateSchema = z.object({
   // Whether bonus credit was granted
   bonusCreditGranted: z.boolean().default(false).register(registry, {
     reducer: {
-      fn: (_prev, next) => next,
+      fn: (prev, next) => {
+        // Guard against undefined/null
+        if (next === undefined || next === null) {
+          return prev;
+        }
+        return next;
+      },
       schema: z.boolean(),
     },
   }),
@@ -132,38 +180,91 @@ export type OnboardingState = z.infer<typeof OnboardingStateSchema>;
  */
 export const OnboardingStateAnnotation = Annotation.Root({
   step: Annotation<OnboardingStepType>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => {
+      // Guard against undefined/null
+      if (next === undefined || next === null) {
+        return prev;
+      }
+      return next;
+    },
     default: () => "welcome",
   }),
   telegramUserId: Annotation<number>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => {
+      // Guard against undefined/null
+      if (next === undefined || next === null) {
+        return prev;
+      }
+      return next;
+    },
   }),
   chatId: Annotation<number>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => {
+      // Guard against undefined/null
+      if (next === undefined || next === null) {
+        return prev;
+      }
+      return next;
+    },
   }),
   name: Annotation<string | null>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => {
+      // Guard against undefined (null is valid for nullable field)
+      if (next === undefined) {
+        return prev;
+      }
+      return next;
+    },
     default: () => null,
   }),
   goals: Annotation<UserGoalType[]>({
-    reducer: (prev, next) =>
-      Array.isArray(next) ? next : prev.concat(next),
+    reducer: (prev, next) => {
+      // Guard against undefined/null
+      if (next === undefined || next === null) {
+        return prev;
+      }
+      return Array.isArray(next) ? next : prev.concat(next);
+    },
     default: () => [],
   }),
   timezone: Annotation<string>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => {
+      // Guard against undefined/null
+      if (next === undefined || next === null) {
+        return prev;
+      }
+      return next;
+    },
     default: () => "Europe/Moscow",
   }),
   notificationsEnabled: Annotation<boolean>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => {
+      // Guard against undefined/null
+      if (next === undefined || next === null) {
+        return prev;
+      }
+      return next;
+    },
     default: () => true,
   }),
   completed: Annotation<boolean>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => {
+      // Guard against undefined/null
+      if (next === undefined || next === null) {
+        return prev;
+      }
+      return next;
+    },
     default: () => false,
   }),
   bonusCreditGranted: Annotation<boolean>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => {
+      // Guard against undefined/null
+      if (next === undefined || next === null) {
+        return prev;
+      }
+      return next;
+    },
     default: () => false,
   }),
 });

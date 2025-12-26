@@ -2,6 +2,7 @@
  * Main message dispatcher for routing Telegram updates
  * Sets up bot handlers, middleware, and message processing logic
  */
+import { Composer } from "grammy";
 import { getBot } from "../../core/telegram.js";
 import { getLogger } from "../../core/logger.js";
 import { loadProfile, loadUserState, checkBanned, type BotContext } from "./middleware.js";
@@ -24,11 +25,25 @@ const logger = getLogger().child({ module: "router" });
 export function setupRouter(): void {
   const bot = getBot();
 
-  // Apply middleware in order
-  bot.use(loadProfile);
-  bot.use(loadUserState);
-  bot.use(checkBanned);
-  bot.use(rateLimitMiddleware);
+  // Create protected composer for middleware with error boundary
+  const protectedMiddleware = new Composer<BotContext>();
+
+  // Apply middleware to protected composer
+  protectedMiddleware.use(loadProfile);
+  protectedMiddleware.use(loadUserState);
+  protectedMiddleware.use(checkBanned);
+  protectedMiddleware.use(rateLimitMiddleware);
+
+  // Install middleware with error boundary
+  bot.use(
+    protectedMiddleware.errorBoundary((err) => {
+      logger.error(
+        { error: err.error, updateId: err.ctx?.update?.update_id },
+        "Middleware error caught by boundary"
+      );
+      // Don't call next() - stop processing on middleware errors
+    })
+  );
 
   // Handle /start command
   bot.command("start", async (ctx: BotContext) => {

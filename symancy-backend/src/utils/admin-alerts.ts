@@ -31,10 +31,18 @@ const SEVERITY_EMOJI: Record<AlertSeverity, string> = {
 const MAX_MESSAGE_LENGTH = 4000;
 
 /**
- * Rate limiting: Track last alert time per error type
- * Key: error message hash, Value: timestamp
+ * Alert cache entry with count aggregation
  */
-const alertCache = new Map<string, number>();
+interface AlertCacheEntry {
+  lastSentTime: number;
+  count: number;
+}
+
+/**
+ * Rate limiting: Track last alert time and count per error type
+ * Key: error message hash, Value: { lastSentTime, count }
+ */
+const alertCache = new Map<string, AlertCacheEntry>();
 
 /**
  * Rate limit duration: 1 minute per unique error
@@ -55,28 +63,45 @@ function hashString(str: string): string {
 }
 
 /**
- * Check if alert should be rate-limited
+ * Check if alert should be rate-limited and increment count
  */
 function shouldRateLimit(errorKey: string): boolean {
-  const lastAlertTime = alertCache.get(errorKey);
-  if (!lastAlertTime) {
+  const entry = alertCache.get(errorKey);
+  if (!entry) {
+    // First occurrence - initialize entry
+    alertCache.set(errorKey, { lastSentTime: 0, count: 1 });
     return false;
   }
 
-  const timeSinceLastAlert = Date.now() - lastAlertTime;
-  return timeSinceLastAlert < RATE_LIMIT_MS;
+  const timeSinceLastAlert = Date.now() - entry.lastSentTime;
+
+  if (timeSinceLastAlert < RATE_LIMIT_MS) {
+    // Within rate limit - increment count
+    entry.count++;
+    return true;
+  }
+
+  // Rate limit expired - reset count
+  entry.count = 1;
+  return false;
 }
 
 /**
- * Record alert in rate limit cache
+ * Record alert in rate limit cache with count
  */
 function recordAlert(errorKey: string): void {
-  alertCache.set(errorKey, Date.now());
+  const entry = alertCache.get(errorKey);
+  if (entry) {
+    entry.lastSentTime = Date.now();
+    // Count is reset in shouldRateLimit when rate limit expires
+  } else {
+    alertCache.set(errorKey, { lastSentTime: Date.now(), count: 1 });
+  }
 
   // Clean up old entries (older than 5 minutes)
   const cutoffTime = Date.now() - 5 * 60 * 1000;
-  for (const [key, timestamp] of alertCache.entries()) {
-    if (timestamp < cutoffTime) {
+  for (const [key, entry] of alertCache.entries()) {
+    if (entry.lastSentTime < cutoffTime) {
       alertCache.delete(key);
     }
   }
@@ -95,19 +120,26 @@ function truncateMessage(message: string, maxLength: number): string {
 }
 
 /**
- * Format alert message with severity and timestamp
+ * Format alert message with severity, timestamp, and occurrence count
  */
 function formatAlertMessage(
   message: string,
   severity: AlertSeverity,
-  context?: Record<string, unknown>
+  context?: Record<string, unknown>,
+  count?: number
 ): string {
   const emoji = SEVERITY_EMOJI[severity];
   const timestamp = new Date().toISOString();
 
   let formatted = `${emoji} ${severity.toUpperCase()} ALERT\n`;
-  formatted += `Time: ${timestamp}\n\n`;
-  formatted += `Message: ${message}\n`;
+  formatted += `Time: ${timestamp}\n`;
+
+  // Add count if > 1
+  if (count && count > 1) {
+    formatted += `Occurrences: ${count} times in last ${RATE_LIMIT_MS / 1000}s\n`;
+  }
+
+  formatted += `\nMessage: ${message}\n`;
 
   if (context && Object.keys(context).length > 0) {
     formatted += `\nContext:\n`;
@@ -122,18 +154,25 @@ function formatAlertMessage(
 }
 
 /**
- * Format error alert message with stack trace
+ * Format error alert message with stack trace and occurrence count
  */
 function formatErrorAlert(
   error: Error,
-  context?: Record<string, unknown>
+  context?: Record<string, unknown>,
+  count?: number
 ): string {
   const emoji = SEVERITY_EMOJI.error;
   const timestamp = new Date().toISOString();
 
   let formatted = `${emoji} ERROR ALERT\n`;
-  formatted += `Time: ${timestamp}\n\n`;
-  formatted += `Message: ${error.message}\n`;
+  formatted += `Time: ${timestamp}\n`;
+
+  // Add count if > 1
+  if (count && count > 1) {
+    formatted += `Occurrences: ${count} times in last ${RATE_LIMIT_MS / 1000}s\n`;
+  }
+
+  formatted += `\nMessage: ${error.message}\n`;
 
   if (context && Object.keys(context).length > 0) {
     formatted += `\nContext:\n`;
@@ -185,8 +224,12 @@ export async function sendAdminAlert(
       return;
     }
 
-    // Format message
-    const formattedMessage = formatAlertMessage(message, severity, context);
+    // Get count from cache
+    const entry = alertCache.get(errorKey);
+    const count = entry?.count || 1;
+
+    // Format message with count
+    const formattedMessage = formatAlertMessage(message, severity, context, count);
 
     // Send to admin
     const api = getBotApi();
@@ -194,7 +237,7 @@ export async function sendAdminAlert(
       parse_mode: undefined, // Plain text to avoid HTML/Markdown issues
     });
 
-    // Record alert
+    // Record alert (resets count)
     recordAlert(errorKey);
 
     logger.debug("Admin alert sent", { message, severity });
@@ -242,8 +285,12 @@ export async function sendErrorAlert(
       return;
     }
 
-    // Format message
-    const formattedMessage = formatErrorAlert(error, context);
+    // Get count from cache
+    const entry = alertCache.get(errorKey);
+    const count = entry?.count || 1;
+
+    // Format message with count
+    const formattedMessage = formatErrorAlert(error, context, count);
 
     // Send to admin
     const api = getBotApi();
@@ -251,7 +298,7 @@ export async function sendErrorAlert(
       parse_mode: undefined,
     });
 
-    // Record alert
+    // Record alert (resets count)
     recordAlert(errorKey);
 
     logger.debug("Error alert sent", { error: error.message });

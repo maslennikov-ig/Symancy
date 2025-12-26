@@ -27,37 +27,12 @@ export type MessageType = "photo" | "text" | "command" | "callback" | "unknown";
 export type HandledUpdate = "message" | "callback_query";
 
 /**
- * Photo analysis job data
- * Payload for queued photo analysis tasks
+ * Job data types
+ * Re-exported from job-schemas for backwards compatibility
  */
-export interface PhotoAnalysisJobData {
-  telegramUserId: number;
-  chatId: number;
-  messageId: number;  // Loading message ID to edit with result
-  fileId: string;
-  persona: "arina" | "cassandra";
-  language: string;
-  userName?: string;
-}
-
-/**
- * Chat reply job data
- * Payload for queued text message processing
- */
-export interface ChatReplyJobData {
-  telegramUserId: number;
-  chatId: number;
-  messageId: number;
-  text: string;
-}
-
-/**
- * Scheduled message job data
- * Payload for scheduled proactive messages
- */
-export interface SendMessageJobData {
-  telegramUserId: number;
-  chatId: number;
-  text: string;
-  parseMode?: "HTML" | "Markdown";
-}
+export type {
+  PhotoAnalysisJobData,
+  ChatReplyJobData,
+  SendMessageJobData,
+  EngagementJobData,
+} from "./job-schemas.js";

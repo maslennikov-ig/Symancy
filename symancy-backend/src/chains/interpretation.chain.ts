@@ -13,6 +13,9 @@ import type {
 import { readFile } from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
+import { getLogger } from "../core/logger.js";
+
+const logger = getLogger().child({ module: "interpretation-chain" });
 
 /**
  * Get project root directory
@@ -20,6 +23,28 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "../..");
+
+/**
+ * Fallback interpretations when LLM fails
+ * Provides graceful degradation for better UX
+ */
+const FALLBACK_INTERPRETATION_RU = `
+☕ К сожалению, сейчас я не могу полностью интерпретировать образы в вашей чашке.
+
+Однако помните: кофейная гуща всегда хранит ваши мечты и надежды.
+Попробуйте снова через несколько минут, и я постараюсь раскрыть для вас послание судьбы.
+
+✨ Ваша удача на вашей стороне.
+`;
+
+const FALLBACK_INTERPRETATION_EN = `
+☕ Unfortunately, I cannot fully interpret the images in your cup right now.
+
+However, remember: coffee grounds always hold your dreams and hopes.
+Try again in a few minutes, and I will try to reveal destiny's message for you.
+
+✨ Your luck is on your side.
+`;
 
 /**
  * Cached prompts (loaded once at module init)
@@ -180,18 +205,33 @@ export async function generateInterpretation(
     new HumanMessage(interpretationText),
   ];
 
-  // Invoke model
-  const response = await model.invoke(messages);
+  // Invoke model with error recovery
+  try {
+    const response = await model.invoke(messages);
 
-  // Extract token usage from response metadata
-  // ChatOpenAI response structure: response.usage_metadata.total_tokens or response.response_metadata
-  const tokensUsed =
-    response.usage_metadata?.total_tokens ??
-    0;
+    // Extract token usage from response metadata
+    // ChatOpenAI response structure: response.usage_metadata.total_tokens or response.response_metadata
+    const tokensUsed = response.usage_metadata?.total_tokens ?? 0;
 
-  return {
-    text: response.content as string,
-    persona,
-    tokensUsed,
-  };
+    return {
+      text: response.content as string,
+      persona,
+      tokensUsed,
+      success: true,
+    };
+  } catch (error) {
+    logger.error({ error, persona, language }, "Interpretation chain failed, using fallback");
+
+    // Select fallback based on language
+    const fallback =
+      language === "en" ? FALLBACK_INTERPRETATION_EN : FALLBACK_INTERPRETATION_RU;
+
+    return {
+      text: fallback,
+      persona,
+      tokensUsed: 0,
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
 }

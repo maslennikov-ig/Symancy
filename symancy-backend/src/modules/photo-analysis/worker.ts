@@ -24,7 +24,7 @@ import { downloadAndResize, toBase64DataUrl } from "../../utils/image-processor.
 import { analyzeVision } from "../../chains/vision.chain.js";
 import { consumeCredits, refundCredits } from "../credits/service.js";
 import { splitMessage } from "../../utils/message-splitter.js";
-import { QUEUE_ANALYZE_PHOTO } from "../../config/constants.js";
+import { QUEUE_ANALYZE_PHOTO, TELEGRAM_PHOTO_SIZE_LIMIT } from "../../config/constants.js";
 import type { PhotoAnalysisJobData } from "../../types/telegram.js";
 import { arinaStrategy } from "./personas/arina.strategy.js";
 import { cassandraStrategy } from "./personas/cassandra.strategy.js";
@@ -32,6 +32,7 @@ import type { PersonaStrategy } from "./personas/arina.strategy.js";
 import { withRetry } from "../../utils/retry.js";
 import { sendErrorAlert } from "../../utils/admin-alerts.js";
 import { savePhoto } from "./storage.service.js";
+import { getEnv } from "../../config/env.js";
 
 const logger = getLogger().child({ module: "photo-analysis-worker" });
 
@@ -119,11 +120,8 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
       throw new Error("File path not found in Telegram response");
     }
 
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
-    if (!botToken) {
-      throw new Error("TELEGRAM_BOT_TOKEN environment variable not set");
-    }
-    const fileUrl = `https://api.telegram.org/file/bot${botToken}/${file.file_path}`;
+    const env = getEnv();
+    const fileUrl = `https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
     jobLogger.debug({ fileUrl }, "Got Telegram file URL");
 
     // Step 2: Download and resize image (with retry)
@@ -133,6 +131,15 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
       baseDelayMs: 2000,
     });
     jobLogger.info({ bufferSize: imageBuffer.length }, "Image downloaded and resized");
+
+    // Validate downloaded image size
+    if (imageBuffer.length > TELEGRAM_PHOTO_SIZE_LIMIT) {
+      jobLogger.error(
+        { bufferSize: imageBuffer.length, limit: TELEGRAM_PHOTO_SIZE_LIMIT },
+        "Downloaded image exceeds size limit"
+      );
+      throw new Error(`Image too large: ${imageBuffer.length} bytes (max: ${TELEGRAM_PHOTO_SIZE_LIMIT})`);
+    }
 
     // Step 2.5: Save photo to disk for future reference
     if (analysisId) {
@@ -175,6 +182,26 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
       "Vision analysis completed"
     );
 
+    // Step 4.5: Check and consume credits BEFORE generating interpretation
+    // This is atomic and prevents race conditions from handler-level checks
+    jobLogger.debug({ creditCost }, "Checking and consuming credits");
+    const consumed = await consumeCredits(telegramUserId, creditCost);
+    if (!consumed) {
+      // Not enough credits - update message and exit gracefully
+      const personaLabel = persona === "cassandra" ? "премиум гадание" : "гадание";
+      await bot.api.editMessageText(
+        chatId,
+        messageId,
+        `💳 Недостаточно кредитов для ${personaLabel}.\n` +
+          `Необходимо: ${creditCost} кредит(ов)\n` +
+          "Пожалуйста, пополните баланс."
+      );
+      jobLogger.info({ creditCost }, "Insufficient credits - job aborted");
+      return; // Exit gracefully, don't throw
+    }
+    creditsConsumed = true;
+    jobLogger.info({ creditCost }, "Credits consumed");
+
     // Step 5: Generate interpretation with persona using strategy (with retry)
     jobLogger.debug({ persona }, "Generating interpretation");
     await bot.api.sendChatAction(chatId, "typing");
@@ -194,15 +221,6 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
       { tokensUsed: interpretation.tokensUsed, textLength: interpretation.text.length },
       "Interpretation generated"
     );
-
-    // Step 6: Consume credits BEFORE sending result
-    jobLogger.debug({ creditCost }, "Consuming credits");
-    const consumed = await consumeCredits(telegramUserId, creditCost);
-    if (!consumed) {
-      throw new Error("Failed to consume credits");
-    }
-    creditsConsumed = true;
-    jobLogger.info({ creditCost }, "Credits consumed");
 
     // Step 7: Save interpretation to analysis_history
     const processingTime = Date.now() - startTime;

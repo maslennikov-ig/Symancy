@@ -7,6 +7,7 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import pg from "pg";
 import { getEnv } from "../config/env.js";
 import { getLogger } from "./logger.js";
+import { sendErrorAlert } from "../utils/admin-alerts.js";
 
 const { Pool } = pg;
 
@@ -47,9 +48,16 @@ export function getPool(): pg.Pool {
       connectionTimeoutMillis: env.DB_POOL_CONNECTION_TIMEOUT_MS,
     });
 
-    // Log pool errors
-    _pool.on("error", (err) => {
-      getLogger().child({ module: "database" }).error({ err }, "PostgreSQL pool error");
+    // Log pool errors and send admin alerts for critical database issues
+    _pool.on("error", async (err) => {
+      const logger = getLogger().child({ module: "database" });
+      logger.error({ err }, "PostgreSQL pool error");
+
+      // Send admin alert for critical database issues
+      await sendErrorAlert(err as Error, {
+        module: "database",
+        severity: "critical",
+      }).catch(() => {}); // Don't let alert failure crash app
     });
 
     getLogger().child({ module: "database" }).info("PostgreSQL pool initialized");
