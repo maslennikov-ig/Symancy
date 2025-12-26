@@ -27,10 +27,10 @@ module.exports = {
       watch: false,                    // Don't watch in production
       max_memory_restart: '512M',      // Restart if memory exceeds 512MB
 
-      // Logs
+      // Logs (relative to cwd, will be created automatically)
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-      error_file: '/var/log/symancy-backend/error.log',
-      out_file: '/var/log/symancy-backend/out.log',
+      error_file: './logs/error.log',
+      out_file: './logs/out.log',
       merge_logs: true,
 
       // Graceful shutdown

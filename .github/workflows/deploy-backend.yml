@@ -173,8 +173,12 @@ jobs:
           # Create symlink to current release
           ssh ${SSH_USER}@${SSH_HOST} "ln -sfn ${RELEASE_DIR} ${TARGET_ROOT}/current"
 
-          # Reload PM2 (graceful restart)
-          ssh ${SSH_USER}@${SSH_HOST} "cd ${TARGET_ROOT}/current && pm2 reload ecosystem.config.cjs --env production || pm2 start ecosystem.config.cjs --env production"
+          # Create logs directory
+          ssh ${SSH_USER}@${SSH_HOST} "mkdir -p ${RELEASE_DIR}/logs"
+
+          # Stop old PM2 process if exists, then start fresh
+          ssh ${SSH_USER}@${SSH_HOST} "pm2 delete symancy-backend 2>/dev/null || true"
+          ssh ${SSH_USER}@${SSH_HOST} "cd ${TARGET_ROOT}/current && pm2 start ecosystem.config.cjs --env production"
 
           # Save PM2 process list
           ssh ${SSH_USER}@${SSH_HOST} "pm2 save"
