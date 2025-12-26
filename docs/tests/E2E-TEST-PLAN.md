@@ -1,9 +1,17 @@
 # E2E Test Plan: Symancy Backend
 
-**Version**: 1.0
+**Version**: 1.2
 **Date**: 2024-12-26
 **Scope**: Full backend functionality testing
 **Environment**: Local development
+
+---
+
+> **Quick Start**: Готовый `.env` файл с настроенными ключами уже создан:
+> ```
+> symancy-backend/.env  (gitignored, только для локальной разработки)
+> ```
+> Все API-ключи (OpenRouter, Telegram, Supabase) настроены и проверены.
 
 ---
 
@@ -84,38 +92,29 @@ Place test photos in `/docs/tests/photos/`:
 
 ```bash
 cd symancy-backend
+```
 
-# Copy environment template
+**Готовый `.env` уже создан** с проверенными ключами:
+
+| Переменная | Статус | Описание |
+|------------|--------|----------|
+| `SUPABASE_URL` | ✅ | `https://johspxgvkbrysxhilmbg.supabase.co` |
+| `SUPABASE_SERVICE_KEY` | ✅ | `sb_secret_...` (elevated access) |
+| `DATABASE_URL` | ✅ | Pooler connection (eu-west-1) |
+| `TELEGRAM_BOT_TOKEN` | ✅ | @coffeeveda_bot |
+| `OPENROUTER_API_KEY` | ✅ | `sk-or-v1-...` |
+
+**Если нужно создать заново:**
+```bash
 cp .env.example .env
-
-# Edit .env with your values:
+# Заполнить значения из Supabase Dashboard и @BotFather
 ```
 
-**.env file:**
-```env
-# Server
-NODE_ENV=development
-PORT=3000
-LOG_LEVEL=debug
-
-# Database (Supabase)
-DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/postgres
-SUPABASE_URL=https://[PROJECT].supabase.co
-SUPABASE_SERVICE_KEY=eyJ...
-
-# Telegram
-TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
-TELEGRAM_WEBHOOK_SECRET=test-secret-123
-
-# OpenRouter (LLM)
-OPENROUTER_API_KEY=sk-or-v1-...
-
-# Admin
-ADMIN_CHAT_ID=123456789
-
-# Storage
-PHOTO_STORAGE_PATH=./data/photos
-```
+**Модели OpenRouter (настроены в `src/config/constants.ts`):**
+| Назначение | Модель |
+|------------|--------|
+| Vision (анализ фото) | `google/gemini-3-flash-preview` |
+| Chat, Interpretation | `xiaomi/mimo-v2-flash:free` |
 
 ### Step 2: Database Setup
 
@@ -1413,3 +1412,4 @@ jobs:
 |---------|------|--------|---------|
 | 1.0 | 2024-12-26 | Claude | Initial version |
 | 1.1 | 2024-12-26 | Claude | Added TC-US1-007 (decorated cup), TC-US1-008 (minimal grounds), automated tests section |
+| 1.2 | 2024-12-26 | Claude | Added .env quick start reference, updated models info (Gemini + Mimo) |
