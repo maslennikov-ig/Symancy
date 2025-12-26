@@ -313,15 +313,21 @@
 
 ### Scheduled Jobs Setup
 
-- [ ] T061 [EXECUTOR: telegram-handler-specialist] [PARALLEL-GROUP-10] [US5] Implement inactive reminder trigger (users inactive 7+ days) in symancy-backend/src/modules/engagement/triggers/inactive.ts
-- [ ] T062 [EXECUTOR: telegram-handler-specialist] [PARALLEL-GROUP-10] [US5] Implement weekly check-in trigger (Monday 10:00 MSK) in symancy-backend/src/modules/engagement/triggers/weekly-checkin.ts
-- [ ] T063 [EXECUTOR: telegram-handler-specialist] [PARALLEL-GROUP-10] [US5] Implement daily fortune trigger (for subscribers) in symancy-backend/src/modules/engagement/triggers/daily-fortune.ts
+- [X] T061 [EXECUTOR: telegram-handler-specialist] [PARALLEL-GROUP-10] [US5] Implement inactive reminder trigger (users inactive 7+ days) in symancy-backend/src/modules/engagement/triggers/inactive.ts
+  → Artifacts: [inactive.ts](symancy-backend/src/modules/engagement/triggers/inactive.ts)
+- [X] T062 [EXECUTOR: telegram-handler-specialist] [PARALLEL-GROUP-10] [US5] Implement weekly check-in trigger (Monday 10:00 MSK) in symancy-backend/src/modules/engagement/triggers/weekly-checkin.ts
+  → Artifacts: [weekly-checkin.ts](symancy-backend/src/modules/engagement/triggers/weekly-checkin.ts)
+- [X] T063 [EXECUTOR: telegram-handler-specialist] [PARALLEL-GROUP-10] [US5] Implement daily fortune trigger (for subscribers) in symancy-backend/src/modules/engagement/triggers/daily-fortune.ts
+  → Artifacts: [daily-fortune.ts](symancy-backend/src/modules/engagement/triggers/daily-fortune.ts)
 
 ### Engagement Module
 
-- [ ] T064 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US5] Implement scheduler setup (pg-boss cron jobs with tz: Europe/Moscow) in symancy-backend/src/modules/engagement/scheduler.ts
-- [ ] T065 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US5] Implement engagement worker (processes scheduled_messages, sends via Telegram) in symancy-backend/src/modules/engagement/worker.ts
-- [ ] T066 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US5] Register scheduler in app.ts initialization
+- [X] T064 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US5] Implement scheduler setup (pg-boss cron jobs with tz: Europe/Moscow) in symancy-backend/src/modules/engagement/scheduler.ts
+  → Artifacts: [scheduler.ts](symancy-backend/src/modules/engagement/scheduler.ts)
+- [X] T065 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US5] Implement engagement worker (processes scheduled_messages, sends via Telegram) in symancy-backend/src/modules/engagement/worker.ts
+  → Artifacts: [worker.ts](symancy-backend/src/modules/engagement/worker.ts)
+- [X] T066 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US5] Register scheduler in app.ts initialization
+  → Artifacts: [app.ts](symancy-backend/src/app.ts), [index.ts](symancy-backend/src/modules/engagement/index.ts)
 
 **Checkpoint**: User Story 5 (Proactive Engagement) is fully functional and testable independently
 

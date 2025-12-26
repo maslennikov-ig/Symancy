@@ -12,6 +12,7 @@ import { closeCheckpointer } from "./core/langchain/index.js";
 import { setupRouter } from "./modules/router/index.js";
 import { registerPhotoWorker } from "./modules/photo-analysis/worker.js";
 import { registerChatWorker } from "./modules/chat/worker.js";
+import { setupScheduler, registerEngagementWorkers } from "./modules/engagement/index.js";
 
 const logger = getLogger();
 
@@ -101,7 +102,13 @@ async function startWorkers() {
   const chatWorkerId = await registerChatWorker();
   logger.info({ workerId: chatWorkerId }, "Chat reply worker registered");
 
-  // TODO: Register scheduled message worker (Phase 4)
+  // Setup engagement scheduler (pg-boss cron jobs)
+  await setupScheduler();
+  logger.info("Engagement scheduler configured");
+
+  // Register engagement workers
+  const engagementWorkerIds = await registerEngagementWorkers();
+  logger.info({ count: engagementWorkerIds.length }, "Engagement workers registered");
 
   logger.info("All workers started");
 }
