@@ -189,8 +189,10 @@
 
 ### LangChain Chains
 
-- [ ] T036 [EXECUTOR: langchain-node-specialist] [SEQUENTIAL] [US1] Implement vision analysis chain in symancy-backend/src/chains/vision.chain.ts
-- [ ] T037 [EXECUTOR: langchain-node-specialist] [SEQUENTIAL] [US1] Implement interpretation chain (uses Arina prompts) in symancy-backend/src/chains/interpretation.chain.ts
+- [X] T036 [EXECUTOR: langchain-node-specialist] [SEQUENTIAL] [US1] Implement vision analysis chain in symancy-backend/src/chains/vision.chain.ts
+  → Artifacts: [vision.chain.ts](symancy-backend/src/chains/vision.chain.ts)
+- [X] T037 [EXECUTOR: langchain-node-specialist] [SEQUENTIAL] [US1] Implement interpretation chain (uses Arina prompts) in symancy-backend/src/chains/interpretation.chain.ts
+  → Artifacts: [interpretation.chain.ts](symancy-backend/src/chains/interpretation.chain.ts)
 
 ### Photo Analysis Module
 
