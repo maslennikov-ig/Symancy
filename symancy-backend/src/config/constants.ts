@@ -108,6 +108,20 @@ export const CONFIG_CACHE_TTL_SECONDS = 60;
 export const CHAT_HISTORY_LIMIT = 20;
 
 // =============================================================================
+// Credit Costs
+// =============================================================================
+
+/**
+ * Credit cost for Arina persona (basic tier)
+ */
+export const CREDIT_COST_ARINA = 1;
+
+/**
+ * Credit cost for Cassandra persona (premium tier)
+ */
+export const CREDIT_COST_CASSANDRA = 3;
+
+// =============================================================================
 // LLM Models (OpenRouter)
 // =============================================================================
 

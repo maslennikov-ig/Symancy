@@ -287,14 +287,19 @@
 
 ### Prompts
 
-- [ ] T056 [EXECUTOR: prompt-engineer] [PARALLEL-GROUP-9] [US4] Create Cassandra system prompt in symancy-backend/prompts/cassandra/system.txt
-- [ ] T057 [EXECUTOR: prompt-engineer] [PARALLEL-GROUP-9] [US4] Create Cassandra interpretation prompt in symancy-backend/prompts/cassandra/interpretation.txt
+- [X] T056 [EXECUTOR: prompt-engineer] [PARALLEL-GROUP-9] [US4] Create Cassandra system prompt in symancy-backend/prompts/cassandra/system.txt
+  → Artifacts: [system.txt](symancy-backend/prompts/cassandra/system.txt)
+- [X] T057 [EXECUTOR: prompt-engineer] [PARALLEL-GROUP-9] [US4] Create Cassandra interpretation prompt in symancy-backend/prompts/cassandra/interpretation.txt
+  → Artifacts: [interpretation.txt](symancy-backend/prompts/cassandra/interpretation.txt)
 
 ### Cassandra Module
 
-- [ ] T058 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US4] Implement Cassandra persona strategy (premium model, extended analysis) in symancy-backend/src/modules/photo-analysis/personas/cassandra.strategy.ts
-- [ ] T059 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US4] Update photo handler to detect premium mode (caption contains "cassandra" or "premium") in symancy-backend/src/modules/photo-analysis/handler.ts
-- [ ] T060 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US4] Update photo worker to use Cassandra strategy when persona=cassandra in symancy-backend/src/modules/photo-analysis/worker.ts
+- [X] T058 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US4] Implement Cassandra persona strategy (premium model, extended analysis) in symancy-backend/src/modules/photo-analysis/personas/cassandra.strategy.ts
+  → Artifacts: [cassandra.strategy.ts](symancy-backend/src/modules/photo-analysis/personas/cassandra.strategy.ts)
+- [X] T059 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US4] Update photo handler to detect premium mode (caption contains "cassandra" or "premium") in symancy-backend/src/modules/photo-analysis/handler.ts
+  → Artifacts: [handler.ts](symancy-backend/src/modules/photo-analysis/handler.ts)
+- [X] T060 [EXECUTOR: telegram-handler-specialist] [SEQUENTIAL] [US4] Update photo worker to use Cassandra strategy when persona=cassandra in symancy-backend/src/modules/photo-analysis/worker.ts
+  → Artifacts: [worker.ts](symancy-backend/src/modules/photo-analysis/worker.ts), [interpretation.chain.ts](symancy-backend/src/chains/interpretation.chain.ts), [constants.ts](symancy-backend/src/config/constants.ts)
 
 **Checkpoint**: User Story 4 (Cassandra Premium) is fully functional and testable independently
 

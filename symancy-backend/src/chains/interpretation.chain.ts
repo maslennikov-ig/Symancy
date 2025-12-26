@@ -1,10 +1,10 @@
 /**
  * Interpretation Chain
- * Generates warm, psychological interpretations of coffee ground analysis
- * Uses Arina persona with cached prompt templates
+ * Generates psychological interpretations of coffee ground analysis
+ * Supports both Arina (warm, mystical) and Cassandra (direct, analytical) personas
  */
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { createArinaModel } from "../core/langchain/models.js";
+import { createArinaModel, createCassandraModel } from "../core/langchain/models.js";
 import type {
   InterpretationChainInput,
   InterpretationResult,
@@ -26,6 +26,8 @@ const projectRoot = path.resolve(__dirname, "../..");
  */
 let arinaSystemPrompt: string | null = null;
 let arinaInterpretationPrompt: string | null = null;
+let cassandraSystemPrompt: string | null = null;
+let cassandraInterpretationPrompt: string | null = null;
 
 /**
  * Load and cache Arina prompts from disk
@@ -46,6 +48,30 @@ async function loadArinaPrompts(): Promise<void> {
   );
 
   [arinaSystemPrompt, arinaInterpretationPrompt] = await Promise.all([
+    readFile(systemPromptPath, "utf-8"),
+    readFile(interpretationPromptPath, "utf-8"),
+  ]);
+}
+
+/**
+ * Load and cache Cassandra prompts from disk
+ * Called once at module initialization
+ */
+async function loadCassandraPrompts(): Promise<void> {
+  if (cassandraSystemPrompt && cassandraInterpretationPrompt) {
+    return; // Already loaded
+  }
+
+  const systemPromptPath = path.join(
+    projectRoot,
+    "prompts/cassandra/system.txt"
+  );
+  const interpretationPromptPath = path.join(
+    projectRoot,
+    "prompts/cassandra/interpretation.txt"
+  );
+
+  [cassandraSystemPrompt, cassandraInterpretationPrompt] = await Promise.all([
     readFile(systemPromptPath, "utf-8"),
     readFile(interpretationPromptPath, "utf-8"),
   ]);
@@ -103,25 +129,46 @@ export async function generateInterpretation(
 ): Promise<InterpretationResult> {
   const { visionResult, persona, language = "ru", userName = "дорогой друг" } = input;
 
-  // Only Arina is supported for now (Cassandra will be added later)
-  if (persona !== "arina") {
+  // Validate persona
+  if (persona !== "arina" && persona !== "cassandra") {
     throw new Error(
-      `Persona "${persona}" is not yet supported. Only "arina" is currently available.`
+      `Persona "${persona}" is not supported. Available personas: "arina", "cassandra".`
     );
   }
 
-  // Load prompts (cached after first call)
-  await loadArinaPrompts();
+  // Load prompts based on persona (cached after first call)
+  let systemPrompt: string;
+  let interpretationPrompt: string;
+  let model;
 
-  if (!arinaSystemPrompt || !arinaInterpretationPrompt) {
-    throw new Error("Failed to load Arina prompts");
+  if (persona === "arina") {
+    await loadArinaPrompts();
+
+    if (!arinaSystemPrompt || !arinaInterpretationPrompt) {
+      throw new Error("Failed to load Arina prompts");
+    }
+
+    systemPrompt = arinaSystemPrompt;
+    interpretationPrompt = arinaInterpretationPrompt;
+    model = createArinaModel();
+  } else {
+    // Cassandra persona
+    await loadCassandraPrompts();
+
+    if (!cassandraSystemPrompt || !cassandraInterpretationPrompt) {
+      throw new Error("Failed to load Cassandra prompts");
+    }
+
+    systemPrompt = cassandraSystemPrompt;
+    interpretationPrompt = cassandraInterpretationPrompt;
+    model = createCassandraModel();
   }
 
   // Format vision result for prompt
   const formattedVisionResult = formatVisionResult(visionResult);
 
   // Replace placeholders in interpretation prompt
-  const interpretationText = replacePlaceholders(arinaInterpretationPrompt, {
+  const interpretationText = replacePlaceholders(interpretationPrompt, {
     VISION_RESULT: formattedVisionResult,
     LANGUAGE: language,
     USER_NAME: userName,
@@ -129,12 +176,11 @@ export async function generateInterpretation(
 
   // Create messages for LangChain
   const messages = [
-    new SystemMessage(arinaSystemPrompt),
+    new SystemMessage(systemPrompt),
     new HumanMessage(interpretationText),
   ];
 
-  // Create Arina model and invoke
-  const model = createArinaModel();
+  // Invoke model
   const response = await model.invoke(messages);
 
   // Extract token usage from response metadata

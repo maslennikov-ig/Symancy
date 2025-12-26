@@ -22,13 +22,24 @@ import { getLogger } from "../../core/logger.js";
 import { registerWorker } from "../../core/queue.js";
 import { downloadAndResize, toBase64DataUrl } from "../../utils/image-processor.js";
 import { analyzeVision } from "../../chains/vision.chain.js";
-import { generateInterpretation } from "../../chains/interpretation.chain.js";
 import { consumeCredits, refundCredits } from "../credits/service.js";
 import { splitMessage } from "../../utils/message-splitter.js";
 import { QUEUE_ANALYZE_PHOTO } from "../../config/constants.js";
 import type { PhotoAnalysisJobData } from "../../types/telegram.js";
+import { arinaStrategy } from "./personas/arina.strategy.js";
+import { cassandraStrategy } from "./personas/cassandra.strategy.js";
+import type { PersonaStrategy } from "./personas/arina.strategy.js";
 
 const logger = getLogger().child({ module: "photo-analysis-worker" });
+
+/**
+ * Persona strategy map
+ * Maps persona names to their strategy implementations
+ */
+const PERSONA_STRATEGIES: Record<"arina" | "cassandra", PersonaStrategy> = {
+  arina: arinaStrategy,
+  cassandra: cassandraStrategy,
+};
 
 /**
  * Process photo analysis job
@@ -44,13 +55,14 @@ const logger = getLogger().child({ module: "photo-analysis-worker" });
  * @throws Error on retryable failures (network, API errors)
  */
 export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Promise<void> {
-  const { telegramUserId, chatId, messageId, fileId, persona } = job.data;
+  const { telegramUserId, chatId, messageId, fileId, persona, language, userName } = job.data;
 
   const jobLogger = logger.child({
     jobId: job.id,
     telegramUserId,
     chatId,
     fileId,
+    persona,
   });
 
   jobLogger.info("Starting photo analysis");
@@ -58,6 +70,15 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
   const startTime = Date.now();
   const bot = getBot();
   const supabase = getSupabase();
+
+  // Get strategy for selected persona
+  const strategy = PERSONA_STRATEGIES[persona];
+  if (!strategy) {
+    throw new Error(`Invalid persona: ${persona}`);
+  }
+
+  const creditCost = strategy.getCreditCost();
+  const modelName = strategy.getModelName();
 
   let analysisId: string | null = null;
   let creditsConsumed = false;
@@ -124,14 +145,13 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
       "Vision analysis completed"
     );
 
-    // Step 5: Generate interpretation with persona
+    // Step 5: Generate interpretation with persona using strategy
     jobLogger.debug({ persona }, "Generating interpretation");
     await bot.api.sendChatAction(chatId, "typing");
 
-    const interpretation = await generateInterpretation({
-      visionResult,
-      persona,
-      language: "ru",
+    const interpretation = await strategy.interpret(visionResult, {
+      language: language || "ru",
+      userName,
     });
     jobLogger.info(
       { tokensUsed: interpretation.tokensUsed, textLength: interpretation.text.length },
@@ -139,13 +159,13 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
     );
 
     // Step 6: Consume credits BEFORE sending result
-    jobLogger.debug("Consuming credits");
-    const consumed = await consumeCredits(telegramUserId, 1);
+    jobLogger.debug({ creditCost }, "Consuming credits");
+    const consumed = await consumeCredits(telegramUserId, creditCost);
     if (!consumed) {
       throw new Error("Failed to consume credits");
     }
     creditsConsumed = true;
-    jobLogger.info("Credits consumed");
+    jobLogger.info({ creditCost }, "Credits consumed");
 
     // Step 7: Save interpretation to analysis_history
     const processingTime = Date.now() - startTime;
@@ -155,7 +175,7 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
       .update({
         interpretation: interpretation.text,
         tokens_used: interpretation.tokensUsed,
-        model_used: "anthropic/claude-3.5-sonnet",
+        model_used: modelName,
         processing_time_ms: processingTime,
         status: "completed",
         completed_at: new Date().toISOString(),
@@ -241,12 +261,12 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
 
     // Refund credits if they were consumed
     if (creditsConsumed) {
-      jobLogger.info("Refunding credits due to failure");
-      const refunded = await refundCredits(telegramUserId, 1);
+      jobLogger.info({ creditCost }, "Refunding credits due to failure");
+      const refunded = await refundCredits(telegramUserId, creditCost);
       if (refunded) {
-        jobLogger.info("Credits refunded successfully");
+        jobLogger.info({ creditCost }, "Credits refunded successfully");
       } else {
-        jobLogger.error("Failed to refund credits");
+        jobLogger.error({ creditCost }, "Failed to refund credits");
       }
     }
 

@@ -12,17 +12,19 @@ import {
   QUEUE_ANALYZE_PHOTO,
   TELEGRAM_PHOTO_SIZE_LIMIT,
 } from "../../config/constants.js";
+import { arinaStrategy } from "./personas/arina.strategy.js";
+import { cassandraStrategy } from "./personas/cassandra.strategy.js";
+import type { PersonaStrategy } from "./personas/arina.strategy.js";
 
 const logger = getLogger().child({ module: "photo-handler" });
 
 /**
- * Default loading messages by persona
- * Provides immediate feedback while job is queued
+ * Persona strategy map for loading messages and credit costs
  */
-const LOADING_MESSAGES = {
-  arina: "☕️ Смотрю в кофейную гущу... Вижу что-то интересное!",
-  cassandra: "🔮 Анализирую изображение...",
-} as const;
+const PERSONA_STRATEGIES: Record<"arina" | "cassandra", PersonaStrategy> = {
+  arina: arinaStrategy,
+  cassandra: cassandraStrategy,
+};
 
 /**
  * Determine persona from message caption
@@ -36,14 +38,20 @@ function determinePersona(caption?: string): "arina" | "cassandra" {
 
   const lowerCaption = caption.toLowerCase();
 
-  // Check for persona keywords
-  if (lowerCaption.includes("cassandra") || lowerCaption.includes("кассандра")) {
+  // Check for Cassandra/premium keywords
+  if (
+    lowerCaption.includes("cassandra") ||
+    lowerCaption.includes("кассандра") ||
+    lowerCaption.includes("premium") ||
+    lowerCaption.includes("премиум")
+  ) {
     return "cassandra";
   }
 
   // Default to warm, supportive persona
   return "arina";
 }
+
 
 /**
  * Handle photo message from Telegram
@@ -108,22 +116,32 @@ export async function handlePhotoMessage(ctx: BotContext): Promise<void> {
     return;
   }
 
-  // Check if user has credits (must have at least 1 credit)
-  if (!(await hasCredits(telegramUserId, 1))) {
-    logger.info({ telegramUserId }, "User has insufficient credits");
-    await ctx.reply(
-      "💳 У вас недостаточно кредитов для гадания.\n" +
-      "Пожалуйста, пополните баланс."
-    );
-    return;
-  }
-
   // Determine persona from caption (if provided)
   const caption = ctx.message.caption;
   const persona = determinePersona(caption);
 
-  // Get loading message for selected persona
-  const loadingText = LOADING_MESSAGES[persona];
+  // Get strategy for selected persona
+  const strategy = PERSONA_STRATEGIES[persona];
+  const creditCost = strategy.getCreditCost();
+
+  // Check if user has enough credits
+  if (!(await hasCredits(telegramUserId, creditCost))) {
+    logger.info(
+      { telegramUserId, persona, creditsNeeded: creditCost },
+      "User has insufficient credits"
+    );
+
+    const personaLabel = persona === "cassandra" ? "премиум гадание" : "гадание";
+    await ctx.reply(
+      `💳 У вас недостаточно кредитов для ${personaLabel}.\n` +
+        `Необходимо: ${creditCost} кредит(ов)\n` +
+        "Пожалуйста, пополните баланс."
+    );
+    return;
+  }
+
+  // Get loading message for selected persona using strategy
+  const loadingText = strategy.getLoadingMessage(ctx.from.language_code || "ru");
 
   // Send loading message (quick response <100ms)
   const loadingMessage = await ctx.reply(loadingText);
