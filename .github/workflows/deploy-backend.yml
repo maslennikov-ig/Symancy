@@ -161,8 +161,8 @@ jobs:
           # Create release directory
           ssh ${SSH_USER}@${SSH_HOST} "mkdir -p ${RELEASE_DIR}"
 
-          # Upload build artifacts
-          scp -r backend-dist/symancy-backend/* ${SSH_USER}@${SSH_HOST}:${RELEASE_DIR}/
+          # Upload build artifacts (artifact root is symancy-backend/, so files are in backend-dist/)
+          scp -r backend-dist/* ${SSH_USER}@${SSH_HOST}:${RELEASE_DIR}/
 
           # Install production dependencies on server
           ssh ${SSH_USER}@${SSH_HOST} "cd ${RELEASE_DIR} && pnpm install --frozen-lockfile --prod"
