@@ -33,9 +33,11 @@ export type HandledUpdate = "message" | "callback_query";
 export interface PhotoAnalysisJobData {
   telegramUserId: number;
   chatId: number;
-  messageId: number;
+  messageId: number;  // Loading message ID to edit with result
   fileId: string;
   persona: "arina" | "cassandra";
+  language: string;
+  userName?: string;
 }
 
 /**
