@@ -167,6 +167,9 @@ jobs:
           # Install production dependencies on server
           ssh ${SSH_USER}@${SSH_HOST} "cd ${RELEASE_DIR} && pnpm install --frozen-lockfile --prod"
 
+          # Link shared .env file
+          ssh ${SSH_USER}@${SSH_HOST} "ln -sf ${TARGET_ROOT}/shared/.env ${RELEASE_DIR}/.env"
+
           # Create symlink to current release
           ssh ${SSH_USER}@${SSH_HOST} "ln -sfn ${RELEASE_DIR} ${TARGET_ROOT}/current"
 
