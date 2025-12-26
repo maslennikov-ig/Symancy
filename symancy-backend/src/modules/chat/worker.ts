@@ -26,6 +26,8 @@ import { consumeCredits, refundCredits } from "../credits/service.js";
 import { splitMessage } from "../../utils/message-splitter.js";
 import { QUEUE_CHAT_REPLY, DAILY_CHAT_LIMIT } from "../../config/constants.js";
 import type { ChatReplyJobData } from "../../types/telegram.js";
+import { withRetry } from "../../utils/retry.js";
+import { sendErrorAlert } from "../../utils/admin-alerts.js";
 
 const logger = getLogger().child({ module: "chat-worker" });
 
@@ -222,10 +224,16 @@ export async function processChatReply(job: Job<ChatReplyJobData>): Promise<void
     // Step 3: Show typing indicator
     await bot.api.sendChatAction(chatId, "typing");
 
-    // Step 4: Generate AI response with conversation history
+    // Step 4: Generate AI response with conversation history (with retry)
     jobLogger.debug("Generating chat response");
 
-    const response = await generateChatResponseDirect(text, telegramUserId);
+    const response = await withRetry(
+      () => generateChatResponseDirect(text, telegramUserId),
+      {
+        maxAttempts: 3,
+        baseDelayMs: 2000,
+      }
+    );
 
     jobLogger.info(
       { tokensUsed: response.tokensUsed, textLength: response.text.length },
@@ -301,6 +309,17 @@ export async function processChatReply(job: Job<ChatReplyJobData>): Promise<void
   } catch (error) {
     const processingTime = Date.now() - startTime;
     jobLogger.error({ error, processingTime, creditsConsumed }, "Chat reply failed");
+
+    // Send admin alert for critical failures
+    if (error instanceof Error) {
+      await sendErrorAlert(error, {
+        module: "chat-reply",
+        telegramUserId,
+        chatId,
+        messageText: text,
+        creditsConsumed,
+      });
+    }
 
     // Refund credits if they were consumed
     if (creditsConsumed) {

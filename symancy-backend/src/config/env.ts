@@ -41,6 +41,9 @@ const EnvSchema = z.object({
   LOG_LEVEL: LogLevelSchema.default("info"),
   ADMIN_CHAT_ID: z.coerce.number().optional(),
 
+  // Photo Storage
+  PHOTO_STORAGE_PATH: z.string().default("./data/photos"),
+
   // Database Pool Configuration
   DB_POOL_MAX: z.coerce.number().min(1).max(100).default(20),
   DB_POOL_IDLE_TIMEOUT_MS: z.coerce.number().min(1000).default(30000),

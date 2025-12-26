@@ -24,6 +24,7 @@ import {
   findDailyFortuneUsers,
   createDailyFortuneMessage,
 } from "./triggers/daily-fortune.js";
+import { cleanupExpiredPhotos } from "./triggers/photo-cleanup.js";
 
 const logger = getLogger().child({ module: "engagement-worker" });
 
@@ -241,6 +242,28 @@ export async function processDailyFortune(job: Job): Promise<void> {
 }
 
 /**
+ * Process photo cleanup job
+ * Deletes old photos based on retention policy
+ */
+export async function processPhotoCleanup(job: Job): Promise<void> {
+  const jobLogger = logger.child({ jobId: job.id, type: "photo-cleanup" });
+
+  jobLogger.info("Starting photo cleanup processing");
+
+  try {
+    const deletedCount = await cleanupExpiredPhotos();
+
+    jobLogger.info(
+      { deletedCount },
+      "Photo cleanup processing completed"
+    );
+  } catch (error) {
+    jobLogger.error({ error }, "Photo cleanup processing failed");
+    throw error; // Trigger pg-boss retry
+  }
+}
+
+/**
  * Register all engagement workers with pg-boss
  *
  * Configures workers with appropriate settings:
@@ -289,6 +312,18 @@ export async function registerEngagementWorkers(): Promise<string[]> {
   );
   workerIds.push(dailyWorkerId);
   logger.info({ workerId: dailyWorkerId }, "Daily fortune worker registered");
+
+  // Register photo cleanup worker
+  const photoCleanupWorkerId = await registerWorker(
+    "photo-cleanup",
+    processPhotoCleanup,
+    {
+      batchSize: 1,
+      pollingIntervalSeconds: 60,
+    }
+  );
+  workerIds.push(photoCleanupWorkerId);
+  logger.info({ workerId: photoCleanupWorkerId }, "Photo cleanup worker registered");
 
   logger.info({ count: workerIds.length }, "All engagement workers registered");
 

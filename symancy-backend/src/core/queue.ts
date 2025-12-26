@@ -188,6 +188,77 @@ export async function stopQueue(): Promise<void> {
 }
 
 /**
+ * Clean up stale processing locks from previous crashes
+ *
+ * pg-boss jobs can get stuck if a worker crashes while processing.
+ * This function fails stale jobs that have been processing for too long.
+ *
+ * @param maxAgeMinutes - Maximum age of jobs in processing state (default: 5 minutes)
+ * @returns Number of jobs cleaned up
+ */
+export async function cleanupStaleLocks(maxAgeMinutes: number = 5): Promise<number> {
+  const logger = getLogger().child({ module: "queue" });
+
+  try {
+    // Initialize queue (needed for pool initialization)
+    await getQueue();
+    // Calculate cutoff time
+    const cutoffTime = new Date();
+    cutoffTime.setMinutes(cutoffTime.getMinutes() - maxAgeMinutes);
+
+    logger.info({ maxAgeMinutes, cutoffTime }, "Cleaning up stale processing locks");
+
+    // pg-boss doesn't expose a direct API for this, so we use SQL directly
+    // Query the pgboss.job table for stale jobs
+    const pool = await import("../core/database.js").then((m) => m.getPool());
+
+    const result = await pool.query(
+      `
+      UPDATE pgboss.job
+      SET state = 'failed',
+          completedon = NOW(),
+          output = jsonb_build_object(
+            'error', 'Job stale - cleared by cleanup task',
+            'cleanedAt', NOW()
+          )
+      WHERE state = 'active'
+        AND startedon < $1
+      RETURNING id, name, startedon
+      `,
+      [cutoffTime]
+    );
+
+    const cleanedCount = result.rowCount || 0;
+
+    if (cleanedCount > 0) {
+      logger.warn(
+        { cleanedCount, maxAgeMinutes },
+        "Cleaned up stale processing locks"
+      );
+
+      // Log details of cleaned jobs
+      for (const row of result.rows) {
+        logger.debug(
+          {
+            jobId: row.id,
+            jobName: row.name,
+            startedOn: row.startedon,
+          },
+          "Stale job cleaned up"
+        );
+      }
+    } else {
+      logger.debug("No stale processing locks found");
+    }
+
+    return cleanedCount;
+  } catch (error) {
+    logger.error({ error }, "Failed to cleanup stale processing locks");
+    throw error;
+  }
+}
+
+/**
  * Queue names export (for convenience)
  */
 export const QUEUES = {

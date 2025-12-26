@@ -29,6 +29,9 @@ import type { PhotoAnalysisJobData } from "../../types/telegram.js";
 import { arinaStrategy } from "./personas/arina.strategy.js";
 import { cassandraStrategy } from "./personas/cassandra.strategy.js";
 import type { PersonaStrategy } from "./personas/arina.strategy.js";
+import { withRetry } from "../../utils/retry.js";
+import { sendErrorAlert } from "../../utils/admin-alerts.js";
+import { savePhoto } from "./storage.service.js";
 
 const logger = getLogger().child({ module: "photo-analysis-worker" });
 
@@ -104,11 +107,14 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
     analysisId = analysisRecord.id;
     jobLogger.debug({ analysisId }, "Analysis record created");
 
-    // Step 1: Download photo from Telegram
+    // Step 1: Download photo from Telegram (with retry)
     jobLogger.debug("Downloading photo from Telegram");
     await bot.api.sendChatAction(chatId, "typing");
 
-    const file = await bot.api.getFile(fileId);
+    const file = await withRetry(() => bot.api.getFile(fileId), {
+      maxAttempts: 3,
+      baseDelayMs: 1000,
+    });
     if (!file.file_path) {
       throw new Error("File path not found in Telegram response");
     }
@@ -120,10 +126,28 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
     const fileUrl = `https://api.telegram.org/file/bot${botToken}/${file.file_path}`;
     jobLogger.debug({ fileUrl }, "Got Telegram file URL");
 
-    // Step 2: Download and resize image
+    // Step 2: Download and resize image (with retry)
     jobLogger.debug("Downloading and resizing image");
-    const imageBuffer = await downloadAndResize(fileUrl);
+    const imageBuffer = await withRetry(() => downloadAndResize(fileUrl), {
+      maxAttempts: 3,
+      baseDelayMs: 2000,
+    });
     jobLogger.info({ bufferSize: imageBuffer.length }, "Image downloaded and resized");
+
+    // Step 2.5: Save photo to disk for future reference
+    if (analysisId) {
+      try {
+        const photoPath = await savePhoto(imageBuffer, {
+          userId: telegramUserId,
+          analysisId,
+          analysisType: persona === "cassandra" ? "cassandra" : "basic",
+        });
+        jobLogger.debug({ photoPath }, "Photo saved to disk");
+      } catch (storageError) {
+        // Non-blocking: Log error but continue with analysis
+        jobLogger.warn({ error: storageError }, "Failed to save photo to disk");
+      }
+    }
 
     // Step 3: Convert to base64 data URL
     const dataUrl = toBase64DataUrl(imageBuffer);
@@ -131,11 +155,17 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
     const base64Image = dataUrl.replace(/^data:image\/webp;base64,/, "");
     jobLogger.debug({ base64Length: base64Image.length }, "Image converted to base64");
 
-    // Step 4: Run vision analysis
+    // Step 4: Run vision analysis (with retry)
     jobLogger.debug("Running vision analysis");
     await bot.api.sendChatAction(chatId, "typing");
 
-    const visionResult = await analyzeVision({ imageBase64: base64Image });
+    const visionResult = await withRetry(
+      () => analyzeVision({ imageBase64: base64Image }),
+      {
+        maxAttempts: 3,
+        baseDelayMs: 2000,
+      }
+    );
     jobLogger.info(
       {
         symbolsCount: visionResult.symbols.length,
@@ -145,14 +175,21 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
       "Vision analysis completed"
     );
 
-    // Step 5: Generate interpretation with persona using strategy
+    // Step 5: Generate interpretation with persona using strategy (with retry)
     jobLogger.debug({ persona }, "Generating interpretation");
     await bot.api.sendChatAction(chatId, "typing");
 
-    const interpretation = await strategy.interpret(visionResult, {
-      language: language || "ru",
-      userName,
-    });
+    const interpretation = await withRetry(
+      () =>
+        strategy.interpret(visionResult, {
+          language: language || "ru",
+          userName,
+        }),
+      {
+        maxAttempts: 3,
+        baseDelayMs: 2000,
+      }
+    );
     jobLogger.info(
       { tokensUsed: interpretation.tokensUsed, textLength: interpretation.text.length },
       "Interpretation generated"
@@ -258,6 +295,18 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
       { error, processingTime, creditsConsumed },
       "Photo analysis failed"
     );
+
+    // Send admin alert for critical failures
+    if (error instanceof Error) {
+      await sendErrorAlert(error, {
+        module: "photo-analysis",
+        telegramUserId,
+        chatId,
+        fileId,
+        persona,
+        creditsConsumed,
+      });
+    }
 
     // Refund credits if they were consumed
     if (creditsConsumed) {

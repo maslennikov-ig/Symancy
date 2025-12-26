@@ -26,6 +26,11 @@ const SCHEDULES = {
     tz: "Europe/Moscow",
     description: "Daily fortune for users with spiritual goal",
   },
+  "photo-cleanup": {
+    cron: "0 3 * * *", // Daily at 3:00 AM MSK
+    tz: "Europe/Moscow",
+    description: "Cleanup expired photos (7/90 day retention)",
+  },
 } as const;
 
 /**

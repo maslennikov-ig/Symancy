@@ -94,6 +94,13 @@ async function startWorkers() {
 
   logger.info("Worker mode: registering queue handlers...");
 
+  // Clean up stale jobs from previous crashes
+  const { cleanupStaleLocks } = await import("./core/queue.js");
+  const cleaned = await cleanupStaleLocks(5);
+  if (cleaned > 0) {
+    logger.warn({ cleaned }, "Cleaned up stale processing locks from previous crashes");
+  }
+
   // Register photo analysis worker
   const photoWorkerId = await registerPhotoWorker();
   logger.info({ workerId: photoWorkerId }, "Photo analysis worker registered");
