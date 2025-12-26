@@ -381,7 +381,8 @@
 
 ### Deployment
 
-- [ ] T077 [EXECUTOR: deployment-engineer] [SEQUENTIAL] Deploy to production server (91.132.59.194) and configure Telegram webhook with secret token
+- [X] T077 [EXECUTOR: deployment-engineer] [SEQUENTIAL] Deploy to production server (91.132.59.194) and configure Telegram webhook with secret token
+  → Artifacts: [ecosystem.config.cjs](../../symancy-backend/ecosystem.config.cjs), [nginx-backend.conf](../../symancy-backend/nginx-backend.conf), [deploy-backend.yml](../../.github/workflows/deploy-backend.yml), [DEPLOYMENT.md](../../symancy-backend/DEPLOYMENT.md)
 
 ---
 
