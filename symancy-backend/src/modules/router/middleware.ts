@@ -60,8 +60,11 @@ export async function loadProfile(ctx: BotContext, next: NextFunction): Promise<
           .from("profiles")
           .insert({
             telegram_user_id: telegramUserId,
-            name: ctx.from.username || ctx.from.first_name || null,
+            username: ctx.from.username || null,
+            first_name: ctx.from.first_name || null,
+            last_name: ctx.from.last_name || null,
             language_code: ctx.from.language_code || "ru",
+            is_premium: ctx.from.is_premium || false,
           })
           .select()
           .single();
