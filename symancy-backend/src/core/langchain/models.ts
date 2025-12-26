@@ -19,11 +19,18 @@ const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
 /**
  * Common ChatOpenAI configuration options
+ * Extended with diversity parameters for interpretation variety
  */
 interface ModelOptions {
   temperature?: number;
   maxRetries?: number;
   streaming?: boolean;
+  /** Penalty for repeating same tokens (0-2, default 0) */
+  frequencyPenalty?: number;
+  /** Penalty for repeating same topics (0-2, default 0) */
+  presencePenalty?: number;
+  /** Maximum tokens in response */
+  maxTokens?: number;
 }
 
 /**
@@ -39,13 +46,27 @@ function createChatOpenAIInstance(
     temperature = 0.7,
     maxRetries = RETRY_ATTEMPTS,
     streaming = false,
+    frequencyPenalty,
+    presencePenalty,
+    maxTokens,
   } = options;
+
+  // Build model kwargs for additional parameters
+  const modelKwargs: Record<string, unknown> = {};
+  if (frequencyPenalty !== undefined) {
+    modelKwargs.frequency_penalty = frequencyPenalty;
+  }
+  if (presencePenalty !== undefined) {
+    modelKwargs.presence_penalty = presencePenalty;
+  }
 
   return new ChatOpenAI({
     model: modelName,
     temperature,
     maxRetries,
     streaming,
+    maxTokens,
+    modelKwargs: Object.keys(modelKwargs).length > 0 ? modelKwargs : undefined,
     configuration: {
       apiKey: env.OPENROUTER_API_KEY,
       baseURL: OPENROUTER_BASE_URL,
@@ -55,12 +76,21 @@ function createChatOpenAIInstance(
 
 /**
  * Create Arina persona model
- * Used for Arina-style interpretations with warm, mystical tone
+ * Used for Arina-style interpretations with warm, archetypal tone
+ *
+ * Optimized parameters for interpretation variety:
+ * - High temperature (0.9) for creative diversity
+ * - Frequency penalty (0.6) to reduce token repetition
+ * - Presence penalty (0.5) to encourage new topics
+ * - Max tokens (1200) for controlled length
  */
 export function createArinaModel(options?: ModelOptions): ChatOpenAI {
   return createChatOpenAIInstance(MODEL_ARINA, {
+    temperature: 0.9,
+    frequencyPenalty: 0.6,
+    presencePenalty: 0.5,
+    maxTokens: 1200,
     ...options,
-    temperature: options?.temperature ?? 0.8,
   });
 }
 
@@ -86,11 +116,16 @@ export function createChatModel(options?: ModelOptions): ChatOpenAI {
 /**
  * Create vision analysis model
  * Used for analyzing images (coffee grounds, palms, tarot cards)
+ *
+ * Optimized parameters for accurate pattern detection:
+ * - Low temperature (0.3) for consistency
+ * - Max tokens (800) for concise structured output
  */
 export function createVisionModel(options?: ModelOptions): ChatOpenAI {
   return createChatOpenAIInstance(MODEL_VISION, {
+    temperature: 0.3,
+    maxTokens: 800,
     ...options,
-    temperature: options?.temperature ?? 0.3,
   });
 }
 

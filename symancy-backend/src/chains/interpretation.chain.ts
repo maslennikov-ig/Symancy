@@ -14,6 +14,8 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getLogger } from "../core/logger.js";
+import { selectRandomLens } from "../config/interpretation-matrix.js";
+import { findMaxSimilarity } from "../utils/similarity.js";
 
 const logger = getLogger().child({ module: "interpretation-chain" });
 
@@ -146,13 +148,25 @@ function replacePlaceholders(
 /**
  * Generate interpretation of coffee ground analysis
  *
- * @param input - Vision result, persona, and optional language/userName
+ * @param input - Vision result, persona, and optional language/userName/userContext/recentInterpretations
  * @returns InterpretationResult with HTML-formatted text and token usage
  */
 export async function generateInterpretation(
-  input: InterpretationChainInput & { language?: string; userName?: string }
+  input: InterpretationChainInput & {
+    language?: string;
+    userName?: string;
+    userContext?: string;
+    recentInterpretations?: string[];
+  }
 ): Promise<InterpretationResult> {
-  const { visionResult, persona, language = "ru", userName = "дорогой друг" } = input;
+  const {
+    visionResult,
+    persona,
+    language = "ru",
+    userName = "дорогой друг",
+    userContext,
+    recentInterpretations = [],
+  } = input;
 
   // Validate persona
   if (persona !== "arina" && persona !== "cassandra") {
@@ -192,11 +206,19 @@ export async function generateInterpretation(
   // Format vision result for prompt
   const formattedVisionResult = formatVisionResult(visionResult);
 
+  // Select a random lens from the interpretation matrix
+  const lens = selectRandomLens([], userContext);
+
+  logger.info({ lensId: lens.id, lensName: lens.name }, "Selected interpretation lens");
+
   // Replace placeholders in interpretation prompt
   const interpretationText = replacePlaceholders(interpretationPrompt, {
     VISION_RESULT: formattedVisionResult,
     LANGUAGE: language,
     USER_NAME: userName,
+    USER_CONTEXT: userContext || "Не указан",
+    LENS_NAME: lens.name,
+    LENS_INSTRUCTION: lens.instruction,
   });
 
   // Create messages for LangChain
@@ -212,6 +234,49 @@ export async function generateInterpretation(
     // Extract token usage from response metadata
     // ChatOpenAI response structure: response.usage_metadata.total_tokens or response.response_metadata
     const tokensUsed = response.usage_metadata?.total_tokens ?? 0;
+
+    // Check similarity with recent interpretations
+    if (recentInterpretations && recentInterpretations.length > 0) {
+      const { maxSimilarity } = findMaxSimilarity(
+        response.content as string,
+        recentInterpretations
+      );
+
+      if (maxSimilarity > 0.35) {
+        logger.info({ maxSimilarity }, "Interpretation too similar, re-rolling with different lens");
+
+        // Select new lens avoiding the current one
+        const newLens = selectRandomLens([lens.id], userContext);
+
+        logger.info({ newLensId: newLens.id, newLensName: newLens.name }, "Re-rolled lens");
+
+        // Regenerate with new lens
+        const newInterpretationText = replacePlaceholders(interpretationPrompt, {
+          VISION_RESULT: formattedVisionResult,
+          LANGUAGE: language,
+          USER_NAME: userName,
+          USER_CONTEXT: userContext || "Не указан",
+          LENS_NAME: newLens.name,
+          LENS_INSTRUCTION: newLens.instruction,
+        });
+
+        const newMessages = [
+          new SystemMessage(systemPrompt),
+          new HumanMessage(newInterpretationText),
+        ];
+
+        const newResponse = await model.invoke(newMessages);
+
+        return {
+          text: newResponse.content as string,
+          persona,
+          tokensUsed:
+            (response.usage_metadata?.total_tokens ?? 0) +
+            (newResponse.usage_metadata?.total_tokens ?? 0),
+          success: true,
+        };
+      }
+    }
 
     return {
       text: response.content as string,

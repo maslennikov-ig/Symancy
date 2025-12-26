@@ -8,6 +8,7 @@ import { createVisionModel } from "../core/langchain/models.js";
 import type {
   VisionChainInput,
   VisionAnalysisResult,
+  StructuredVisionResult,
 } from "../types/langchain.js";
 import { readFile } from "fs/promises";
 import path from "path";
@@ -49,7 +50,7 @@ async function loadVisionPrompt(): Promise<string> {
 }
 
 /**
- * Parse vision model response into structured result
+ * Parse legacy vision model response into structured result
  * Extracts symbols, colors, patterns from formatted response
  *
  * Expected format:
@@ -60,7 +61,7 @@ async function loadVisionPrompt(): Promise<string> {
  * OVERALL COMPOSITION: [description]
  * SYMBOLIC ELEMENTS: [description]
  */
-function parseVisionResponse(rawText: string): VisionAnalysisResult {
+function parseLegacyVisionResponse(rawText: string): VisionAnalysisResult {
   const symbols: string[] = [];
   const colors: string[] = [];
   const patterns: string[] = [];
@@ -168,6 +169,101 @@ function parseVisionResponse(rawText: string): VisionAnalysisResult {
 }
 
 /**
+ * Parse structured vision response into typed result
+ * Handles new structured format with fallback to legacy
+ */
+function parseStructuredVision(rawText: string): StructuredVisionResult {
+  const result: StructuredVisionResult = {
+    technicalQuality: "CLEAR",
+    complexityScore: 5,
+    sedimentPhysics: { density: "medium", flow: "stagnant", chaos: "medium" },
+    zones: { rim: "", center: "", bottom: "" },
+    visualAnchors: [],
+    atmosphere: [],
+    rawDescription: rawText.trim(),
+  };
+
+  // Parse TECHNICAL section
+  const technicalMatch = rawText.match(/TECHNICAL:\s*(\w+),?\s*(?:Complexity\s*)?(\d+)?/i);
+  if (technicalMatch) {
+    const quality = technicalMatch[1]?.toUpperCase();
+    if (quality === "CLEAR" || quality === "BLURRY" || quality === "EMPTY" || quality === "DARK") {
+      result.technicalQuality = quality;
+    }
+    if (technicalMatch[2]) {
+      result.complexityScore = Math.min(10, Math.max(1, parseInt(technicalMatch[2], 10)));
+    }
+  }
+
+  // Parse PHYSICS section
+  const physicsSection = rawText.match(/PHYSICS:\s*([\s\S]*?)(?=ZONES:|ANCHORS:|ATMOSPHERE:|$)/i);
+  if (physicsSection && physicsSection[1]) {
+    const physicsText = physicsSection[1];
+
+    const densityMatch = physicsText.match(/Density:\s*(\w+)/i);
+    if (densityMatch) result.sedimentPhysics.density = densityMatch[1]!.toLowerCase();
+
+    const flowMatch = physicsText.match(/Flow:\s*(.+?)(?:\n|$)/i);
+    if (flowMatch) result.sedimentPhysics.flow = flowMatch[1]!.trim().toLowerCase();
+
+    const chaosMatch = physicsText.match(/Chaos:\s*(\w+)/i);
+    if (chaosMatch) result.sedimentPhysics.chaos = chaosMatch[1]!.toLowerCase();
+  }
+
+  // Parse ZONES section
+  const zonesSection = rawText.match(/ZONES:\s*([\s\S]*?)(?=ANCHORS:|ATMOSPHERE:|$)/i);
+  if (zonesSection && zonesSection[1]) {
+    const zonesText = zonesSection[1];
+
+    const rimMatch = zonesText.match(/\[RIM\]\s*(.+?)(?:\n|\[|$)/i);
+    if (rimMatch) result.zones.rim = rimMatch[1]!.trim();
+
+    const centerMatch = zonesText.match(/\[CENTER\]\s*(.+?)(?:\n|\[|$)/i);
+    if (centerMatch) result.zones.center = centerMatch[1]!.trim();
+
+    const bottomMatch = zonesText.match(/\[BOTTOM\]\s*(.+?)(?:\n|\[|$)/i);
+    if (bottomMatch) result.zones.bottom = bottomMatch[1]!.trim();
+  }
+
+  // Parse ANCHORS section
+  const anchorsSection = rawText.match(/ANCHORS:\s*([\s\S]*?)(?=ATMOSPHERE:|$)/i);
+  if (anchorsSection && anchorsSection[1]) {
+    const anchorLines = anchorsSection[1].match(/^\d+\.\s*(.+)$/gm) || [];
+
+    for (const line of anchorLines) {
+      const cleaned = line.replace(/^\d+\.\s*/, "");
+      // Parse format: [location] description
+      const locationMatch = cleaned.match(/\[([^\]]+)\]\s*(.+)/);
+      if (locationMatch) {
+        const location = locationMatch[1]!;
+        const description = locationMatch[2]!;
+
+        // Try to extract texture and unique feature from description
+        const texturePart = description.match(/(grainy|smooth|fractured|flowing)/i);
+
+        result.visualAnchors.push({
+          location,
+          geometry: description.split(",")[0]?.trim() || description,
+          texture: texturePart ? texturePart[1]!.toLowerCase() : "complex",
+          uniqueFeature: description,
+        });
+      }
+    }
+  }
+
+  // Parse ATMOSPHERE section
+  const atmosphereMatch = rawText.match(/ATMOSPHERE:\s*(.+?)$/im);
+  if (atmosphereMatch && atmosphereMatch[1]) {
+    result.atmosphere = atmosphereMatch[1]
+      .split(/[,;]/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+  }
+
+  return result;
+}
+
+/**
  * Analyze coffee ground image using vision model
  * Main entry point for vision analysis chain
  *
@@ -223,8 +319,32 @@ export async function analyzeVision(
           .map((block) => ("text" in block ? block.text : ""))
           .join("\n");
 
-  // Parse structured response
-  const result = parseVisionResponse(rawText);
+  // Try parsing with new structured format first
+  const structuredResult = parseStructuredVision(rawText);
+
+  // Check if structured parsing yielded meaningful results
+  const hasStructuredData =
+    structuredResult.visualAnchors.length > 0 ||
+    structuredResult.zones.rim !== "" ||
+    structuredResult.atmosphere.length > 0;
+
+  // Fall back to legacy parser if structured parsing failed
+  if (!hasStructuredData) {
+    const result = parseLegacyVisionResponse(rawText);
+    return result;
+  }
+
+  // Convert structured result to legacy format for backward compatibility
+  const result: VisionAnalysisResult = {
+    symbols: structuredResult.visualAnchors.map(a => a.uniqueFeature),
+    colors: [], // Extract from atmosphere or description if needed
+    patterns: [
+      structuredResult.zones.rim,
+      structuredResult.zones.center,
+      structuredResult.zones.bottom,
+    ].filter(z => z !== ""),
+    rawDescription: structuredResult.rawDescription,
+  };
 
   return result;
 }
@@ -274,7 +394,33 @@ export async function createVisionChain() {
               .map((block) => ("text" in block ? block.text : ""))
               .join("\n");
 
-      return parseVisionResponse(rawText);
+      // Try parsing with new structured format first
+      const structuredResult = parseStructuredVision(rawText);
+
+      // Check if structured parsing yielded meaningful results
+      const hasStructuredData =
+        structuredResult.visualAnchors.length > 0 ||
+        structuredResult.zones.rim !== "" ||
+        structuredResult.atmosphere.length > 0;
+
+      // Fall back to legacy parser if structured parsing failed
+      if (!hasStructuredData) {
+        return parseLegacyVisionResponse(rawText);
+      }
+
+      // Convert structured result to legacy format for backward compatibility
+      const result: VisionAnalysisResult = {
+        symbols: structuredResult.visualAnchors.map(a => a.uniqueFeature),
+        colors: [], // Extract from atmosphere or description if needed
+        patterns: [
+          structuredResult.zones.rim,
+          structuredResult.zones.center,
+          structuredResult.zones.bottom,
+        ].filter(z => z !== ""),
+        rawDescription: structuredResult.rawDescription,
+      };
+
+      return result;
     },
   };
 }

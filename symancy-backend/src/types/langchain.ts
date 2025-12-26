@@ -17,6 +17,40 @@ export interface VisionAnalysisResult {
 }
 
 /**
+ * Structured vision analysis result (new format)
+ * Parsed from vision model's structured output
+ */
+export interface StructuredVisionResult {
+  /** Image quality assessment */
+  technicalQuality: "CLEAR" | "BLURRY" | "EMPTY" | "DARK";
+  /** Complexity score 1-10 */
+  complexityScore: number;
+  /** Sediment physics description */
+  sedimentPhysics: {
+    density: string;
+    flow: string;
+    chaos: string;
+  };
+  /** Zone analysis (traditional tasseography) */
+  zones: {
+    rim: string;
+    center: string;
+    bottom: string;
+  };
+  /** Visual anchors (2-5 unique patterns) */
+  visualAnchors: Array<{
+    location: string;
+    geometry: string;
+    texture: string;
+    uniqueFeature: string;
+  }>;
+  /** Atmosphere keywords (3) */
+  atmosphere: string[];
+  /** Raw description for fallback */
+  rawDescription: string;
+}
+
+/**
  * Interpretation result from persona
  * Persona-specific analysis of vision results
  */
