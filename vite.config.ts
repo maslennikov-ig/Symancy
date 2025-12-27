@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
       },
       resolve: {
         alias: {
-          '@': fileURLToPath(new URL('.', import.meta.url)),
+          '@': fileURLToPath(new URL('./src', import.meta.url)),
         }
       },
       build: {
@@ -24,9 +24,6 @@ export default defineConfig(({ mode }) => {
           output: {
             manualChunks: {
               vendor_react: ['react', 'react-dom', 'react-router'],
-              vendor_antd: ['antd', '@ant-design/icons'],
-              vendor_refine: ['@refinedev/core', '@refinedev/antd', '@refinedev/supabase'],
-              vendor_utils: ['browser-image-compression', '@supabase/supabase-js']
             }
           }
         }

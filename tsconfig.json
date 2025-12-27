@@ -17,29 +17,21 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*"]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
   "include": [
-    "*.ts",
-    "*.tsx",
-    "components/**/*.ts",
-    "components/**/*.tsx",
-    "contexts/**/*.ts",
-    "contexts/**/*.tsx",
-    "lib/**/*.ts",
-    "pages/**/*.ts",
-    "pages/**/*.tsx",
-    "services/**/*.ts",
-    "types/**/*.ts",
-    "types/**/*.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.d.ts",
     "vite.config.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "supabase"
+    "supabase",
+    "symancy-backend"
   ]
 }
