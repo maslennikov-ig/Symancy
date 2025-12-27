@@ -2,6 +2,28 @@
 
 User-facing release notes for all versions.
 
+## v0.5.3
+
+_Released on 2025-12-27_
+
+### ✨ New Features
+
+- **router**: Require /start before allowing other interactions
+
+### 🐛 Bug Fixes
+
+- **onboarding**: Fix flow to wait for user input instead of auto-transitioning
+- **deploy**: Remove pkill that killed SSH session
+- **deploy**: Handle pkill exit code properly
+- **deploy**: Force PM2 restart and add version verification
+- **router**: Rewrite with correct Grammy middleware pattern
+- **deploy**: Fix PM2 log directory permissions issue
+- **backend**: Add guards to onboarding nodes for safe graph traversal
+
+---
+
+_This release was automatically generated from 10 commits._
+
 ## v0.5.2
 
 _Released on 2025-12-26_

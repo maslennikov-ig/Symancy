@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.3] - 2025-12-27
+
+### Added
+- **router**: require /start before allowing other interactions (8a285c8)
+
+### Fixed
+- **onboarding**: fix flow to wait for user input instead of auto-transitioning (338356e)
+- **deploy**: remove pkill that killed SSH session (7e32fb8)
+- **deploy**: handle pkill exit code properly (1ddac52)
+- **deploy**: force PM2 restart and add version verification (a4858ca)
+- **router**: rewrite with correct Grammy middleware pattern (cad0f75)
+- **deploy**: fix PM2 log directory permissions issue (e6c0c30)
+- **backend**: add guards to onboarding nodes for safe graph traversal (dbcbb76)
+
+### Other
+- update docs (2441693)
+- **router**: add extensive logging for command debugging (3a0cd89)
+
 ## [0.5.2] - 2025-12-26
 
 ### Other
