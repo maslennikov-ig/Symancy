@@ -176,25 +176,18 @@ jobs:
           # Create logs directory
           ssh ${SSH_USER}@${SSH_HOST} "mkdir -p ${RELEASE_DIR}/logs"
 
-          # Force stop all PM2 processes with this name (handle stale processes)
-          ssh ${SSH_USER}@${SSH_HOST} "pm2 stop symancy-backend 2>/dev/null || true"
-          ssh ${SSH_USER}@${SSH_HOST} "pm2 delete symancy-backend 2>/dev/null || true"
-
-          # Kill any lingering node processes running old code (safety measure)
-          # pkill returns 1 if no processes found, which is fine
-          ssh ${SSH_USER}@${SSH_HOST} "pkill -f 'symancy-backend' 2>/dev/null; exit 0"
+          # Force stop and delete PM2 process
+          ssh ${SSH_USER}@${SSH_HOST} "pm2 stop symancy-backend 2>/dev/null; pm2 delete symancy-backend 2>/dev/null; true"
 
           # Wait for processes to fully terminate
           sleep 2
 
-          # Start fresh with git commit info
-          ssh ${SSH_USER}@${SSH_HOST} "cd ${TARGET_ROOT}/current && GIT_COMMIT=${GITHUB_SHA::7} BUILD_TIME='$(date -Iseconds)' pm2 start ecosystem.config.cjs --env production"
+          # Start fresh PM2 process
+          GIT_SHORT="${GITHUB_SHA:0:7}"
+          ssh ${SSH_USER}@${SSH_HOST} "cd ${TARGET_ROOT}/current && GIT_COMMIT=${GIT_SHORT} pm2 start ecosystem.config.cjs --env production"
 
-          # Save PM2 process list
-          ssh ${SSH_USER}@${SSH_HOST} "pm2 save"
-
-          # Show PM2 status for debugging
-          ssh ${SSH_USER}@${SSH_HOST} "pm2 list"
+          # Save PM2 process list and show status
+          ssh ${SSH_USER}@${SSH_HOST} "pm2 save && pm2 list"
 
           # Cleanup old releases (keep last 5)
           ssh ${SSH_USER}@${SSH_HOST} "cd ${TARGET_ROOT}/releases && ls -t | tail -n +6 | xargs -r rm -rf"
