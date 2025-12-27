@@ -37,10 +37,39 @@ function routeAfterGoals(
 }
 
 /**
+ * Route from welcome based on whether we have a name
+ * If no name yet, stop (wait for user input). If name provided, continue.
+ */
+function routeAfterWelcome(
+  state: OnboardingStateAnnotationType
+): "ask_name" | typeof END {
+  // If this is initial welcome (no name), stop and wait for user input
+  if (!state.name) {
+    return END;
+  }
+  // If name is provided (re-invocation), continue to ask_name
+  return "ask_name";
+}
+
+/**
+ * Route from ask_name based on whether name was processed
+ * Stops if waiting for input, continues if name was saved
+ */
+function routeAfterAskName(
+  state: OnboardingStateAnnotationType
+): "ask_goals" | typeof END {
+  // If step is still ask_name (waiting for input), stop
+  if (state.step === "ask_name" && !state.name) {
+    return END;
+  }
+  // If name was processed, continue to goals
+  return "ask_goals";
+}
+
+/**
  * Create the onboarding StateGraph
- * Flow: START → welcome → ask_name → ask_goals → [conditional] → complete → END
- *                                                      ↓
- *                                                 ask_timezone → complete → END
+ * Each node can be an entry point - graph stops at END after each step
+ * Handler re-invokes with updated state when user provides input
  */
 function createGraphBuilder() {
   const builder = new StateGraph(OnboardingStateAnnotation)
@@ -51,10 +80,20 @@ function createGraphBuilder() {
     .addNode("ask_timezone", askTimezone)
     .addNode("complete", complete)
 
-    // Define edges
+    // Define edges with conditional routing to allow stopping
     .addEdge(START, "welcome")
-    .addEdge("welcome", "ask_name")
-    .addEdge("ask_name", "ask_goals")
+
+    // After welcome, conditionally stop or continue
+    .addConditionalEdges("welcome", routeAfterWelcome, {
+      ask_name: "ask_name",
+      [END]: END,
+    })
+
+    // After ask_name, conditionally stop or continue
+    .addConditionalEdges("ask_name", routeAfterAskName, {
+      ask_goals: "ask_goals",
+      [END]: END,
+    })
 
     // Conditional routing from ask_goals
     .addConditionalEdges("ask_goals", routeAfterGoals, {

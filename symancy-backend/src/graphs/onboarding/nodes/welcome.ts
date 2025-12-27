@@ -1,6 +1,6 @@
 /**
  * Welcome node - T048
- * Sends welcome message and transitions to ask_name step
+ * Sends welcome message and waits for user to provide their name
  */
 import type { OnboardingState } from "../state.js";
 import { getBotApi } from "../../../core/telegram.js";
@@ -10,7 +10,8 @@ const logger = getLogger().child({ module: "onboarding:welcome" });
 
 /**
  * Send welcome message to user
- * Explains what the bot does (coffee fortune telling)
+ * After this, graph stops and waits for user input (name)
+ * Handler will save step="ask_name" to DB and re-invoke when user responds
  */
 export async function welcome(
   state: OnboardingState
@@ -33,6 +34,8 @@ export async function welcome(
 
     logger.info({ telegramUserId, chatId }, "Welcome message sent");
 
+    // Return step="ask_name" - this tells handler what step user is on
+    // Graph will stop here (routeAfterWelcome returns END when no name)
     return {
       step: "ask_name",
     };

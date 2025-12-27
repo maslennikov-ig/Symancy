@@ -24,21 +24,34 @@ import {
 const logger = getLogger().child({ module: "router" });
 
 /**
+ * Check if user needs to complete onboarding first
+ * Returns true if user should be blocked from using commands
+ */
+function requiresOnboarding(ctx: BotContext): boolean {
+  // No profile = definitely needs onboarding
+  if (!ctx.profile) {
+    return true;
+  }
+  // Has profile but not completed onboarding
+  return !ctx.profile.onboarding_completed;
+}
+
+/**
+ * Send message prompting user to complete onboarding
+ */
+async function sendOnboardingRequired(ctx: BotContext): Promise<void> {
+  await ctx.reply(
+    "👋 Сначала давайте познакомимся! Нажмите /start чтобы начать.",
+    { parse_mode: "HTML" }
+  );
+}
+
+/**
  * Setup bot message handlers and middleware
  * Call this once during application startup
  */
 export function setupRouter(): void {
   const bot = getBot();
-
-  // DEBUG: Log every incoming update
-  bot.use(async (ctx, next) => {
-    console.log("[DEBUG] === INCOMING UPDATE ===");
-    console.log("[DEBUG] Update ID:", ctx.update?.update_id);
-    console.log("[DEBUG] From:", ctx.from?.id, ctx.from?.username);
-    console.log("[DEBUG] Text:", ctx.message?.text);
-    console.log("[DEBUG] ========================");
-    await next();
-  });
 
   // Middleware 1: Load user profile
   bot.use(async (ctx, next) => {
@@ -46,7 +59,7 @@ export function setupRouter(): void {
       await loadProfile(ctx as BotContext, next);
     } catch (error) {
       logger.error({ error, updateId: ctx.update?.update_id }, "Error in loadProfile middleware");
-      await next(); // Continue even on error
+      await next();
     }
   });
 
@@ -56,7 +69,7 @@ export function setupRouter(): void {
       await loadUserState(ctx as BotContext, next);
     } catch (error) {
       logger.error({ error, updateId: ctx.update?.update_id }, "Error in loadUserState middleware");
-      await next(); // Continue even on error
+      await next();
     }
   });
 
@@ -66,7 +79,7 @@ export function setupRouter(): void {
       await checkBanned(ctx as BotContext, next);
     } catch (error) {
       logger.error({ error, updateId: ctx.update?.update_id }, "Error in checkBanned middleware");
-      await next(); // Continue even on error
+      await next();
     }
   });
 
@@ -76,19 +89,18 @@ export function setupRouter(): void {
       await rateLimitMiddleware(ctx, next);
     } catch (error) {
       logger.error({ error, updateId: ctx.update?.update_id }, "Error in rateLimitMiddleware");
-      await next(); // Continue even on error
+      await next();
     }
   });
 
-  // Handle /start command
+  // Handle /start command - always available
   bot.command("start", async (ctx) => {
     const botCtx = ctx as BotContext;
     logger.info({ telegramUserId: ctx.from?.id }, "Received /start command");
 
     try {
       // Check if onboarding needed
-      if (!botCtx.profile?.onboarding_completed) {
-        // Start onboarding flow (T055)
+      if (requiresOnboarding(botCtx)) {
         await startOnboarding(botCtx);
         return;
       }
@@ -102,52 +114,76 @@ export function setupRouter(): void {
 
   // Handle /cassandra and /premium commands (premium fortune teller)
   bot.command(["cassandra", "premium"], async (ctx) => {
-    console.log("[DEBUG] /cassandra or /premium received from:", ctx.from?.id);
-    logger.info({ telegramUserId: ctx.from?.id }, "Received /cassandra or /premium command");
+    const botCtx = ctx as BotContext;
+    logger.info({ telegramUserId: ctx.from?.id }, "Received /cassandra command");
+
+    // Block if onboarding not completed
+    if (requiresOnboarding(botCtx)) {
+      await sendOnboardingRequired(botCtx);
+      return;
+    }
+
     try {
-      await handleCassandraCommand(ctx as BotContext);
+      await handleCassandraCommand(botCtx);
     } catch (error) {
-      console.error("[DEBUG] Error in /cassandra:", error);
-      logger.error({ error }, "Error in /cassandra command");
+      logger.error({ error, telegramUserId: ctx.from?.id }, "Error in /cassandra command");
       await ctx.reply("Ошибка в команде /cassandra");
     }
   });
 
   // Handle /help command
   bot.command("help", async (ctx) => {
-    console.log("[DEBUG] /help received from:", ctx.from?.id);
+    const botCtx = ctx as BotContext;
     logger.info({ telegramUserId: ctx.from?.id }, "Received /help command");
+
+    // Block if onboarding not completed
+    if (requiresOnboarding(botCtx)) {
+      await sendOnboardingRequired(botCtx);
+      return;
+    }
+
     try {
-      await handleHelpCommand(ctx as BotContext);
+      await handleHelpCommand(botCtx);
     } catch (error) {
-      console.error("[DEBUG] Error in /help:", error);
-      logger.error({ error }, "Error in /help command");
+      logger.error({ error, telegramUserId: ctx.from?.id }, "Error in /help command");
       await ctx.reply("Ошибка в команде /help");
     }
   });
 
   // Handle /credits command
   bot.command("credits", async (ctx) => {
-    console.log("[DEBUG] /credits received from:", ctx.from?.id);
+    const botCtx = ctx as BotContext;
     logger.info({ telegramUserId: ctx.from?.id }, "Received /credits command");
+
+    // Block if onboarding not completed
+    if (requiresOnboarding(botCtx)) {
+      await sendOnboardingRequired(botCtx);
+      return;
+    }
+
     try {
-      await handleCreditsCommand(ctx as BotContext);
+      await handleCreditsCommand(botCtx);
     } catch (error) {
-      console.error("[DEBUG] Error in /credits:", error);
-      logger.error({ error }, "Error in /credits command");
+      logger.error({ error, telegramUserId: ctx.from?.id }, "Error in /credits command");
       await ctx.reply("Ошибка в команде /credits");
     }
   });
 
   // Handle /history command
   bot.command("history", async (ctx) => {
-    console.log("[DEBUG] /history received from:", ctx.from?.id);
+    const botCtx = ctx as BotContext;
     logger.info({ telegramUserId: ctx.from?.id }, "Received /history command");
+
+    // Block if onboarding not completed
+    if (requiresOnboarding(botCtx)) {
+      await sendOnboardingRequired(botCtx);
+      return;
+    }
+
     try {
-      await handleHistoryCommand(ctx as BotContext);
+      await handleHistoryCommand(botCtx);
     } catch (error) {
-      console.error("[DEBUG] Error in /history:", error);
-      logger.error({ error }, "Error in /history command");
+      logger.error({ error, telegramUserId: ctx.from?.id }, "Error in /history command");
       await ctx.reply("Ошибка в команде /history");
     }
   });
@@ -157,38 +193,45 @@ export function setupRouter(): void {
     const botCtx = ctx as BotContext;
     logger.info({ telegramUserId: ctx.from?.id }, "Received photo message");
 
-    // Require /start first if no profile
-    if (!botCtx.profile) {
-      await ctx.reply(
-        "👋 Привет! Для начала работы с ботом нажмите /start",
-        { parse_mode: "HTML" }
-      );
+    // Block if onboarding not completed
+    if (requiresOnboarding(botCtx)) {
+      await sendOnboardingRequired(botCtx);
       return;
     }
 
     await handlePhotoMessage(botCtx);
   });
 
-  // Handle text messages - route based on onboarding state (T055)
+  // Handle text messages - route based on onboarding state
   bot.on("message:text", async (ctx) => {
     const botCtx = ctx as BotContext;
+    const text = ctx.message?.text || "";
 
     try {
-      // Require /start first if no profile
+      // If no profile at all, require /start
       if (!botCtx.profile) {
-        await ctx.reply(
-          "👋 Привет! Для начала работы с ботом нажмите /start",
-          { parse_mode: "HTML" }
-        );
+        await sendOnboardingRequired(botCtx);
         return;
       }
 
-      // Check if user is in onboarding flow
+      // Check if user is in active onboarding flow (has onboarding_step set)
       const inOnboarding = await isInOnboarding(botCtx);
 
       if (inOnboarding) {
+        // If user sends a command during onboarding, remind them to finish
+        if (text.startsWith("/")) {
+          await ctx.reply(
+            "Пожалуйста, сначала завершите знакомство. Просто напишите ваше имя.",
+            { parse_mode: "HTML" }
+          );
+          return;
+        }
         await handleOnboardingText(botCtx);
+      } else if (requiresOnboarding(botCtx)) {
+        // Profile exists but onboarding not completed - prompt to start
+        await sendOnboardingRequired(botCtx);
       } else {
+        // Normal message handling for users who completed onboarding
         await handleTextMessage(botCtx);
       }
     } catch (error) {
