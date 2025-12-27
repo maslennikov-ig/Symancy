@@ -154,8 +154,19 @@ export function setupRouter(): void {
 
   // Handle photos - delegate to photo-analysis module
   bot.on("message:photo", async (ctx) => {
+    const botCtx = ctx as BotContext;
     logger.info({ telegramUserId: ctx.from?.id }, "Received photo message");
-    await handlePhotoMessage(ctx as BotContext);
+
+    // Require /start first if no profile
+    if (!botCtx.profile) {
+      await ctx.reply(
+        "👋 Привет! Для начала работы с ботом нажмите /start",
+        { parse_mode: "HTML" }
+      );
+      return;
+    }
+
+    await handlePhotoMessage(botCtx);
   });
 
   // Handle text messages - route based on onboarding state (T055)
@@ -163,6 +174,15 @@ export function setupRouter(): void {
     const botCtx = ctx as BotContext;
 
     try {
+      // Require /start first if no profile
+      if (!botCtx.profile) {
+        await ctx.reply(
+          "👋 Привет! Для начала работы с ботом нажмите /start",
+          { parse_mode: "HTML" }
+        );
+        return;
+      }
+
       // Check if user is in onboarding flow
       const inOnboarding = await isInOnboarding(botCtx);
 

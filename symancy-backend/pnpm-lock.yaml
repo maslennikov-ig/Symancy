@@ -35,6 +35,9 @@ importers:
       lru-cache:
         specifier: ^11.2.4
         version: 11.2.4
+      openai:
+        specifier: ^6.15.0
+        version: 6.15.0(ws@8.18.3)(zod@4.2.1)
       pg:
         specifier: ^8.16.3
         version: 8.16.3
@@ -3499,7 +3502,7 @@ snapshots:
       isstream: 0.1.2
       jsonwebtoken: 9.0.3
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.13.2(debug@4.4.3))
+      retry-axios: 2.6.0(axios@1.13.2)
       tough-cookie: 4.1.4
     transitivePeerDependencies:
       - supports-color
@@ -3930,7 +3933,7 @@ snapshots:
 
   ret@0.5.0: {}
 
-  retry-axios@2.6.0(axios@1.13.2(debug@4.4.3)):
+  retry-axios@2.6.0(axios@1.13.2):
     dependencies:
       axios: 1.13.2(debug@4.4.3)
 
