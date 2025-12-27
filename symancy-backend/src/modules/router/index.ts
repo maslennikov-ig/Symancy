@@ -2,7 +2,6 @@
  * Main message dispatcher for routing Telegram updates
  * Sets up bot handlers, middleware, and message processing logic
  */
-import { Composer } from "grammy";
 import { getBot } from "../../core/telegram.js";
 import { getLogger } from "../../core/logger.js";
 import { loadProfile, loadUserState, checkBanned, type BotContext } from "./middleware.js";
@@ -31,69 +30,118 @@ const logger = getLogger().child({ module: "router" });
 export function setupRouter(): void {
   const bot = getBot();
 
-  // Create protected composer for middleware with error boundary
-  const protectedMiddleware = new Composer<BotContext>();
+  // Middleware 1: Load user profile
+  bot.use(async (ctx, next) => {
+    try {
+      await loadProfile(ctx as BotContext, next);
+    } catch (error) {
+      logger.error({ error, updateId: ctx.update?.update_id }, "Error in loadProfile middleware");
+      await next(); // Continue even on error
+    }
+  });
 
-  // Apply middleware to protected composer
-  protectedMiddleware.use(loadProfile);
-  protectedMiddleware.use(loadUserState);
-  protectedMiddleware.use(checkBanned);
-  protectedMiddleware.use(rateLimitMiddleware);
+  // Middleware 2: Load user state
+  bot.use(async (ctx, next) => {
+    try {
+      await loadUserState(ctx as BotContext, next);
+    } catch (error) {
+      logger.error({ error, updateId: ctx.update?.update_id }, "Error in loadUserState middleware");
+      await next(); // Continue even on error
+    }
+  });
 
-  // Install middleware with error boundary
-  bot.use(
-    protectedMiddleware.errorBoundary((err) => {
-      logger.error(
-        { error: err.error, updateId: err.ctx?.update?.update_id },
-        "Middleware error caught by boundary"
-      );
-      // Don't call next() - stop processing on middleware errors
-    })
-  );
+  // Middleware 3: Check if banned
+  bot.use(async (ctx, next) => {
+    try {
+      await checkBanned(ctx as BotContext, next);
+    } catch (error) {
+      logger.error({ error, updateId: ctx.update?.update_id }, "Error in checkBanned middleware");
+      await next(); // Continue even on error
+    }
+  });
+
+  // Middleware 4: Rate limiting
+  bot.use(async (ctx, next) => {
+    try {
+      await rateLimitMiddleware(ctx, next);
+    } catch (error) {
+      logger.error({ error, updateId: ctx.update?.update_id }, "Error in rateLimitMiddleware");
+      await next(); // Continue even on error
+    }
+  });
 
   // Handle /start command
-  bot.command("start", async (ctx: BotContext) => {
+  bot.command("start", async (ctx) => {
+    const botCtx = ctx as BotContext;
     logger.info({ telegramUserId: ctx.from?.id }, "Received /start command");
 
-    // Check if onboarding needed
-    if (!ctx.profile?.onboarding_completed) {
-      // Start onboarding flow (T055)
-      await startOnboarding(ctx);
-      return;
-    }
+    try {
+      // Check if onboarding needed
+      if (!botCtx.profile?.onboarding_completed) {
+        // Start onboarding flow (T055)
+        await startOnboarding(botCtx);
+        return;
+      }
 
-    await ctx.reply("Привет! Отправьте мне фото кофейной гущи для гадания.");
+      await ctx.reply("Привет! Отправьте мне фото кофейной гущи для гадания.");
+    } catch (error) {
+      logger.error({ error, telegramUserId: ctx.from?.id }, "Error in /start command");
+      await ctx.reply("Произошла ошибка. Попробуйте /start ещё раз.");
+    }
   });
 
   // Handle /cassandra and /premium commands (premium fortune teller)
-  bot.command(["cassandra", "premium"], handleCassandraCommand);
+  bot.command(["cassandra", "premium"], async (ctx) => {
+    logger.info({ telegramUserId: ctx.from?.id }, "Received /cassandra or /premium command");
+    await handleCassandraCommand(ctx as BotContext);
+  });
 
   // Handle /help command
-  bot.command("help", handleHelpCommand);
+  bot.command("help", async (ctx) => {
+    logger.info({ telegramUserId: ctx.from?.id }, "Received /help command");
+    await handleHelpCommand(ctx as BotContext);
+  });
 
   // Handle /credits command
-  bot.command("credits", handleCreditsCommand);
+  bot.command("credits", async (ctx) => {
+    logger.info({ telegramUserId: ctx.from?.id }, "Received /credits command");
+    await handleCreditsCommand(ctx as BotContext);
+  });
 
   // Handle /history command
-  bot.command("history", handleHistoryCommand);
+  bot.command("history", async (ctx) => {
+    logger.info({ telegramUserId: ctx.from?.id }, "Received /history command");
+    await handleHistoryCommand(ctx as BotContext);
+  });
 
   // Handle photos - delegate to photo-analysis module
-  bot.on("message:photo", handlePhotoMessage);
+  bot.on("message:photo", async (ctx) => {
+    logger.info({ telegramUserId: ctx.from?.id }, "Received photo message");
+    await handlePhotoMessage(ctx as BotContext);
+  });
 
   // Handle text messages - route based on onboarding state (T055)
-  bot.on("message:text", async (ctx: BotContext) => {
-    // Check if user is in onboarding flow
-    const inOnboarding = await isInOnboarding(ctx);
+  bot.on("message:text", async (ctx) => {
+    const botCtx = ctx as BotContext;
 
-    if (inOnboarding) {
-      await handleOnboardingText(ctx);
-    } else {
-      await handleTextMessage(ctx);
+    try {
+      // Check if user is in onboarding flow
+      const inOnboarding = await isInOnboarding(botCtx);
+
+      if (inOnboarding) {
+        await handleOnboardingText(botCtx);
+      } else {
+        await handleTextMessage(botCtx);
+      }
+    } catch (error) {
+      logger.error({ error, telegramUserId: ctx.from?.id }, "Error handling text message");
     }
   });
 
   // Handle callback queries (inline button presses) - T055
-  bot.on("callback_query:data", async (ctx: BotContext) => {
+  bot.on("callback_query:data", async (ctx) => {
+    const botCtx = ctx as BotContext;
+
     // Type guards
     if (!ctx.callbackQuery?.data || !ctx.from) {
       logger.warn("Invalid callback query context");
@@ -105,20 +153,25 @@ export function setupRouter(): void {
       "Received callback query"
     );
 
-    // Route onboarding callbacks
-    if (ctx.callbackQuery.data.startsWith("onboarding:")) {
-      await handleOnboardingCallback(ctx);
-      return;
-    }
+    try {
+      // Route onboarding callbacks
+      if (ctx.callbackQuery.data.startsWith("onboarding:")) {
+        await handleOnboardingCallback(botCtx);
+        return;
+      }
 
-    // TODO: Implement other callback query handling (Phase 4)
-    await ctx.answerCallbackQuery({ text: "Обрабатывается..." });
+      // TODO: Implement other callback query handling (Phase 4)
+      await ctx.answerCallbackQuery({ text: "Обрабатывается..." });
+    } catch (error) {
+      logger.error({ error, telegramUserId: ctx.from.id }, "Error handling callback query");
+      await ctx.answerCallbackQuery({ text: "Произошла ошибка" });
+    }
   });
 
   // Global error handler
   bot.catch((err) => {
     const updateId = err.ctx?.update?.update_id;
-    logger.error({ error: err.error, updateId }, "Bot error");
+    logger.error({ error: err.error, updateId }, "Bot error caught by global handler");
   });
 
   // Set bot commands menu (fire-and-forget)
