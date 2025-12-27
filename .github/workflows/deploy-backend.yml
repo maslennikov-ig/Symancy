@@ -181,7 +181,8 @@ jobs:
           ssh ${SSH_USER}@${SSH_HOST} "pm2 delete symancy-backend 2>/dev/null || true"
 
           # Kill any lingering node processes running old code (safety measure)
-          ssh ${SSH_USER}@${SSH_HOST} "pkill -f 'node.*symancy-backend.*app.js' 2>/dev/null || true"
+          # pkill returns 1 if no processes found, which is fine
+          ssh ${SSH_USER}@${SSH_HOST} "pkill -f 'symancy-backend' 2>/dev/null; exit 0"
 
           # Wait for processes to fully terminate
           sleep 2
