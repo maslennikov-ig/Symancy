@@ -30,6 +30,16 @@ const logger = getLogger().child({ module: "router" });
 export function setupRouter(): void {
   const bot = getBot();
 
+  // DEBUG: Log every incoming update
+  bot.use(async (ctx, next) => {
+    console.log("[DEBUG] === INCOMING UPDATE ===");
+    console.log("[DEBUG] Update ID:", ctx.update?.update_id);
+    console.log("[DEBUG] From:", ctx.from?.id, ctx.from?.username);
+    console.log("[DEBUG] Text:", ctx.message?.text);
+    console.log("[DEBUG] ========================");
+    await next();
+  });
+
   // Middleware 1: Load user profile
   bot.use(async (ctx, next) => {
     try {
@@ -92,26 +102,54 @@ export function setupRouter(): void {
 
   // Handle /cassandra and /premium commands (premium fortune teller)
   bot.command(["cassandra", "premium"], async (ctx) => {
+    console.log("[DEBUG] /cassandra or /premium received from:", ctx.from?.id);
     logger.info({ telegramUserId: ctx.from?.id }, "Received /cassandra or /premium command");
-    await handleCassandraCommand(ctx as BotContext);
+    try {
+      await handleCassandraCommand(ctx as BotContext);
+    } catch (error) {
+      console.error("[DEBUG] Error in /cassandra:", error);
+      logger.error({ error }, "Error in /cassandra command");
+      await ctx.reply("Ошибка в команде /cassandra");
+    }
   });
 
   // Handle /help command
   bot.command("help", async (ctx) => {
+    console.log("[DEBUG] /help received from:", ctx.from?.id);
     logger.info({ telegramUserId: ctx.from?.id }, "Received /help command");
-    await handleHelpCommand(ctx as BotContext);
+    try {
+      await handleHelpCommand(ctx as BotContext);
+    } catch (error) {
+      console.error("[DEBUG] Error in /help:", error);
+      logger.error({ error }, "Error in /help command");
+      await ctx.reply("Ошибка в команде /help");
+    }
   });
 
   // Handle /credits command
   bot.command("credits", async (ctx) => {
+    console.log("[DEBUG] /credits received from:", ctx.from?.id);
     logger.info({ telegramUserId: ctx.from?.id }, "Received /credits command");
-    await handleCreditsCommand(ctx as BotContext);
+    try {
+      await handleCreditsCommand(ctx as BotContext);
+    } catch (error) {
+      console.error("[DEBUG] Error in /credits:", error);
+      logger.error({ error }, "Error in /credits command");
+      await ctx.reply("Ошибка в команде /credits");
+    }
   });
 
   // Handle /history command
   bot.command("history", async (ctx) => {
+    console.log("[DEBUG] /history received from:", ctx.from?.id);
     logger.info({ telegramUserId: ctx.from?.id }, "Received /history command");
-    await handleHistoryCommand(ctx as BotContext);
+    try {
+      await handleHistoryCommand(ctx as BotContext);
+    } catch (error) {
+      console.error("[DEBUG] Error in /history:", error);
+      logger.error({ error }, "Error in /history command");
+      await ctx.reply("Ошибка в команде /history");
+    }
   });
 
   // Handle photos - delegate to photo-analysis module
