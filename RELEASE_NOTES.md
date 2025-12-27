@@ -12,6 +12,23 @@ _Released on 2025-12-27_
 
 ### 🐛 Bug Fixes
 
+- Resolve vitest mock hoisting and test configuration issues
+- Resolve code review issues and add documentation
+
+---
+
+_This release was automatically generated from 4 commits._
+
+## v0.5.4
+
+_Released on 2025-12-27_
+
+### 🔧 Improvements
+
+- Restructure frontend to src/ directory
+
+### 🐛 Bug Fixes
+
 - Resolve code review issues and add documentation
 
 ---

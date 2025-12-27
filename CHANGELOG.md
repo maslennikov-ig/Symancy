@@ -11,6 +11,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - restructure frontend to src/ directory (a5388b6)
 
 ### Fixed
+- resolve vitest mock hoisting and test configuration issues (2f8c5ca)
+- resolve code review issues and add documentation (7fcad20)
+
+### Other
+- add project architecture documentation (52fecec)
+
+## [0.5.4] - 2025-12-27
+
+### Changed
+- restructure frontend to src/ directory (a5388b6)
+
+### Fixed
 - resolve code review issues and add documentation (7fcad20)
 
 ### Other
