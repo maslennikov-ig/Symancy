@@ -1,0 +1,29 @@
+#!/bin/sh
+
+# Symancy Backend Pre-commit Hooks
+# Run type-check and unit tests before allowing commits
+
+BACKEND_DIR="symancy-backend"
+
+# Check if any files in symancy-backend were staged
+if git diff --cached --name-only | grep -q "^${BACKEND_DIR}/"; then
+  echo "Changes detected in ${BACKEND_DIR}, running checks..."
+
+  cd "${BACKEND_DIR}" || exit 1
+
+  # Run type check
+  echo "Running type check..."
+  pnpm type-check || {
+    echo "Type check failed! Please fix TypeScript errors before committing."
+    exit 1
+  }
+
+  # Run unit tests (test:unit already includes 'run' flag for non-watch mode)
+  echo "Running unit tests..."
+  pnpm test:unit || {
+    echo "Unit tests failed! Please fix failing tests before committing."
+    exit 1
+  }
+
+  echo "Pre-commit checks passed!"
+fi

@@ -21,19 +21,16 @@ const creditTypeBadgeStyles: Record<Tariff['creditType'], string> = {
   cassandra: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
 };
 
-// Use generic translations or specific keys if we add them later
-const creditTypeLabels: Record<Tariff['creditType'], string> = {
-  basic: 'Basic',
-  pro: 'PRO',
-  cassandra: 'Cassandra',
+// Credit type label keys for i18n
+const creditTypeLabels: Record<Tariff['creditType'], keyof typeof translations.en> = {
+  basic: 'tariff.card.type.basic',
+  pro: 'tariff.card.type.pro',
+  cassandra: 'tariff.card.type.cassandra',
 };
 
-function formatCredits(count: number, t: (key: string) => string): string {
-    // Simple pluralization logic could be improved with a proper library
-    // For now, let's use a generic format or key if available
-    // Assuming simple structure for brevity in this refactor
-    if (count === 1) return `1 ${t('pricing.tariff.basic.feature.1').split(' ')[1] || 'credit'}`;
-    return `${count} credits`; // Fallback, ideally add specific keys for "credits"
+function formatCredits(count: number, t: (key: keyof typeof translations.en) => string): string {
+    if (count === 1) return t('tariff.card.credit.single');
+    return t('tariff.card.credits').replace('{count}', count.toString());
 }
 
 export function TariffCard({ tariff, onSelect, onClick, isSelected = false, disabled = false, t }: TariffCardProps) {
@@ -76,7 +73,7 @@ export function TariffCard({ tariff, onSelect, onClick, isSelected = false, disa
               creditTypeBadgeStyles[tariff.creditType]
             )}
           >
-            {creditTypeLabels[tariff.creditType]}
+            {t(creditTypeLabels[tariff.creditType])}
           </span>
         </div>
       </CardHeader>
@@ -89,7 +86,7 @@ export function TariffCard({ tariff, onSelect, onClick, isSelected = false, disa
           {t(tariff.description as any)}
         </CardDescription>
         <p className="text-sm font-medium text-muted-foreground">
-           {tariff.credits} Credits
+           {formatCredits(tariff.credits, t)}
         </p>
       </CardContent>
     </Card>

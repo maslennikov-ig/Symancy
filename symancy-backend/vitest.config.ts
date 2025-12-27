@@ -9,9 +9,15 @@ export default defineConfig({
     setupFiles: ['./tests/setup/vitest.setup.ts'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'json-summary', 'html'],
       include: ['src/**/*.ts'],
-      exclude: ['src/types/**', 'src/**/*.d.ts']
+      exclude: ['src/types/**', 'src/**/*.d.ts'],
+      thresholds: {
+        lines: 20,
+        branches: 15,
+        functions: 20,
+        statements: 20
+      }
     },
     testTimeout: 30000,
     // Suppress unhandled rejection warnings from fake timers + error handling tests

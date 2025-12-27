@@ -2,6 +2,22 @@
 
 User-facing release notes for all versions.
 
+## v0.5.4
+
+_Released on 2025-12-27_
+
+### 🔧 Improvements
+
+- Restructure frontend to src/ directory
+
+### 🐛 Bug Fixes
+
+- Resolve code review issues and add documentation
+
+---
+
+_This release was automatically generated from 3 commits._
+
 ## v0.5.3
 
 _Released on 2025-12-27_

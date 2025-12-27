@@ -8,10 +8,11 @@ import { cn } from '../../../lib/utils';
 
 /**
  * Credit type configuration with icons and styles
+ * Note: labels are now translation keys, resolved at render time
  */
-const creditTypeConfig = {
+const getCreditTypeConfig = (t: (key: string) => string) => ({
   basic: {
-    label: 'Базовые',
+    labelKey: 'credits.type.basic',
     icon: (
       <svg
         className="w-4 h-4"
@@ -33,7 +34,7 @@ const creditTypeConfig = {
     iconBgClass: 'bg-green-500/20 text-green-600 dark:text-green-400',
   },
   pro: {
-    label: 'PRO',
+    labelKey: 'credits.type.pro',
     icon: (
       <svg
         className="w-4 h-4"
@@ -47,7 +48,7 @@ const creditTypeConfig = {
     iconBgClass: 'bg-purple-500/20 text-purple-600 dark:text-purple-400',
   },
   cassandra: {
-    label: 'Кассандра',
+    labelKey: 'credits.type.cassandra',
     icon: (
       <svg
         className="w-4 h-4"
@@ -69,16 +70,18 @@ const creditTypeConfig = {
     badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
     iconBgClass: 'bg-amber-500/20 text-amber-600 dark:text-amber-400',
   },
-} as const;
+});
 
 interface CreditBalanceProps {
-  /** Callback when user clicks "Пополнить" button */
+  /** Translation function */
+  t: (key: string) => string;
+  /** Callback when user clicks refill button */
   onBuyCredits?: () => void;
   /** Optional className for container */
   className?: string;
 }
 
-export function CreditBalance({ onBuyCredits, className }: CreditBalanceProps) {
+export function CreditBalance({ t, onBuyCredits, className }: CreditBalanceProps) {
   const [credits, setCredits] = useState<UserCredits | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +95,7 @@ export function CreditBalance({ onBuyCredits, className }: CreditBalanceProps) {
         setCredits(result);
       } catch (err) {
         console.error('Failed to fetch credits:', err);
-        setError(err instanceof Error ? err.message : 'Ошибка загрузки баланса');
+        setError(err instanceof Error ? err.message : t('credits.balance.error.default'));
       } finally {
         setLoading(false);
       }
@@ -108,7 +111,7 @@ export function CreditBalance({ onBuyCredits, className }: CreditBalanceProps) {
         <CardContent className="py-8 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <LoaderIcon className="h-6 w-6 animate-spin text-primary" />
-            <span className="text-sm text-muted-foreground">Загрузка баланса...</span>
+            <span className="text-sm text-muted-foreground">{t('credits.balance.loading')}</span>
           </div>
         </CardContent>
       </Card>
@@ -121,7 +124,7 @@ export function CreditBalance({ onBuyCredits, className }: CreditBalanceProps) {
       <Card className={cn('w-full', className)}>
         <CardContent className="py-6">
           <div className="text-center text-destructive">
-            <p className="font-medium">Ошибка</p>
+            <p className="font-medium">{t('credits.balance.error.title')}</p>
             <p className="text-sm text-muted-foreground mt-1">{error}</p>
           </div>
         </CardContent>
@@ -134,11 +137,11 @@ export function CreditBalance({ onBuyCredits, className }: CreditBalanceProps) {
     return (
       <Card className={cn('w-full', className)}>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Ваши кредиты</CardTitle>
+          <CardTitle className="text-lg">{t('credits.balance.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-sm">
-            Войдите в аккаунт, чтобы увидеть баланс
+            {t('credits.balance.signin')}
           </p>
         </CardContent>
       </Card>
@@ -152,12 +155,13 @@ export function CreditBalance({ onBuyCredits, className }: CreditBalanceProps) {
   ];
 
   const totalCredits = credits.basic_credits + credits.pro_credits + credits.cassandra_credits;
+  const creditTypeConfig = getCreditTypeConfig(t);
 
   return (
     <Card className={cn('w-full', className)}>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center justify-between">
-          <span>Ваши кредиты</span>
+          <span>{t('credits.balance.title')}</span>
           <span className="text-2xl font-bold text-primary">{totalCredits}</span>
         </CardTitle>
       </CardHeader>
@@ -178,7 +182,7 @@ export function CreditBalance({ onBuyCredits, className }: CreditBalanceProps) {
                 >
                   {config.icon}
                 </div>
-                <span className="font-medium">{config.label}</span>
+                <span className="font-medium">{t(config.labelKey)}</span>
               </div>
               <span
                 className={cn(
@@ -195,7 +199,7 @@ export function CreditBalance({ onBuyCredits, className }: CreditBalanceProps) {
       {onBuyCredits && (
         <CardFooter>
           <Button onClick={onBuyCredits} className="w-full">
-            Пополнить
+            {t('credits.balance.refill')}
           </Button>
         </CardFooter>
       )}

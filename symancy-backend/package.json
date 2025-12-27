@@ -1,6 +1,6 @@
 {
   "name": "symancy-backend",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Symancy Telegram Bot Backend - Node.js migration from n8n",
   "type": "module",
   "engines": {
@@ -11,8 +11,8 @@
     "build": "tsc && tsc-alias",
     "start": "node dist/app.js",
     "test": "vitest",
-    "test:unit": "vitest run --dir tests/unit",
-    "test:integration": "vitest run --dir tests/integration",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage",
     "type-check": "tsc --noEmit",

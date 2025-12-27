@@ -41,7 +41,7 @@ const Terms: React.FC<TermsProps> = ({ language: propLanguage, t: propT }) => {
             {t('terms.subtitle')}
           </p>
           <p className="text-sm text-muted-foreground">
-            Актуальная редакция всегда доступна по адресу:{' '}
+            {t('terms.currentVersion')}{' '}
             <a href="https://symancy.ru/offer" className="text-primary hover:underline">
               https://symancy.ru/offer
             </a>

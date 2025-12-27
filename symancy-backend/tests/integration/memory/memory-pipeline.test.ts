@@ -367,7 +367,7 @@ describe("Memory Pipeline Integration", () => {
 
         await addMemory(TEST_USER_ID_2, content, "personal_info");
 
-        const embedding = mockEmbeddings.get(content);
+        const embedding = embeddingGen.mockEmbeddings.get(content);
         expect(embedding).toBeDefined();
         embeddings.push(embedding!);
       }
@@ -388,14 +388,14 @@ describe("Memory Pipeline Integration", () => {
       mockMemoryInsert("memory-1", content, "preferences");
       await addMemory(TEST_USER_ID_2, content, "preferences");
 
-      const embedding1 = mockEmbeddings.get(content);
+      const embedding1 = embeddingGen.mockEmbeddings.get(content);
 
       vi.clearAllMocks();
 
       mockMemoryInsert("memory-2", content, "preferences");
       await addMemory(TEST_USER_ID_2, content, "preferences");
 
-      const embedding2 = mockEmbeddings.get(content);
+      const embedding2 = embeddingGen.mockEmbeddings.get(content);
 
       expect(embedding1).toEqual(embedding2);
       // Allow for floating point precision errors

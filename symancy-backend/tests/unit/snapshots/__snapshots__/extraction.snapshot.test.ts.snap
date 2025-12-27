@@ -1,0 +1,317 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Memory Extraction Snapshots > Category-specific extraction > should match all category types 1`] = `
+{
+  "allValid": true,
+  "categories": [
+    {
+      "category": "personal_info",
+      "hasMemories": true,
+      "memoriesCount": 1,
+    },
+    {
+      "category": "health",
+      "hasMemories": true,
+      "memoriesCount": 1,
+    },
+    {
+      "category": "preferences",
+      "hasMemories": true,
+      "memoriesCount": 1,
+    },
+    {
+      "category": "events",
+      "hasMemories": true,
+      "memoriesCount": 1,
+    },
+    {
+      "category": "interests",
+      "hasMemories": true,
+      "memoriesCount": 1,
+    },
+    {
+      "category": "work",
+      "hasMemories": true,
+      "memoriesCount": 1,
+    },
+    {
+      "category": "other",
+      "hasMemories": true,
+      "memoriesCount": 1,
+    },
+  ],
+  "totalCategories": 7,
+}
+`;
+
+exports[`Memory Extraction Snapshots > Category-specific extraction > should match health extraction 1`] = `
+{
+  "category": "health",
+  "contentPattern": {
+    "hasContent": true,
+  },
+  "hasMemories": true,
+  "isHealth": true,
+}
+`;
+
+exports[`Memory Extraction Snapshots > Category-specific extraction > should match personal_info extraction 1`] = `
+{
+  "category": "personal_info",
+  "contentPattern": {
+    "hasContent": true,
+    "mentionsUser": true,
+  },
+  "hasMemories": true,
+  "isPersonalInfo": true,
+}
+`;
+
+exports[`Memory Extraction Snapshots > Extraction edge cases > should match extraction with duplicate memories 1`] = `
+{
+  "hasDuplicates": true,
+  "hasMemories": true,
+  "memoriesCount": 2,
+  "uniqueContents": 1,
+}
+`;
+
+exports[`Memory Extraction Snapshots > Extraction edge cases > should match extraction with minimal content 1`] = `
+{
+  "contentLength": 5,
+  "hasMemories": true,
+  "isMinimal": true,
+}
+`;
+
+exports[`Memory Extraction Snapshots > Extraction edge cases > should match extraction with special characters 1`] = `
+{
+  "contentLength": 43,
+  "hasAccents": true,
+  "hasApostrophe": true,
+  "hasEmoji": true,
+  "hasMemories": true,
+}
+`;
+
+exports[`Memory Extraction Snapshots > Extraction edge cases > should match extraction with very long content 1`] = `
+{
+  "contentLength": 1800,
+  "hasMemories": true,
+  "isLong": true,
+  "memoriesCount": 1,
+}
+`;
+
+exports[`Memory Extraction Snapshots > Extraction result validation > should match extraction consistency flags 1`] = `
+{
+  "allConsistent": true,
+  "results": [
+    {
+      "expectedHasMemories": false,
+      "hasMemories": false,
+      "isConsistent": true,
+      "memoriesCount": 0,
+    },
+    {
+      "expectedHasMemories": true,
+      "hasMemories": true,
+      "isConsistent": true,
+      "memoriesCount": 1,
+    },
+    {
+      "expectedHasMemories": true,
+      "hasMemories": true,
+      "isConsistent": true,
+      "memoriesCount": 5,
+    },
+  ],
+  "testCasesCount": 3,
+}
+`;
+
+exports[`Memory Extraction Snapshots > Extraction result validation > should match extraction with invalid category (error case) 1`] = `
+{
+  "category": "invalid_category",
+  "hasMemories": true,
+  "isValidCategory": false,
+}
+`;
+
+exports[`Memory Extraction Snapshots > Extraction result validation > should match valid extraction schema 1`] = `
+{
+  "allMemoriesValid": true,
+  "flagsConsistent": true,
+  "hasMemoriesIsBoolean": true,
+  "hasRequiredFields": true,
+  "memoriesIsArray": true,
+}
+`;
+
+exports[`Memory Extraction Snapshots > JSON serialization > should match LLM response JSON format 1`] = `
+{
+  "canParse": true,
+  "hasContent": true,
+  "isString": true,
+}
+`;
+
+exports[`Memory Extraction Snapshots > JSON serialization > should match serialized extraction result 1`] = `
+{
+  "canSerialize": true,
+  "deserializedMatches": true,
+  "serializedLength": 169,
+  "structure": {
+    "hasMemories": true,
+    "memoriesCount": 2,
+  },
+}
+`;
+
+exports[`Memory Extraction Snapshots > Multi-batch extraction > should match extraction metadata 1`] = `
+{
+  "categories": {
+    "distribution": {
+      "events": 1,
+      "interests": 1,
+      "work": 1,
+    },
+    "unique": [
+      "work",
+      "interests",
+      "events",
+    ],
+  },
+  "content": {
+    "avgLength": 28,
+    "maxLength": 32,
+    "minLength": 25,
+    "totalLength": 85,
+  },
+  "hasMemories": true,
+  "totalMemories": 3,
+}
+`;
+
+exports[`Memory Extraction Snapshots > Multi-batch extraction > should match large batch extraction structure 1`] = `
+{
+  "allCategoriesPresent": true,
+  "categoryDistribution": [
+    {
+      "category": "personal_info",
+      "count": 3,
+    },
+    {
+      "category": "health",
+      "count": 3,
+    },
+    {
+      "category": "preferences",
+      "count": 3,
+    },
+    {
+      "category": "events",
+      "count": 3,
+    },
+    {
+      "category": "interests",
+      "count": 3,
+    },
+    {
+      "category": "work",
+      "count": 3,
+    },
+    {
+      "category": "other",
+      "count": 2,
+    },
+  ],
+  "expectedCount": 20,
+  "hasMemories": true,
+  "totalMemories": 20,
+}
+`;
+
+exports[`Memory Extraction Snapshots > Multi-memory extraction format > should match LLM response wrapper structure 1`] = `
+{
+  "contentType": "string",
+  "hasContent": true,
+  "isValidJSON": true,
+  "parsed": {
+    "hasMemories": true,
+    "memoriesCount": 2,
+    "structure": {
+      "hasHasMemoriesField": true,
+      "hasMemoriesField": true,
+    },
+  },
+}
+`;
+
+exports[`Memory Extraction Snapshots > Multi-memory extraction format > should match batch extraction result format 1`] = `
+{
+  "allValid": true,
+  "expectedCount": 5,
+  "hasMemories": true,
+  "matches": true,
+  "memoriesCount": 5,
+}
+`;
+
+exports[`Memory Extraction Snapshots > Multi-memory extraction format > should match multi-category extraction structure 1`] = `
+{
+  "allMemoriesComplete": true,
+  "categories": [
+    "work",
+    "interests",
+    "events",
+  ],
+  "hasMemories": true,
+  "totalMemories": 3,
+  "uniqueCategories": [
+    "work",
+    "interests",
+    "events",
+  ],
+  "uniqueCategoriesCount": 3,
+}
+`;
+
+exports[`Memory Extraction Snapshots > Single extraction result structure > should match basic extraction result structure 1`] = `
+{
+  "allMemoriesHaveCategory": true,
+  "allMemoriesHaveContent": true,
+  "categoryTypes": [
+    "string",
+    "string",
+  ],
+  "contentTypes": [
+    "string",
+    "string",
+  ],
+  "hasMemories": true,
+  "memoriesCount": 2,
+  "memoriesIsArray": true,
+}
+`;
+
+exports[`Memory Extraction Snapshots > Single extraction result structure > should match empty extraction result structure 1`] = `
+{
+  "consistentFlags": true,
+  "hasMemories": false,
+  "isEmpty": true,
+  "memoriesCount": 0,
+}
+`;
+
+exports[`Memory Extraction Snapshots > Single extraction result structure > should match single-memory extraction 1`] = `
+{
+  "firstMemory": {
+    "category": "personal_info",
+    "contentLength": 20,
+    "hasContent": true,
+  },
+  "hasMemories": true,
+  "memoriesCount": 1,
+}
+`;

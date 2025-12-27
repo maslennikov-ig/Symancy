@@ -103,7 +103,7 @@ const App: React.FC = () => {
 
   const performAnalysis = async (file: File, data: UserData) => {
     if (!user) {
-        setError('Войдите в аккаунт для анализа');
+        setError(t('error.loginRequired'));
         return;
     }
 
@@ -151,7 +151,7 @@ const App: React.FC = () => {
         console.error(err);
         // Handle insufficient credits error from Edge Function
         if (err instanceof Error && err.message === 'INSUFFICIENT_CREDITS') {
-            setPaymentMessage('Для анализа нужен кредит');
+            setPaymentMessage(t('error.creditRequired'));
             setShowTariffSelector(true);
         } else {
             setError(t('error.analyzeFailed'));
@@ -205,7 +205,7 @@ const App: React.FC = () => {
       setShowTariffSelector(false);
     } catch (err) {
       console.error('Payment creation failed:', err);
-      setPaymentError(err instanceof Error ? err.message : 'Ошибка создания платежа');
+      setPaymentError(err instanceof Error ? err.message : t('error.paymentCreationFailed'));
     } finally {
       setIsPaymentLoading(false);
     }
@@ -265,7 +265,7 @@ const App: React.FC = () => {
                 </div>
                  <div className="mb-6 w-full max-w-sm">
                     <p className="text-muted-foreground italic">
-                        {userData?.intent ? `Ваш запрос: "${userData.intent}"` : ''}
+                        {userData?.intent ? t('imageReady.intent').replace('{intent}', userData.intent) : ''}
                     </p>
                 </div>
             </CardContent>
@@ -317,9 +317,9 @@ const App: React.FC = () => {
         )}
         <footer className="text-center mt-auto pt-8 text-muted-foreground text-sm z-10">
           <nav className="mb-3 flex flex-wrap justify-center gap-4">
-            <a href="/pricing" className="hover:text-foreground transition-colors">Тарифы</a>
-            <a href="/offer" className="hover:text-foreground transition-colors">Оферта</a>
-            <a href="/contacts" className="hover:text-foreground transition-colors">Контакты</a>
+            <a href="/pricing" className="hover:text-foreground transition-colors">{t('footer.link.pricing')}</a>
+            <a href="/offer" className="hover:text-foreground transition-colors">{t('footer.link.terms')}</a>
+            <a href="/contacts" className="hover:text-foreground transition-colors">{t('footer.link.contacts')}</a>
           </nav>
           <p>{t('footer.copyright').replace('{year}', new Date().getFullYear().toString())}</p>
           <p className="mt-1">{t('footer.disclaimer')}</p>
@@ -355,12 +355,12 @@ const App: React.FC = () => {
             <button
               onClick={handleClosePaymentWidget}
               className="absolute top-2 right-2 text-muted-foreground hover:text-foreground p-2 rounded-full text-2xl leading-none"
-              aria-label="Закрыть"
+              aria-label={t('payment.modal.close')}
             >
               &times;
             </button>
             <h2 className="text-xl font-display font-bold mb-4 text-center">
-              Оплата
+              {t('payment.modal.title')}
             </h2>
             <Suspense fallback={<div className="flex items-center justify-center p-8"><LoaderIcon className="w-8 h-8 animate-spin" /></div>}>
               <PaymentWidget

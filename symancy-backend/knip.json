@@ -1,0 +1,31 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/app.ts",
+    "src/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "project": [
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "ignore": [
+    "**/*.d.ts",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/node_modules/**",
+    "dist/**",
+    "coverage/**"
+  ],
+  "ignoreDependencies": [
+    "@types/*",
+    "tsx",
+    "tsc-alias",
+    "vitest",
+    "@vitest/coverage-v8",
+    "husky",
+    "pino-pretty",
+    "dotenv"
+  ]
+}

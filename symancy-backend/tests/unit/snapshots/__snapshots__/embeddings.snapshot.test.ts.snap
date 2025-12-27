@@ -1,0 +1,180 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Embedding Result Snapshots > Batch embeddings structure > should match batch embeddings response structure 1`] = `
+{
+  "allEmbeddingsSameLength": true,
+  "dataLength": 3,
+  "embeddingTypes": {
+    "allArrays": true,
+    "firstIsArray": true,
+  },
+  "hasIndexes": true,
+  "indexesSequential": true,
+}
+`;
+
+exports[`Embedding Result Snapshots > Batch embeddings structure > should match empty batch structure 1`] = `
+{
+  "dataLength": 0,
+  "isEmpty": true,
+}
+`;
+
+exports[`Embedding Result Snapshots > Batch embeddings structure > should match large batch structure 1`] = `
+{
+  "batchSize": 100,
+  "dataLength": 100,
+  "hasAllIndexes": true,
+  "indexRange": {
+    "max": 99,
+    "min": 0,
+  },
+}
+`;
+
+exports[`Embedding Result Snapshots > Embedding consistency > should match deterministic embedding reproducibility 1`] = `
+{
+  "areEqual": true,
+  "firstValueMatch": true,
+  "lastValueMatch": true,
+  "lengthMatch": true,
+}
+`;
+
+exports[`Embedding Result Snapshots > Embedding consistency > should match random embedding uniqueness 1`] = `
+{
+  "areDifferent": true,
+  "areEqual": false,
+  "firstValueMatch": false,
+}
+`;
+
+exports[`Embedding Result Snapshots > Embedding dimensions edge cases > should match custom dimensions 1`] = `
+{
+  "expectedLength": 512,
+  "length": 512,
+  "matches": true,
+}
+`;
+
+exports[`Embedding Result Snapshots > Embedding dimensions edge cases > should match small dimension embedding (test case) 1`] = `
+{
+  "expectedLength": 8,
+  "length": 8,
+  "matches": true,
+  "values": [
+    -0.013230376368532063,
+    0.036734950541913655,
+    0.08633323396950461,
+    0.1350689042611901,
+    0.1824550107093968,
+    0.22801808700220233,
+    0.27130288194243934,
+    0.31187690816711566,
+  ],
+}
+`;
+
+exports[`Embedding Result Snapshots > Embedding dimensions edge cases > should match standard BGE-M3 dimensions (1024) 1`] = `
+{
+  "expectedLength": 1024,
+  "isBGEM3Standard": true,
+  "length": 1024,
+  "matches": true,
+}
+`;
+
+exports[`Embedding Result Snapshots > Memory object with embeddings > should match memory object structure snapshot 1`] = `
+{
+  "categoryType": "string",
+  "contentType": "string",
+  "createdAtType": "object",
+  "embeddingLength": 1024,
+  "embeddingValueTypes": true,
+  "hasCategory": true,
+  "hasContent": true,
+  "hasCreatedAt": true,
+  "hasEmbedding": true,
+  "hasId": true,
+  "hasImportance": true,
+  "hasSourceMessage": true,
+  "hasUpdatedAt": true,
+  "hasUserId": true,
+  "idType": "string",
+  "importanceType": "number",
+  "updatedAtType": "object",
+  "userIdType": "number",
+}
+`;
+
+exports[`Embedding Result Snapshots > Memory object with embeddings > should match memory with different categories 1`] = `
+{
+  "allHaveEmbeddings": true,
+  "allSameDimensions": true,
+  "categories": [
+    "personal_info",
+    "health",
+    "preferences",
+    "events",
+    "interests",
+    "work",
+    "other",
+  ],
+  "totalCategories": 7,
+}
+`;
+
+exports[`Embedding Result Snapshots > Memory object with embeddings > should match memory without embedding (null case) 1`] = `
+{
+  "embeddingIsNull": false,
+  "embeddingIsUndefined": true,
+  "embeddingType": "undefined",
+  "hasEmbedding": false,
+}
+`;
+
+exports[`Embedding Result Snapshots > Single embedding structure > should match deterministic embedding structure (seeded) 1`] = `
+{
+  "firstValue": -0.49688581822784056,
+  "isReproducible": true,
+  "lastValue": 0.1524847851220566,
+  "length": 1024,
+  "middleValue": -0.2504382061427976,
+}
+`;
+
+exports[`Embedding Result Snapshots > Single embedding structure > should match embedding value distribution snapshot 1`] = `
+{
+  "dimensions": 1024,
+  "magnitudeDistribution": {
+    "hasLarge": true,
+    "hasMedium": true,
+    "hasSmall": true,
+  },
+  "signDistribution": {
+    "negative": true,
+    "positive": true,
+    "zero": false,
+  },
+}
+`;
+
+exports[`Embedding Result Snapshots > Single embedding structure > should match embedding vector structure snapshot 1`] = `
+{
+  "isArray": true,
+  "length": 1024,
+  "range": {
+    "hasNegative": true,
+    "hasPositive": true,
+    "hasZero": false,
+    "maxInRange": true,
+    "minInRange": true,
+  },
+  "statistics": {
+    "allFinite": true,
+    "allNumbers": true,
+    "hasNaN": false,
+  },
+  "type": "number",
+}
+`;

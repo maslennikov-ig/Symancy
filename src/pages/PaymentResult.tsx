@@ -1,38 +1,48 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { Button } from '../components/ui/button';
+import { translations, t as i18n_t, Lang } from '../lib/i18n';
 
 type PaymentStatus = 'success' | 'canceled' | 'unknown';
 
 interface StatusConfig {
   icon: string;
-  title: string;
-  subtitle: string;
+  titleKey: string;
+  subtitleKey: string;
+}
+
+interface PaymentResultProps {
+  language?: Lang;
+  t?: (key: keyof typeof translations.en) => string;
 }
 
 const STATUS_CONFIGS: Record<PaymentStatus, StatusConfig> = {
   success: {
     icon: '✅',
-    title: 'Оплата прошла успешно!',
-    subtitle: 'Кредиты добавлены на ваш счёт',
+    titleKey: 'payment.result.success.title',
+    subtitleKey: 'payment.result.success.subtitle',
   },
   canceled: {
     icon: '❌',
-    title: 'Оплата отменена',
-    subtitle: 'Вы можете попробовать снова',
+    titleKey: 'payment.result.canceled.title',
+    subtitleKey: 'payment.result.canceled.subtitle',
   },
   unknown: {
     icon: '❓',
-    title: 'Что-то пошло не так',
-    subtitle: 'Статус платежа неизвестен. Проверьте историю покупок.',
+    titleKey: 'payment.result.unknown.title',
+    subtitleKey: 'payment.result.unknown.subtitle',
   },
 };
 
-const PaymentResult: React.FC = () => {
+const PaymentResult: React.FC<PaymentResultProps> = ({ language: propLanguage, t: propT }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<PaymentStatus>('unknown');
   const [purchaseId, setPurchaseId] = useState<string | null>(null);
+
+  // Fallback if props are not passed (though App.tsx should pass them)
+  const language = propLanguage || 'en';
+  const t = propT || ((key: any) => i18n_t(key, language));
 
   useEffect(() => {
     const statusParam = searchParams.get('status');
@@ -69,17 +79,17 @@ const PaymentResult: React.FC = () => {
       case 'success':
         return (
           <Button onClick={handleGoToAnalysis} size="lg">
-            Вернуться к анализу
+            {t('payment.result.button.backToAnalysis')}
           </Button>
         );
       case 'canceled':
         return (
           <>
             <Button onClick={handleRetryPayment} size="lg">
-              Попробовать снова
+              {t('payment.result.button.retry')}
             </Button>
             <Button onClick={handleGoHome} variant="outline" size="lg">
-              На главную
+              {t('payment.result.button.home')}
             </Button>
           </>
         );
@@ -87,7 +97,7 @@ const PaymentResult: React.FC = () => {
       default:
         return (
           <Button onClick={handleGoHome} size="lg">
-            На главную
+            {t('payment.result.button.home')}
           </Button>
         );
     }
@@ -97,24 +107,24 @@ const PaymentResult: React.FC = () => {
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
       <div className="text-center max-w-md">
         {/* Icon */}
-        <div className="text-6xl mb-6" role="img" aria-label={config.title}>
+        <div className="text-6xl mb-6" role="img" aria-label={t(config.titleKey as any)}>
           {config.icon}
         </div>
 
         {/* Title */}
         <h1 className="text-3xl font-bold mb-2 text-foreground">
-          {config.title}
+          {t(config.titleKey as any)}
         </h1>
 
         {/* Subtitle */}
         <p className="text-muted-foreground mb-8">
-          {config.subtitle}
+          {t(config.subtitleKey as any)}
         </p>
 
         {/* Purchase ID for success status */}
         {status === 'success' && purchaseId && (
           <p className="text-sm text-muted-foreground mb-6">
-            ID покупки: <span className="font-mono">{purchaseId}</span>
+            {t('payment.result.purchaseId')}<span className="font-mono">{purchaseId}</span>
           </p>
         )}
 

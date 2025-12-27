@@ -3,6 +3,29 @@
  * Tests storage and retrieval of user memories with vector search
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// Use vi.hoisted to create mock client BEFORE vi.mock hoisting
+const { mockSupabaseClient } = vi.hoisted(() => ({
+  mockSupabaseClient: {
+    from: vi.fn(),
+    rpc: vi.fn(),
+  },
+}));
+
+// Mock embeddings module - inline factory (hoisted to top)
+vi.mock("../../../src/core/embeddings/index.js", () => ({
+  getEmbedding: vi.fn(() => Promise.resolve(Array(1024).fill(0).map(() => Math.random() * 2 - 1))),
+  getEmbeddings: vi.fn((texts: string[]) => Promise.resolve(texts.map(() => Array(1024).fill(0).map(() => Math.random() * 2 - 1)))),
+  EMBEDDING_MODEL: 'baai/bge-m3',
+  EMBEDDING_DIMS: 1024,
+}));
+
+// Mock database module - return the shared mockSupabaseClient
+vi.mock("../../../src/core/database.js", () => ({
+  getSupabase: vi.fn(() => mockSupabaseClient),
+}));
+
+// Import after mocks are set up
 import {
   addMemory,
   searchMemories,
@@ -12,27 +35,11 @@ import {
   type UserMemory,
   type MemorySearchResult,
 } from "../../../src/services/memory.service.js";
+import { getSupabase } from "../../../src/core/database.js";
+import { getEmbedding } from "../../../src/core/embeddings/index.js";
 
-// Import mocks at module level BEFORE vi.mock
-import { mockGetEmbedding, mockGetEmbeddings } from "../../setup/mocks/embeddings.mock.js";
-
-// Mock embeddings module - use synchronous factory
-vi.mock("../../../src/core/embeddings/index.js", () => ({
-  getEmbedding: mockGetEmbedding,
-  getEmbeddings: mockGetEmbeddings,
-  EMBEDDING_MODEL: 'baai/bge-m3',
-  EMBEDDING_DIMS: 1024,
-}));
-
-// Mock database module
-const mockSupabaseClient = {
-  from: vi.fn(),
-  rpc: vi.fn(),
-};
-
-vi.mock("../../../src/core/database.js", () => ({
-  getSupabase: vi.fn(() => mockSupabaseClient),
-}));
+// Helper to get mocked Supabase client - returns the shared mock
+const getMockedSupabase = () => mockSupabaseClient;
 
 describe("Memory Service", () => {
   beforeEach(() => {
@@ -59,7 +66,8 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockInsertChain);
+      const mockSupabase = getMockedSupabase();
+      mockSupabase.from.mockReturnValue(mockInsertChain);
 
       const result = await addMemory(
         999999999,
@@ -78,7 +86,7 @@ describe("Memory Service", () => {
       expect(result.createdAt).toBeInstanceOf(Date);
       expect(result.updatedAt).toBeInstanceOf(Date);
 
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith("user_memories");
+      expect(mockSupabase.from).toHaveBeenCalledWith("user_memories");
       expect(mockInsertChain.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           telegram_user_id: 999999999,
@@ -115,7 +123,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockInsertChain);
+      getMockedSupabase().from.mockReturnValue(mockInsertChain);
 
       await addMemory(123456789, "User is 25 years old", "personal_info");
 
@@ -155,7 +163,7 @@ describe("Memory Service", () => {
           }),
         };
 
-        mockSupabaseClient.from.mockReturnValue(mockInsertChain);
+        getMockedSupabase().from.mockReturnValue(mockInsertChain);
 
         const result = await addMemory(
           123456789,
@@ -189,7 +197,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockInsertChain);
+      getMockedSupabase().from.mockReturnValue(mockInsertChain);
 
       const result = await addMemory(123456789, "Memory without source", "other");
 
@@ -211,7 +219,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockInsertChain);
+      getMockedSupabase().from.mockReturnValue(mockInsertChain);
 
       await expect(
         addMemory(123456789, "Test content", "other")
@@ -239,7 +247,8 @@ describe("Memory Service", () => {
         error: null,
       };
 
-      mockSupabaseClient.rpc.mockResolvedValue(mockRpcResponse);
+      const mockSupabase = getMockedSupabase();
+      mockSupabase.rpc.mockResolvedValue(mockRpcResponse);
 
       const results = await searchMemories(123456789, "coffee preferences", 5);
 
@@ -260,7 +269,7 @@ describe("Memory Service", () => {
         ])
       );
 
-      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+      expect(mockSupabase.rpc).toHaveBeenCalledWith(
         "search_user_memories",
         expect.objectContaining({
           user_id: 123456789,
@@ -268,7 +277,7 @@ describe("Memory Service", () => {
         })
       );
       // Verify query_embedding is a valid JSON array of 1024 numbers
-      const rpcCall = mockSupabaseClient.rpc.mock.calls[0][1];
+      const rpcCall = mockSupabase.rpc.mock.calls[0][1];
       const queryEmbedding = JSON.parse(rpcCall.query_embedding);
       expect(queryEmbedding).toBeInstanceOf(Array);
       expect(queryEmbedding).toHaveLength(1024);
@@ -287,7 +296,7 @@ describe("Memory Service", () => {
         error: null,
       };
 
-      mockSupabaseClient.rpc.mockResolvedValue(mockRpcResponse);
+      getMockedSupabase().rpc.mockResolvedValue(mockRpcResponse);
 
       const results = await searchMemories(123456789, "work", 5);
 
@@ -306,11 +315,12 @@ describe("Memory Service", () => {
         error: null,
       };
 
-      mockSupabaseClient.rpc.mockResolvedValue(mockRpcResponse);
+      const mockSupabase = getMockedSupabase();
+      mockSupabase.rpc.mockResolvedValue(mockRpcResponse);
 
       await searchMemories(123456789, "test query", 3);
 
-      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+      expect(mockSupabase.rpc).toHaveBeenCalledWith(
         "search_user_memories",
         expect.objectContaining({
           match_limit: 3,
@@ -324,11 +334,12 @@ describe("Memory Service", () => {
         error: null,
       };
 
-      mockSupabaseClient.rpc.mockResolvedValue(mockRpcResponse);
+      const mockSupabase = getMockedSupabase();
+      mockSupabase.rpc.mockResolvedValue(mockRpcResponse);
 
       await searchMemories(123456789, "test query");
 
-      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+      expect(mockSupabase.rpc).toHaveBeenCalledWith(
         "search_user_memories",
         expect.objectContaining({
           match_limit: 5,
@@ -342,7 +353,7 @@ describe("Memory Service", () => {
         error: null,
       };
 
-      mockSupabaseClient.rpc.mockResolvedValue(mockRpcResponse);
+      getMockedSupabase().rpc.mockResolvedValue(mockRpcResponse);
 
       const results = await searchMemories(123456789, "non-existent query", 5);
 
@@ -356,7 +367,7 @@ describe("Memory Service", () => {
         error: null,
       };
 
-      mockSupabaseClient.rpc.mockResolvedValue(mockRpcResponse);
+      getMockedSupabase().rpc.mockResolvedValue(mockRpcResponse);
 
       const results = await searchMemories(123456789, "test", 5);
 
@@ -369,7 +380,7 @@ describe("Memory Service", () => {
         error: { message: "RPC function not found" },
       };
 
-      mockSupabaseClient.rpc.mockResolvedValue(mockRpcResponse);
+      getMockedSupabase().rpc.mockResolvedValue(mockRpcResponse);
 
       await expect(searchMemories(123456789, "test", 5)).rejects.toThrow(
         "Failed to search memories: RPC function not found"
@@ -384,7 +395,7 @@ describe("Memory Service", () => {
         error: null,
       };
 
-      mockSupabaseClient.rpc.mockResolvedValue(mockRpcResponse);
+      getMockedSupabase().rpc.mockResolvedValue(mockRpcResponse);
 
       await searchMemories(123456789, "search query text", 5);
 
@@ -422,7 +433,8 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockSelectChain);
+      const mockSupabase = getMockedSupabase();
+      mockSupabase.from.mockReturnValue(mockSelectChain);
 
       const results = await getAllMemories(123456789);
 
@@ -437,7 +449,7 @@ describe("Memory Service", () => {
       expect(results[0]?.createdAt).toBeInstanceOf(Date);
       expect(results[0]?.updatedAt).toBeInstanceOf(Date);
 
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith("user_memories");
+      expect(mockSupabase.from).toHaveBeenCalledWith("user_memories");
       expect(mockSelectChain.select).toHaveBeenCalledWith(
         "id, telegram_user_id, content, category, source_message, created_at, updated_at"
       );
@@ -453,7 +465,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockSelectChain);
+      getMockedSupabase().from.mockReturnValue(mockSelectChain);
 
       await getAllMemories(987654321);
 
@@ -470,7 +482,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockSelectChain);
+      getMockedSupabase().from.mockReturnValue(mockSelectChain);
 
       await getAllMemories(123456789);
 
@@ -489,7 +501,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockSelectChain);
+      getMockedSupabase().from.mockReturnValue(mockSelectChain);
 
       const results = await getAllMemories(123456789);
 
@@ -507,7 +519,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockSelectChain);
+      getMockedSupabase().from.mockReturnValue(mockSelectChain);
 
       const results = await getAllMemories(123456789);
 
@@ -524,7 +536,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockSelectChain);
+      getMockedSupabase().from.mockReturnValue(mockSelectChain);
 
       await expect(getAllMemories(123456789)).rejects.toThrow(
         "Failed to get memories: Query execution failed"
@@ -551,7 +563,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockSelectChain);
+      getMockedSupabase().from.mockReturnValue(mockSelectChain);
 
       const results = await getAllMemories(555555555);
 
@@ -576,11 +588,12 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockDeleteChain);
+      const mockSupabase = getMockedSupabase();
+      mockSupabase.from.mockReturnValue(mockDeleteChain);
 
       await deleteMemory("memory-uuid-123");
 
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith("user_memories");
+      expect(mockSupabase.from).toHaveBeenCalledWith("user_memories");
       expect(mockDeleteChain.delete).toHaveBeenCalled();
       expect(mockDeleteChain.eq).toHaveBeenCalledWith("id", "memory-uuid-123");
     });
@@ -593,7 +606,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockDeleteChain);
+      getMockedSupabase().from.mockReturnValue(mockDeleteChain);
 
       await expect(deleteMemory("non-existent-uuid")).resolves.not.toThrow();
     });
@@ -606,7 +619,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockDeleteChain);
+      getMockedSupabase().from.mockReturnValue(mockDeleteChain);
 
       await expect(deleteMemory("memory-uuid")).rejects.toThrow(
         "Failed to delete memory: Foreign key constraint violation"
@@ -621,7 +634,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockDeleteChain);
+      getMockedSupabase().from.mockReturnValue(mockDeleteChain);
 
       await deleteMemory("uuid-1");
       await deleteMemory("uuid-2");
@@ -655,7 +668,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockInsertChain);
+      getMockedSupabase().from.mockReturnValue(mockInsertChain);
 
       const addedMemory = await addMemory(
         123456789,
@@ -687,7 +700,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockSelectChain);
+      getMockedSupabase().from.mockReturnValue(mockSelectChain);
 
       const allMemories = await getAllMemories(123456789);
 
@@ -709,7 +722,7 @@ describe("Memory Service", () => {
         error: null,
       };
 
-      mockSupabaseClient.rpc.mockResolvedValue(mockRpcResponse);
+      getMockedSupabase().rpc.mockResolvedValue(mockRpcResponse);
 
       const searchResults = await searchMemories(123456789, "test", 5);
       const memoryId = searchResults[0]?.id;
@@ -726,7 +739,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockDeleteChain);
+      getMockedSupabase().from.mockReturnValue(mockDeleteChain);
 
       await deleteMemory(memoryId!);
 
@@ -756,7 +769,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockInsertChain);
+      getMockedSupabase().from.mockReturnValue(mockInsertChain);
 
       const result = await addMemory(123456789, longContent, "other");
 
@@ -785,7 +798,7 @@ describe("Memory Service", () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockInsertChain);
+      getMockedSupabase().from.mockReturnValue(mockInsertChain);
 
       const result = await addMemory(123456789, specialContent, "personal_info");
 
@@ -798,7 +811,7 @@ describe("Memory Service", () => {
         error: null,
       };
 
-      mockSupabaseClient.rpc.mockResolvedValue(mockRpcResponse);
+      getMockedSupabase().rpc.mockResolvedValue(mockRpcResponse);
 
       const results = await searchMemories(123456789, "non-matching query", 10);
 
@@ -812,11 +825,12 @@ describe("Memory Service", () => {
         error: null,
       };
 
-      mockSupabaseClient.rpc.mockResolvedValue(mockRpcResponse);
+      const mockSupabase = getMockedSupabase();
+      mockSupabase.rpc.mockResolvedValue(mockRpcResponse);
 
       const results = await searchMemories(123456789, "test", 0);
 
-      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+      expect(mockSupabase.rpc).toHaveBeenCalledWith(
         "search_user_memories",
         expect.objectContaining({
           match_limit: 0,
@@ -831,11 +845,12 @@ describe("Memory Service", () => {
         error: null,
       };
 
-      mockSupabaseClient.rpc.mockResolvedValue(mockRpcResponse);
+      const mockSupabase = getMockedSupabase();
+      mockSupabase.rpc.mockResolvedValue(mockRpcResponse);
 
       await searchMemories(123456789, "test", 1000);
 
-      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+      expect(mockSupabase.rpc).toHaveBeenCalledWith(
         "search_user_memories",
         expect.objectContaining({
           match_limit: 1000,
