@@ -98,20 +98,15 @@ async function startApi() {
   // Telegram webhook endpoint
   fastify.post("/webhook/telegram", createWebhookHandler());
 
-  // Debug endpoint to check bot status
-  fastify.get("/debug", async () => {
-    const debug = {
-      timestamp: new Date().toISOString(),
+  // Version endpoint to verify deployed code
+  fastify.get("/version", async () => {
+    return {
+      version: process.env.npm_package_version || "0.1.0",
+      buildTime: process.env.BUILD_TIME || "unknown",
+      gitCommit: process.env.GIT_COMMIT || "unknown",
       uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      env: {
-        MODE: process.env.MODE,
-        NODE_ENV: process.env.NODE_ENV,
-        PORT: process.env.PORT,
-      },
-      message: "Bot is running. Check PM2 logs for incoming updates.",
+      startedAt: new Date(Date.now() - process.uptime() * 1000).toISOString(),
     };
-    return debug;
   });
 
   await fastify.listen({ port: env.PORT, host: "0.0.0.0" });

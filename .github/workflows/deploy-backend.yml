@@ -176,12 +176,24 @@ jobs:
           # Create logs directory
           ssh ${SSH_USER}@${SSH_HOST} "mkdir -p ${RELEASE_DIR}/logs"
 
-          # Stop old PM2 process if exists, then start fresh
+          # Force stop all PM2 processes with this name (handle stale processes)
+          ssh ${SSH_USER}@${SSH_HOST} "pm2 stop symancy-backend 2>/dev/null || true"
           ssh ${SSH_USER}@${SSH_HOST} "pm2 delete symancy-backend 2>/dev/null || true"
-          ssh ${SSH_USER}@${SSH_HOST} "cd ${TARGET_ROOT}/current && pm2 start ecosystem.config.cjs --env production"
+
+          # Kill any lingering node processes running old code (safety measure)
+          ssh ${SSH_USER}@${SSH_HOST} "pkill -f 'node.*symancy-backend.*app.js' 2>/dev/null || true"
+
+          # Wait for processes to fully terminate
+          sleep 2
+
+          # Start fresh with git commit info
+          ssh ${SSH_USER}@${SSH_HOST} "cd ${TARGET_ROOT}/current && GIT_COMMIT=${GITHUB_SHA::7} BUILD_TIME='$(date -Iseconds)' pm2 start ecosystem.config.cjs --env production"
 
           # Save PM2 process list
           ssh ${SSH_USER}@${SSH_HOST} "pm2 save"
+
+          # Show PM2 status for debugging
+          ssh ${SSH_USER}@${SSH_HOST} "pm2 list"
 
           # Cleanup old releases (keep last 5)
           ssh ${SSH_USER}@${SSH_HOST} "cd ${TARGET_ROOT}/releases && ls -t | tail -n +6 | xargs -r rm -rf"
@@ -203,8 +215,25 @@ jobs:
             echo "Health check passed: ${HEALTH_STATUS}"
           else
             echo "::error::Health check failed: ${HEALTH_STATUS}"
+            # Show PM2 logs for debugging
+            ssh ${SSH_USER}@${SSH_HOST} "pm2 logs symancy-backend --lines 50 --nostream" || true
             exit 1
           fi
+
+          # Verify correct version is running
+          DEPLOYED_COMMIT=$(ssh ${SSH_USER}@${SSH_HOST} "curl -sf http://localhost:3000/version | jq -r '.gitCommit'" || echo "unknown")
+          EXPECTED_COMMIT="${GITHUB_SHA::7}"
+          echo "Deployed commit: ${DEPLOYED_COMMIT}, Expected: ${EXPECTED_COMMIT}"
+
+          if [ "$DEPLOYED_COMMIT" = "$EXPECTED_COMMIT" ]; then
+            echo "Version verification passed!"
+          else
+            echo "::warning::Version mismatch! Deployed: ${DEPLOYED_COMMIT}, Expected: ${EXPECTED_COMMIT}"
+          fi
+
+          # Show uptime (should be very low for fresh deploy)
+          UPTIME=$(ssh ${SSH_USER}@${SSH_HOST} "curl -sf http://localhost:3000/version | jq -r '.uptime'" || echo "unknown")
+          echo "Process uptime: ${UPTIME} seconds"
 
   # Notify: Telegram
   notify:
