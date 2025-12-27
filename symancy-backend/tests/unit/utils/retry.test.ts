@@ -198,9 +198,11 @@ describe("withRetry", () => {
 
       const promise = withRetry(mockFn, { maxAttempts: 3, baseDelayMs: 100 });
 
+      const expectation = expect(promise).rejects.toThrow("Validation failed");
+
       await vi.runAllTimersAsync();
 
-      await expect(promise).rejects.toThrow("Validation failed");
+      await expectation;
       expect(mockFn).toHaveBeenCalledTimes(1);
     });
 
@@ -209,9 +211,11 @@ describe("withRetry", () => {
 
       const promise = withRetry(mockFn, { maxAttempts: 3, baseDelayMs: 100 });
 
+      const expectation = expect(promise).rejects.toThrow("Unauthorized");
+
       await vi.runAllTimersAsync();
 
-      await expect(promise).rejects.toThrow("Unauthorized");
+      await expectation;
       expect(mockFn).toHaveBeenCalledTimes(1);
     });
 
@@ -220,9 +224,11 @@ describe("withRetry", () => {
 
       const promise = withRetry(mockFn, { maxAttempts: 3, baseDelayMs: 100 });
 
+      const expectation = expect(promise).rejects.toThrow("Bad request (400)");
+
       await vi.runAllTimersAsync();
 
-      await expect(promise).rejects.toThrow("Bad request (400)");
+      await expectation;
       expect(mockFn).toHaveBeenCalledTimes(1);
     });
   });
@@ -233,9 +239,11 @@ describe("withRetry", () => {
 
       const promise = withRetry(mockFn, { maxAttempts: 3, baseDelayMs: 100 });
 
+      const expectation = expect(promise).rejects.toThrow("Network error");
+
       await vi.runAllTimersAsync();
 
-      await expect(promise).rejects.toThrow("Network error");
+      await expectation;
       expect(mockFn).toHaveBeenCalledTimes(3);
     });
 
@@ -244,9 +252,11 @@ describe("withRetry", () => {
 
       const promise = withRetry(mockFn, { maxAttempts: 5, baseDelayMs: 100 });
 
+      const expectation = expect(promise).rejects.toThrow("Network error");
+
       await vi.runAllTimersAsync();
 
-      await expect(promise).rejects.toThrow("Network error");
+      await expectation;
       expect(mockFn).toHaveBeenCalledTimes(5);
     });
 
@@ -255,9 +265,11 @@ describe("withRetry", () => {
 
       const promise = withRetry(mockFn, { maxAttempts: 1, baseDelayMs: 100 });
 
+      const expectation = expect(promise).rejects.toThrow("Network error");
+
       await vi.runAllTimersAsync();
 
-      await expect(promise).rejects.toThrow("Network error");
+      await expectation;
       expect(mockFn).toHaveBeenCalledTimes(1);
     });
   });
@@ -282,9 +294,11 @@ describe("withRetry", () => {
         backoffMultiplier: 2,
       });
 
+      const expectation = expect(promise).rejects.toThrow("Network error");
+
       await vi.runAllTimersAsync();
 
-      await expect(promise).rejects.toThrow("Network error");
+      await expectation;
 
       // Verify delays are increasing (with jitter, should be approximately exponential)
       // First retry: ~1000ms, Second retry: ~2000ms
@@ -314,9 +328,11 @@ describe("withRetry", () => {
         backoffMultiplier: 2,
       });
 
+      const expectation = expect(promise).rejects.toThrow("Network error");
+
       await vi.runAllTimersAsync();
 
-      await expect(promise).rejects.toThrow("Network error");
+      await expectation;
 
       // All delays should be <= maxDelayMs (accounting for jitter: maxDelayMs * 1.1)
       delays.forEach((delay) => {
@@ -346,21 +362,29 @@ describe("withRetry", () => {
         baseDelayMs: 1000,
       });
 
+      const expectation1 = promise1.catch(() => {
+        // Expected to throw
+      });
+
       await vi.runAllTimersAsync();
-      await promise1.catch(() => {});
+      await expectation1;
 
       // Reset and capture delays from second execution
       vi.clearAllMocks();
       captureArray = delays2;
-      mockFn.mockRejectedValue(new Error("Network error"));
+      const mockFn2 = vi.fn().mockRejectedValue(new Error("Network error"));
 
-      const promise2 = withRetry(mockFn, {
+      const promise2 = withRetry(mockFn2, {
         maxAttempts: 3,
         baseDelayMs: 1000,
       });
 
+      const expectation2 = promise2.catch(() => {
+        // Expected to throw
+      });
+
       await vi.runAllTimersAsync();
-      await promise2.catch(() => {});
+      await expectation2;
 
       // Delays should differ due to jitter (very unlikely to be identical)
       if (delays1.length > 0 && delays2.length > 0) {
@@ -412,9 +436,11 @@ describe("withRetry", () => {
         retryCondition: customRetryCondition,
       });
 
+      const expectation = expect(promise).rejects.toThrow("Network error");
+
       await vi.runAllTimersAsync();
 
-      await expect(promise).rejects.toThrow("Network error");
+      await expectation;
       expect(mockFn).toHaveBeenCalledTimes(1);
     });
 
@@ -578,9 +604,13 @@ describe("withRetry", () => {
 
       const promise = withRetry(mockFn, { maxAttempts: 3, baseDelayMs: 100 });
 
+      const expectation = promise.catch(() => {
+        // Expected to throw
+      });
+
       await vi.runAllTimersAsync();
 
-      await promise.catch(() => {});
+      await expectation;
 
       expect(logger.error).toHaveBeenCalledWith(
         "Retry exhausted all attempts",
@@ -599,9 +629,13 @@ describe("withRetry", () => {
 
       const promise = withRetry(mockFn, { maxAttempts: 3, baseDelayMs: 100 });
 
+      const expectation = promise.catch(() => {
+        // Expected to throw
+      });
+
       await vi.runAllTimersAsync();
 
-      await promise.catch(() => {});
+      await expectation;
 
       expect(logger.error).toHaveBeenCalledWith(
         "Error not retryable",

@@ -28,6 +28,8 @@ import { QUEUE_CHAT_REPLY, DAILY_CHAT_LIMIT } from "../../config/constants.js";
 import type { ChatReplyJobData } from "../../types/telegram.js";
 import { withRetry } from "../../utils/retry.js";
 import { sendErrorAlert } from "../../utils/admin-alerts.js";
+import { extractMemories } from "../../chains/memory-extraction.chain.js";
+import { addMemory } from "../../services/memory.service.js";
 
 const logger = getLogger().child({ module: "chat-worker" });
 
@@ -297,6 +299,21 @@ export async function processChatReply(job: Job<ChatReplyJobData>): Promise<void
     } else {
       jobLogger.info({ chunks: messages.length }, "Chat response sent in chunks");
     }
+
+    // Step 7.5: Extract and save memories (async, non-blocking)
+    (async () => {
+      try {
+        const extracted = await extractMemories(text);
+        if (extracted.hasMemories && extracted.memories.length > 0) {
+          for (const mem of extracted.memories) {
+            await addMemory(telegramUserId, mem.content, mem.category, text);
+          }
+          jobLogger.debug({ count: extracted.memories.length }, "Memories extracted and saved");
+        }
+      } catch (error) {
+        jobLogger.warn({ error }, "Failed to extract memories (non-critical)");
+      }
+    })();
 
     // Step 8: Increment daily message counter
     await incrementDailyMessageCount(telegramUserId);

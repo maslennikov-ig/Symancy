@@ -15,6 +15,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { CHAT_HISTORY_LIMIT } from "../config/constants.js";
+import { searchMemories } from "../services/memory.service.js";
 
 /**
  * Get project root directory
@@ -226,9 +227,22 @@ export async function generateChatResponseDirect(
     ? lastAnalysisText
     : "No previous analysis available. This is a new conversation.";
 
+  // Search relevant memories (non-blocking, with fallback)
+  let memoryContext = "";
+  try {
+    const memories = await searchMemories(telegramUserId, message, 5);
+    if (memories.length > 0) {
+      memoryContext = "\n\n## Relevant memories about this user:\n" +
+        memories.map(m => `- ${m.content}`).join("\n");
+    }
+  } catch (error) {
+    // Log but don't fail if memory search fails
+    console.error("Memory search failed:", error);
+  }
+
   // Replace placeholders in chat prompt
   const chatPromptText = replacePlaceholders(arinaChatPrompt, {
-    LAST_ANALYSIS: lastAnalysisContext,
+    LAST_ANALYSIS: lastAnalysisContext + memoryContext,
     USER_NAME: userName,
     LANGUAGE: language,
   });
