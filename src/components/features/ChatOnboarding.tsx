@@ -14,10 +14,7 @@ import {
 import { UserData } from '../../services/analysisService';
 import ImageUploader from './analysis/ImageUploader'; // Re-use existing uploader
 import { translations, Lang, t as i18n_t } from '../../lib/i18n';
-
-// Avatar URL for Arina (placeholder or local asset)
-const ARINA_AVATAR = "https://ui-avatars.com/api/?name=Arina&background=8B4513&color=fff"; 
-const USER_AVATAR = "https://ui-avatars.com/api/?name=User&background=random";
+import { CHAT_CONFIG } from '../../config/chat';
 
 interface ChatOnboardingProps {
   onAnalysisReady: (file: File, userData: UserData) => void;
@@ -55,7 +52,7 @@ const ChatOnboarding: React.FC<ChatOnboardingProps> = ({ onAnalysisReady, langua
   };
 
   // Bot typing simulation
-  const botSpeak = (text: string, nextStep: Step, delay = 1000) => {
+  const botSpeak = (text: string, nextStep: Step, delay = CHAT_CONFIG.TYPING_DELAY) => {
     setIsTyping(true);
     setTimeout(() => {
       addMessage(text, 'Arina');
@@ -68,7 +65,7 @@ const ChatOnboarding: React.FC<ChatOnboardingProps> = ({ onAnalysisReady, langua
   useEffect(() => {
     if (step === 'GREETING' && !greetingSentRef.current) {
       greetingSentRef.current = true;
-      botSpeak(t('chat.arina.greeting'), 'WAIT_NAME', 500);
+      botSpeak(t('chat.arina.greeting'), 'WAIT_NAME', CHAT_CONFIG.GREETING_DELAY);
     }
   }, []); // Empty deps - run only on mount
 
@@ -113,7 +110,7 @@ const ChatOnboarding: React.FC<ChatOnboardingProps> = ({ onAnalysisReady, langua
                   position: "single"
                 }}
               >
-                <Avatar src={msg.sender === 'Arina' ? ARINA_AVATAR : USER_AVATAR} name={msg.sender} />
+                <Avatar src={msg.sender === 'Arina' ? CHAT_CONFIG.ARINA_AVATAR : CHAT_CONFIG.USER_AVATAR} name={msg.sender} />
               </Message>
             ))}
             
@@ -128,7 +125,7 @@ const ChatOnboarding: React.FC<ChatOnboardingProps> = ({ onAnalysisReady, langua
             {isUploading && (
                <div className="my-4 p-4 text-center">
                  <div className="animate-pulse text-muted-foreground">
-                   {language === 'en' ? 'Uploading image...' : 'Загружаю изображение...'}
+                   {t('chat.uploading')}
                  </div>
                </div>
             )}

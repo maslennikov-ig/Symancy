@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router';
 import imageCompression from 'browser-image-compression';
 import ChatOnboarding from './components/features/ChatOnboarding';
@@ -8,16 +8,20 @@ import { createPayment } from './services/paymentService';
 import Header from './components/layout/Header';
 import ImageUploader from './components/features/analysis/ImageUploader';
 import ResultDisplay from './components/features/analysis/ResultDisplay';
-import HistoryDisplay from './components/features/history/HistoryDisplay';
-import TariffSelector from './components/features/payment/TariffSelector';
-import { PaymentWidget } from './components/features/payment/PaymentWidget';
-import PaymentSuccess from './pages/PaymentSuccess';
-import PaymentResult from './pages/PaymentResult';
-import Pricing from './pages/Pricing';
-import Terms from './pages/Terms';
-import Contacts from './pages/Contacts';
-import TestPayment from './pages/TestPayment';
 import { LoaderIcon } from './components/icons/LoaderIcon';
+
+// Heavy components - load on demand
+const HistoryDisplay = lazy(() => import('./components/features/history/HistoryDisplay'));
+const TariffSelector = lazy(() => import('./components/features/payment/TariffSelector'));
+const PaymentWidget = lazy(() => import('./components/features/payment/PaymentWidget'));
+
+// Pages - route-based code splitting
+const Pricing = lazy(() => import('./pages/Pricing'));
+const Terms = lazy(() => import('./pages/Terms'));
+const Contacts = lazy(() => import('./pages/Contacts'));
+const TestPayment = lazy(() => import('./pages/TestPayment'));
+const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
+const PaymentResult = lazy(() => import('./pages/PaymentResult'));
 import { MysticalBackground } from './components/features/MysticalCoffeeCupIllustration';
 import { OfficialLogo } from './components/icons/OfficialLogo';
 import { useAuth } from './contexts/AuthContext';
@@ -298,12 +302,14 @@ const App: React.FC = () => {
       />
       <main className="w-full max-w-4xl mx-auto flex-grow flex flex-col items-center z-10">
         {currentView === 'history' ? (
-          <HistoryDisplay
-            onSelectAnalysis={handleSelectHistoryItem}
-            onClose={() => setCurrentView('uploader')}
-            t={t}
-            language={language}
-          />
+          <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><LoaderIcon className="w-8 h-8 animate-spin" /></div>}>
+            <HistoryDisplay
+              onSelectAnalysis={handleSelectHistoryItem}
+              onClose={() => setCurrentView('uploader')}
+              t={t}
+              language={language}
+            />
+          </Suspense>
         ) : (
           <Card className="w-full shadow-2xl transition-all duration-500 backdrop-blur-xl bg-card/70 flex flex-col flex-grow">
               {renderContent()}
@@ -322,15 +328,17 @@ const App: React.FC = () => {
 
       {/* T022: TariffSelector Modal */}
       {showTariffSelector && (
-        <TariffSelector
-          onClose={() => {
-            setShowTariffSelector(false);
-            setPaymentMessage(''); // Clear message on close
-          }}
-          onSelectTariff={handleSelectTariff}
-          isLoading={isPaymentLoading}
-          message={paymentMessage}
-        />
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><LoaderIcon className="w-8 h-8 animate-spin" /></div>}>
+          <TariffSelector
+            onClose={() => {
+              setShowTariffSelector(false);
+              setPaymentMessage(''); // Clear message on close
+            }}
+            onSelectTariff={handleSelectTariff}
+            isLoading={isPaymentLoading}
+            message={paymentMessage}
+          />
+        </Suspense>
       )}
 
       {/* T023: PaymentWidget Modal */}
@@ -354,12 +362,14 @@ const App: React.FC = () => {
             <h2 className="text-xl font-display font-bold mb-4 text-center">
               Оплата
             </h2>
-            <PaymentWidget
-              confirmationToken={paymentData.confirmationToken}
-              purchaseId={paymentData.purchaseId}
-              onComplete={handlePaymentComplete}
-              onError={handlePaymentError}
-            />
+            <Suspense fallback={<div className="flex items-center justify-center p-8"><LoaderIcon className="w-8 h-8 animate-spin" /></div>}>
+              <PaymentWidget
+                confirmationToken={paymentData.confirmationToken}
+                purchaseId={paymentData.purchaseId}
+                onComplete={handlePaymentComplete}
+                onError={handlePaymentError}
+              />
+            </Suspense>
           </div>
         </div>
       )}
@@ -380,16 +390,18 @@ const App: React.FC = () => {
   );
 
   return (
-    <Routes>
-      <Route path="/" element={mainAppContent} />
-      <Route path="/pricing" element={<Pricing language={language} t={t} />} />
-      <Route path="/payment/success" element={<PaymentSuccess />} />
-      <Route path="/payment/result" element={<PaymentResult />} />
-      <Route path="/offer" element={<Terms language={language} t={t} />} />
-      <Route path="/terms" element={<Terms language={language} t={t} />} />
-      <Route path="/contacts" element={<Contacts language={language} t={t} />} />
-      <Route path="/test-payment" element={<TestPayment />} />
-    </Routes>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><LoaderIcon className="w-8 h-8 animate-spin" /></div>}>
+      <Routes>
+        <Route path="/" element={mainAppContent} />
+        <Route path="/pricing" element={<Pricing language={language} t={t} />} />
+        <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment/result" element={<PaymentResult />} />
+        <Route path="/offer" element={<Terms language={language} t={t} />} />
+        <Route path="/terms" element={<Terms language={language} t={t} />} />
+        <Route path="/contacts" element={<Contacts language={language} t={t} />} />
+        <Route path="/test-payment" element={<TestPayment />} />
+      </Routes>
+    </Suspense>
   );
 };
 

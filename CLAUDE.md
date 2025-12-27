@@ -141,6 +141,9 @@ Follow command-specific instructions. See `docs/Agents Ecosystem/AGENT-ORCHESTRA
 - Architecture: `docs/Agents Ecosystem/ARCHITECTURE.md`
 - Quality gates: `docs/Agents Ecosystem/QUALITY-GATES-SPECIFICATION.md`
 - Report templates: `docs/Agents Ecosystem/REPORT-TEMPLATE-STANDARD.md`
+- **i18n Guide**: `docs/I18N_GUIDE.md` - Translation patterns for 3 languages
+- **Admin Panel Spec**: `docs/ADMIN_PANEL_SPEC.md` - Future admin panel implementation
+- **Admin Config**: `src/config/admin-configurable.ts` - Settings for future admin panel
 - **Server access**: `.claude/local.md` (gitignored, IP: `91.132.59.194`, user: `deploy`)
 
 ## Active Technologies
@@ -149,8 +152,20 @@ Follow command-specific instructions. See `docs/Agents Ecosystem/AGENT-ORCHESTRA
 - Supabase PostgreSQL (Tables: `profiles`, `purchases`, `user_credits`, `analysis_history`).
 
 ## UI/UX Requirements
-- **Languages**: 3 (Russian, English, Chinese) - always test translations
+- **Languages**: 3 (`ru`, `en`, `zh`) - Russian, English, Chinese. See `docs/I18N_GUIDE.md`
+  - ALWAYS add translations to ALL 3 locales in `src/lib/i18n.ts`
+  - NO hardcoded user-visible text in components
 - **Themes**: 2 (light, dark) - always support both themes with CSS variables
+
+## Project Structure
+- **Frontend**: `src/` directory (React 19 + Vite)
+  - `src/components/` - UI components organized by feature
+  - `src/config/` - Configuration files (chat.ts, admin-configurable.ts)
+  - `src/lib/` - Utilities (i18n.ts, supabaseClient.ts)
+  - `src/pages/` - Route pages
+  - `src/services/` - API services
+- **Backend**: `symancy-backend/` (Node.js + grammY Telegram bot)
+- **Docs**: `docs/` - Technical documentation
 
 ## Recent Changes
 - 002-pre-mvp-payments: Added TypeScript 5.8.2, React 19.1.1 + @supabase/supabase-js 2.45.0, YooMoney Checkout Widget (CDN), react-yoomoneycheckoutwidget (wrapper)
