@@ -137,8 +137,9 @@ Follow command-specific instructions. See `docs/Agents Ecosystem/AGENT-ORCHESTRA
 
 ## Reference Docs
 
+- **Project Architecture**: `docs/ARCHITECTURE.md` - Full system architecture
 - Agent orchestration: `docs/Agents Ecosystem/AGENT-ORCHESTRATION.md`
-- Architecture: `docs/Agents Ecosystem/ARCHITECTURE.md`
+- Agents Architecture: `docs/Agents Ecosystem/ARCHITECTURE.md`
 - Quality gates: `docs/Agents Ecosystem/QUALITY-GATES-SPECIFICATION.md`
 - Report templates: `docs/Agents Ecosystem/REPORT-TEMPLATE-STANDARD.md`
 - **i18n Guide**: `docs/I18N_GUIDE.md` - Translation patterns for 3 languages
