@@ -168,8 +168,10 @@
 
 ### Backend Message Services
 
-- [ ] T031 [P] [US2] Implement MessageRouter with routeToChannel() in symancy-backend/src/services/routing/MessageRouter.ts
-- [ ] T032 [P] [US2] Implement DeliveryService with deliverToTelegram(), deliverToRealtime() and retry logic in symancy-backend/src/services/delivery/DeliveryService.ts
+- [X] T031 [P] [US2] Implement MessageRouter with routeToChannel() in symancy-backend/src/services/routing/MessageRouter.ts
+  → Artifacts: [MessageRouter.ts](symancy-backend/src/services/routing/MessageRouter.ts), [index.ts](symancy-backend/src/services/routing/index.ts)
+- [X] T032 [P] [US2] Implement DeliveryService with deliverToTelegram(), deliverToRealtime() and retry logic in symancy-backend/src/services/delivery/DeliveryService.ts
+  → Artifacts: [DeliveryService.ts](symancy-backend/src/services/delivery/DeliveryService.ts), [README.md](symancy-backend/src/services/delivery/README.md)
 
 ### Backend Message Endpoint
 
@@ -178,10 +180,14 @@
 
 ### Frontend Chat Components
 
-- [ ] T035 [P] [US2] Create useRealtimeChat hook with Supabase subscription and reconnection in src/hooks/useRealtimeChat.ts (per quickstart.md)
-- [ ] T036 [P] [US2] Create ChatWindow component in src/components/features/chat/ChatWindow.tsx
-- [ ] T037 [P] [US2] Create MessageBubble component in src/components/features/chat/MessageBubble.tsx
-- [ ] T038 [P] [US2] Create ChannelIndicator component in src/components/features/chat/ChannelIndicator.tsx
+- [X] T035 [P] [US2] Create useRealtimeChat hook with Supabase subscription and reconnection in src/hooks/useRealtimeChat.ts (per quickstart.md)
+  → Artifacts: [useRealtimeChat.ts](src/hooks/useRealtimeChat.ts)
+- [X] T036 [P] [US2] Create ChatWindow component in src/components/features/chat/ChatWindow.tsx
+  → Artifacts: [ChatWindow.tsx](src/components/features/chat/ChatWindow.tsx)
+- [X] T037 [P] [US2] Create MessageBubble component in src/components/features/chat/MessageBubble.tsx
+  → Artifacts: [MessageBubble.tsx](src/components/features/chat/MessageBubble.tsx)
+- [X] T038 [P] [US2] Create ChannelIndicator component in src/components/features/chat/ChannelIndicator.tsx
+  → Artifacts: [ChannelIndicator.tsx](src/components/features/chat/ChannelIndicator.tsx)
 
 ### Frontend Chat Page
 
