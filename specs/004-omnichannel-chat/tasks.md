@@ -169,7 +169,7 @@
 ### Backend Message Services
 
 - [X] T031 [P] [US2] Implement MessageRouter with routeToChannel() in symancy-backend/src/services/routing/MessageRouter.ts
-  → Artifacts: [MessageRouter.ts](symancy-backend/src/services/routing/MessageRouter.ts), [index.ts](symancy-backend/src/services/routing/index.ts)
+  → Artifacts: [MessageRouter.ts](symancy-backend/src/services/routing/MessageRouter.ts), [index.ts](symancy-backend/src/services/routing/index.ts), [README.md](symancy-backend/src/services/routing/README.md)
 - [X] T032 [P] [US2] Implement DeliveryService with deliverToTelegram(), deliverToRealtime() and retry logic in symancy-backend/src/services/delivery/DeliveryService.ts
   → Artifacts: [DeliveryService.ts](symancy-backend/src/services/delivery/DeliveryService.ts), [README.md](symancy-backend/src/services/delivery/README.md)
 
@@ -194,12 +194,12 @@
 ### Frontend Chat Page
 
 - [X] T039 [US2] Create web chat page that uses ChatWindow and useRealtimeChat in src/pages/Chat.tsx (or integrate into existing page)
-  → Artifacts: [Chat.tsx](src/pages/Chat.tsx)
+  → Artifacts: [Chat.tsx](src/pages/Chat.tsx), [App.tsx](src/App.tsx), [i18n.ts](src/lib/i18n.ts)
 
 ### Telegram Bot Message Handling
 
 - [X] T040 [US2] Update Telegram bot message handler to store messages with channel='telegram', interface='bot' in symancy-backend/ (update existing message handler)
-  → Artifacts: [handler.ts](symancy-backend/src/modules/chat/handler.ts), [ConversationService.ts](symancy-backend/src/services/conversation/ConversationService.ts)
+  → Artifacts: [handler.ts](symancy-backend/src/modules/chat/handler.ts), [ConversationService.ts](symancy-backend/src/services/conversation/ConversationService.ts), [conversation/index.ts](symancy-backend/src/services/conversation/index.ts), [job-schemas.ts](symancy-backend/src/types/job-schemas.ts)
 
 **Checkpoint**: User Story 2 complete - Real-time sync works between web and Telegram
 
