@@ -1,0 +1,343 @@
+openapi: 3.1.0
+info:
+  title: Omnichannel Auth API
+  description: Authentication endpoints for Telegram Login Widget, WebApp, and account linking
+  version: 1.0.0
+
+servers:
+  - url: https://symancy.ru/api
+    description: Production
+  - url: http://localhost:3000/api
+    description: Development
+
+paths:
+  /auth/telegram:
+    post:
+      summary: Authenticate via Telegram Login Widget
+      description: |
+        Verifies Telegram Login Widget data and returns a custom JWT.
+        Creates a unified_user if not exists, or links to existing.
+      operationId: telegramLogin
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramAuthData'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid signature or expired auth_date
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/webapp:
+    post:
+      summary: Authenticate via Telegram WebApp initData
+      description: |
+        Verifies Telegram WebApp initData and returns a custom JWT.
+        Used by Telegram Mini Apps for seamless authentication.
+      operationId: webappLogin
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - initData
+              properties:
+                initData:
+                  type: string
+                  description: Raw initData string from Telegram WebApp
+                  example: "query_id=AAHdF...&user=%7B%22id%22%3A123456789%7D&auth_date=1234567890&hash=abc123..."
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid signature or expired auth_date
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/link-token:
+    post:
+      summary: Generate account linking token
+      description: |
+        Creates a one-time token for linking accounts across channels.
+        Called by Telegram bot when user sends /link command.
+      operationId: createLinkToken
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - telegram_id
+              properties:
+                telegram_id:
+                  type: integer
+                  format: int64
+                  description: Telegram user ID
+                  example: 123456789
+      responses:
+        '200':
+          description: Token created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: One-time linking token
+                    example: "abc123def456"
+                  link_url:
+                    type: string
+                    format: uri
+                    description: Full URL for account linking
+                    example: "https://symancy.ru/link?token=abc123def456"
+                  expires_at:
+                    type: string
+                    format: date-time
+                    description: Token expiration time
+                    example: "2025-12-27T12:10:00Z"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/link:
+    post:
+      summary: Complete account linking
+      description: |
+        Links a Telegram account to the current web session using a link token.
+        Called by web frontend when user visits the link URL.
+      operationId: completeLink
+      tags:
+        - Authentication
+      security:
+        - SupabaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  description: One-time linking token
+                  example: "abc123def456"
+      responses:
+        '200':
+          description: Accounts linked successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Accounts linked successfully"
+                  user:
+                    $ref: '#/components/schemas/UnifiedUser'
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Telegram account already linked to another user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/me:
+    get:
+      summary: Get current user profile
+      description: Returns the unified user profile for the authenticated user
+      operationId: getCurrentUser
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+        - SupabaseAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnifiedUser'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Custom JWT for Telegram-authenticated users
+    SupabaseAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase Auth JWT for web-authenticated users
+
+  schemas:
+    TelegramAuthData:
+      type: object
+      required:
+        - id
+        - first_name
+        - auth_date
+        - hash
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Telegram user ID
+          example: 123456789
+        first_name:
+          type: string
+          description: User's first name
+          example: "Ivan"
+        last_name:
+          type: string
+          description: User's last name
+          example: "Petrov"
+        username:
+          type: string
+          description: Telegram username (without @)
+          example: "ivanpetrov"
+        photo_url:
+          type: string
+          format: uri
+          description: Profile photo URL
+          example: "https://t.me/i/userpic/320/abc123.jpg"
+        auth_date:
+          type: integer
+          format: int64
+          description: Unix timestamp of authentication
+          example: 1703674800
+        hash:
+          type: string
+          description: Cryptographic hash for verification
+          example: "abc123def456..."
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/UnifiedUser'
+        token:
+          type: string
+          description: JWT access token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        expires_at:
+          type: string
+          format: date-time
+          description: Token expiration time
+          example: "2026-01-03T12:00:00Z"
+
+    UnifiedUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unified user ID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        telegram_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: Telegram user ID
+          example: 123456789
+        auth_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Supabase auth user ID
+          example: "660e8400-e29b-41d4-a716-446655440000"
+        display_name:
+          type: string
+          nullable: true
+          description: User's display name
+          example: "Ivan Petrov"
+        avatar_url:
+          type: string
+          format: uri
+          nullable: true
+          description: Profile photo URL
+          example: "https://t.me/i/userpic/320/abc123.jpg"
+        language_code:
+          type: string
+          enum: [ru, en, zh]
+          description: Preferred language
+          example: "ru"
+        is_telegram_linked:
+          type: boolean
+          description: Whether Telegram account is linked
+          example: true
+        onboarding_completed:
+          type: boolean
+          description: Whether onboarding is complete
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          description: Account creation time
+          example: "2025-12-27T12:00:00Z"
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: "INVALID_SIGNATURE"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Telegram authentication signature is invalid"
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details

@@ -1,0 +1,565 @@
+openapi: 3.1.0
+info:
+  title: Omnichannel Messages API
+  description: Message sending and conversation management endpoints
+  version: 1.0.0
+
+servers:
+  - url: https://symancy.ru/api
+    description: Production
+  - url: http://localhost:3000/api
+    description: Development
+
+paths:
+  /messages:
+    post:
+      summary: Send a message
+      description: |
+        Sends a message to the specified conversation.
+        The response will be delivered via the same channel/interface.
+
+        For web clients, the response is delivered via Supabase Realtime.
+        For Telegram bot, the response is sent via Telegram API.
+      operationId: sendMessage
+      tags:
+        - Messages
+      security:
+        - BearerAuth: []
+        - SupabaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '202':
+          description: Message accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageAccepted'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '402':
+          description: Insufficient credits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsufficientCreditsError'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+
+  /conversations:
+    get:
+      summary: List user conversations
+      description: Returns all conversations for the authenticated user
+      operationId: listConversations
+      tags:
+        - Conversations
+      security:
+        - BearerAuth: []
+        - SupabaseAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: Filter by conversation status
+          schema:
+            type: string
+            enum: [active, archived, all]
+            default: active
+        - name: persona
+          in: query
+          description: Filter by AI persona
+          schema:
+            type: string
+            enum: [arina, cassandra]
+        - name: limit
+          in: query
+          description: Maximum number of conversations to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of conversations to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+                  total:
+                    type: integer
+                    description: Total number of conversations
+                    example: 5
+                  has_more:
+                    type: boolean
+                    description: Whether more conversations exist
+                    example: false
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create a new conversation
+      description: Creates a new conversation with the specified AI persona
+      operationId: createConversation
+      tags:
+        - Conversations
+      security:
+        - BearerAuth: []
+        - SupabaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                persona:
+                  type: string
+                  enum: [arina, cassandra]
+                  default: arina
+                  description: AI persona for this conversation
+      responses:
+        '201':
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /conversations/{conversationId}:
+    get:
+      summary: Get conversation details
+      description: Returns details and messages for a specific conversation
+      operationId: getConversation
+      tags:
+        - Conversations
+      security:
+        - BearerAuth: []
+        - SupabaseAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          description: Conversation UUID
+          schema:
+            type: string
+            format: uuid
+        - name: messages_limit
+          in: query
+          description: Maximum number of messages to include
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: messages_before
+          in: query
+          description: Fetch messages before this timestamp (for pagination)
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Conversation details with messages
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationWithMessages'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      summary: Update conversation
+      description: Update conversation status or settings
+      operationId: updateConversation
+      tags:
+        - Conversations
+      security:
+        - BearerAuth: []
+        - SupabaseAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          description: Conversation UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [active, archived]
+                  description: New conversation status
+      responses:
+        '200':
+          description: Conversation updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /conversations/{conversationId}/messages:
+    get:
+      summary: Get conversation messages
+      description: Returns messages for a specific conversation with pagination
+      operationId: getConversationMessages
+      tags:
+        - Messages
+      security:
+        - BearerAuth: []
+        - SupabaseAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          description: Conversation UUID
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Maximum number of messages to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: before
+          in: query
+          description: Fetch messages before this timestamp
+          schema:
+            type: string
+            format: date-time
+        - name: after
+          in: query
+          description: Fetch messages after this timestamp
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+                  has_more:
+                    type: boolean
+                    description: Whether more messages exist
+                    example: true
+                  oldest_timestamp:
+                    type: string
+                    format: date-time
+                    description: Timestamp of oldest message in response
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Custom JWT for Telegram-authenticated users
+    SupabaseAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase Auth JWT for web-authenticated users
+
+  schemas:
+    SendMessageRequest:
+      type: object
+      required:
+        - content
+        - interface
+      properties:
+        conversation_id:
+          type: string
+          format: uuid
+          description: Conversation to send message to. If not provided, uses or creates active conversation.
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        content:
+          type: string
+          minLength: 1
+          maxLength: 10000
+          description: Message content
+          example: "Привет! Расскажи мне о моем будущем."
+        interface:
+          type: string
+          enum: [webapp, browser]
+          description: Source interface (channel is determined by auth type)
+          example: "browser"
+        content_type:
+          type: string
+          enum: [text, image]
+          default: text
+          description: Type of content
+          example: "text"
+        temp_id:
+          type: string
+          description: Client-side temporary ID for optimistic updates
+          example: "temp-123"
+        persona:
+          type: string
+          enum: [arina, cassandra]
+          description: AI persona (only used when creating new conversation)
+          example: "arina"
+
+    MessageAccepted:
+      type: object
+      properties:
+        message_id:
+          type: string
+          format: uuid
+          description: Created message ID
+          example: "660e8400-e29b-41d4-a716-446655440000"
+        conversation_id:
+          type: string
+          format: uuid
+          description: Conversation ID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        status:
+          type: string
+          enum: [pending, processing]
+          description: Message processing status
+          example: "pending"
+        temp_id:
+          type: string
+          description: Client-side temporary ID (echoed back)
+          example: "temp-123"
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Message ID
+          example: "660e8400-e29b-41d4-a716-446655440000"
+        conversation_id:
+          type: string
+          format: uuid
+          description: Conversation ID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        channel:
+          type: string
+          enum: [telegram, web, whatsapp, wechat]
+          description: Source channel
+          example: "web"
+        interface:
+          type: string
+          enum: [bot, webapp, browser, api, miniprogram]
+          description: Source interface
+          example: "browser"
+        role:
+          type: string
+          enum: [user, assistant, system]
+          description: Message role
+          example: "user"
+        content:
+          type: string
+          description: Message content
+          example: "Привет! Расскажи мне о моем будущем."
+        content_type:
+          type: string
+          enum: [text, image, analysis, audio, document]
+          description: Content type
+          example: "text"
+        processing_status:
+          type: string
+          enum: [pending, processing, completed, failed]
+          description: Processing status
+          example: "completed"
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Channel-specific metadata
+          example: { "telegram_message_id": 12345 }
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2025-12-27T12:00:00Z"
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Conversation ID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        persona:
+          type: string
+          enum: [arina, cassandra]
+          description: AI persona
+          example: "arina"
+        status:
+          type: string
+          enum: [active, archived, deleted]
+          description: Conversation status
+          example: "active"
+        message_count:
+          type: integer
+          description: Total messages in conversation
+          example: 42
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2025-12-27T10:00:00Z"
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last message timestamp
+          example: "2025-12-27T12:00:00Z"
+
+    ConversationWithMessages:
+      allOf:
+        - $ref: '#/components/schemas/Conversation'
+        - type: object
+          properties:
+            messages:
+              type: array
+              items:
+                $ref: '#/components/schemas/Message'
+              description: Recent messages (newest first)
+
+    InsufficientCreditsError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "INSUFFICIENT_CREDITS"
+        message:
+          type: string
+          example: "Недостаточно кредитов для отправки сообщения"
+        required_credits:
+          type: integer
+          example: 1
+        available_credits:
+          type: object
+          properties:
+            basic:
+              type: integer
+              example: 0
+            pro:
+              type: integer
+              example: 0
+            cassandra:
+              type: integer
+              example: 0
+
+    RateLimitError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "RATE_LIMIT_EXCEEDED"
+        message:
+          type: string
+          example: "Слишком много запросов. Подождите перед отправкой следующего сообщения."
+        retry_after:
+          type: integer
+          description: Seconds to wait before retry
+          example: 60
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: "CONVERSATION_NOT_FOUND"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Conversation not found"
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details
