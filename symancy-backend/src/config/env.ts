@@ -45,6 +45,9 @@ const EnvSchema = z.object({
   ADMIN_CHAT_ID: z.coerce.number().optional(),
   FRONTEND_URL: z.string().url().optional(),
 
+  // Webhook Configuration
+  WEBHOOK_BASE_URL: z.string().url().default("https://symancy.ru"),
+
   // Photo Storage
   PHOTO_STORAGE_PATH: z.string().default("./data/photos"),
 

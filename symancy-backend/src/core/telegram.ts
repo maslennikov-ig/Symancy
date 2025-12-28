@@ -95,3 +95,11 @@ export async function deleteWebhook(): Promise<void> {
 export async function getBotInfo() {
   return getBot().api.getMe();
 }
+
+/**
+ * Get current webhook info
+ * Use this in health checks to verify webhook is configured
+ */
+export async function getWebhookInfo() {
+  return getBot().api.getWebhookInfo();
+}

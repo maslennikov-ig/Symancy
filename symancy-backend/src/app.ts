@@ -11,7 +11,7 @@ import { getEnv, isApiMode, isWorkerMode } from "./config/env.js";
 import { getLogger, setupProcessErrorHandlers } from "./core/logger.js";
 import { closeDatabase, getPool } from "./core/database.js";
 import { getQueue, stopQueue } from "./core/queue.js";
-import { createWebhookHandler, deleteWebhook } from "./core/telegram.js";
+import { createWebhookHandler, setWebhook, getWebhookInfo } from "./core/telegram.js";
 import { closeCheckpointer } from "./core/langchain/index.js";
 import { setupRouter } from "./modules/router/index.js";
 import { registerPhotoWorker } from "./modules/photo-analysis/worker.js";
@@ -103,14 +103,16 @@ async function startApi() {
   });
   logger.info("Rate limiting configured");
 
-  // Health check endpoint with database check
+  // Health check endpoint with database, queue, and webhook checks
   fastify.get("/health", async (_request, reply) => {
     const health: {
       status: string;
       version: string;
       uptime: number;
       timestamp: string;
-      checks: { database: string; queue: string };
+      checks: { database: string; queue: string; webhook: string };
+      webhookUrl?: string;
+      pendingUpdates?: number;
     } = {
       status: "ok",
       version: process.env.npm_package_version || "0.1.0",
@@ -119,6 +121,7 @@ async function startApi() {
       checks: {
         database: "unknown",
         queue: "unknown",
+        webhook: "unknown",
       },
     };
 
@@ -139,6 +142,27 @@ async function startApi() {
       health.checks.queue = boss ? "ok" : "error";
     } catch {
       health.checks.queue = "error";
+      health.status = "degraded";
+    }
+
+    // Check Telegram webhook
+    try {
+      const webhookInfo = await getWebhookInfo();
+      const expectedUrl = `${env.WEBHOOK_BASE_URL}/webhook/telegram`;
+      health.webhookUrl = webhookInfo.url || undefined;
+      health.pendingUpdates = webhookInfo.pending_update_count;
+
+      if (webhookInfo.url === expectedUrl) {
+        health.checks.webhook = "ok";
+      } else if (webhookInfo.url) {
+        health.checks.webhook = "misconfigured";
+        health.status = "degraded";
+      } else {
+        health.checks.webhook = "not_set";
+        health.status = "degraded";
+      }
+    } catch {
+      health.checks.webhook = "error";
       health.status = "degraded";
     }
 
@@ -218,13 +242,9 @@ async function startWorkers() {
 async function shutdown(fastify?: Awaited<ReturnType<typeof Fastify>>) {
   logger.info("Shutting down...");
 
-  // Delete webhook to prevent message loss during restart
-  try {
-    await deleteWebhook();
-    logger.info("Webhook deleted");
-  } catch (error) {
-    logger.warn({ error }, "Failed to delete webhook during shutdown");
-  }
+  // NOTE: We intentionally DO NOT delete webhook on shutdown
+  // Telegram will queue messages (pending_update_count) and deliver them
+  // when the bot comes back online. This prevents message loss during restarts.
 
   if (fastify) {
     await fastify.close();
@@ -257,12 +277,21 @@ async function main() {
 
   if (isApiMode()) {
     fastify = await startApi();
+
+    // Set up Telegram webhook after server is ready
+    const webhookUrl = `${env.WEBHOOK_BASE_URL}/webhook/telegram`;
+    try {
+      await setWebhook(webhookUrl);
+      logger.info({ webhookUrl }, "Telegram webhook configured");
+    } catch (error) {
+      logger.error({ error, webhookUrl }, "Failed to set Telegram webhook");
+    }
   }
 
   if (isWorkerMode()) {
     await startWorkers();
   }
-  
+
   // Graceful shutdown
   process.on("SIGTERM", () => shutdown(fastify));
   process.on("SIGINT", () => shutdown(fastify));
