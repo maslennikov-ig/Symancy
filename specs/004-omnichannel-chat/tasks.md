@@ -201,6 +201,39 @@
 - [X] T040 [US2] Update Telegram bot message handler to store messages with channel='telegram', interface='bot' in symancy-backend/ (update existing message handler)
   → Artifacts: [handler.ts](symancy-backend/src/modules/chat/handler.ts), [ConversationService.ts](symancy-backend/src/services/conversation/ConversationService.ts), [conversation/index.ts](symancy-backend/src/services/conversation/index.ts), [job-schemas.ts](symancy-backend/src/types/job-schemas.ts)
 
+### Code Review & Fixes (2024-12-28)
+
+- [X] T040a Code review of Phase 4 implementation (29 issues identified)
+  → Artifacts: [phase4-code-review.md](docs/reports/code-review/2024-12/phase4-code-review.md)
+- [X] T040b [CRITICAL-1] Fix SQL injection vulnerability - add UUID validation before database queries
+  → Artifacts: [send-message.ts](symancy-backend/src/api/messages/send-message.ts)
+- [X] T040c [CRITICAL-2] Fix JWT error handling - wrap verifyToken in try-catch
+  → Artifacts: [send-message.ts](symancy-backend/src/api/messages/send-message.ts)
+- [X] T040d [HIGH-1] Fix race condition in reconnection logic - add reconnectInProgressRef
+  → Artifacts: [useRealtimeChat.ts](src/hooks/useRealtimeChat.ts)
+- [X] T040e [HIGH-2] Fix memory leak in deduplication - use Set for O(1) lookup
+  → Artifacts: [useRealtimeChat.ts](src/hooks/useRealtimeChat.ts)
+- [X] T040f [HIGH-3] Add rate limiting to send-message endpoint (20 req/min)
+  → Artifacts: [send-message.ts](symancy-backend/src/api/messages/send-message.ts)
+- [X] T040g [HIGH-4] Fix XSS vulnerability - add DOMPurify sanitization
+  → Artifacts: [MessageBubble.tsx](src/components/features/chat/MessageBubble.tsx)
+- [X] T040h [HIGH-5] Fix useEffect dependency array violations
+  → Artifacts: [useRealtimeChat.ts](src/hooks/useRealtimeChat.ts)
+- [X] T040i [HIGH-6] Add mount check to prevent setState after unmount
+  → Artifacts: [useRealtimeChat.ts](src/hooks/useRealtimeChat.ts)
+- [X] T040j [HIGH-7] Improve error recovery with fail-safe retry logic
+  → Artifacts: [DeliveryService.ts](symancy-backend/src/services/delivery/DeliveryService.ts)
+- [X] T040k [HIGH-8] Add metadata sanitization before database insert
+  → Artifacts: [send-message.ts](symancy-backend/src/api/messages/send-message.ts)
+- [X] T040l [MED-7] Add database indexes for performance (5 indexes via Supabase MCP)
+  → Artifacts: Supabase MCP migration
+- [X] T040m [MED-8] Add maximum message length validation (4000 chars)
+  → Artifacts: [send-message.ts](symancy-backend/src/api/messages/send-message.ts)
+- [X] T040n [MED-1] Fix TypeScript any type in Chat.tsx translation function
+  → Artifacts: [Chat.tsx](src/pages/Chat.tsx)
+- [X] T040o [LOW-6] Fix dark mode inline styles in connection warning banner
+  → Artifacts: [ChatWindow.tsx](src/components/features/chat/ChatWindow.tsx)
+
 **Checkpoint**: User Story 2 complete - Real-time sync works between web and Telegram
 
 ---
@@ -213,7 +246,8 @@
 
 ### Frontend Telegram Link Prompt
 
-- [ ] T041 [P] [US3] Create TelegramLinkPrompt component in src/components/features/auth/TelegramLinkPrompt.tsx (shows benefits of connecting Telegram)
+- [X] T041 [P] [US3] Create TelegramLinkPrompt component in src/components/features/auth/TelegramLinkPrompt.tsx (shows benefits of connecting Telegram)
+  → Artifacts: [TelegramLinkPrompt.tsx](src/components/features/auth/TelegramLinkPrompt.tsx)
 
 ### Backend Web User Support
 
@@ -429,21 +463,23 @@ Task: "Create authService in src/services/authService.ts"
 
 ## Summary
 
-| Phase | Tasks | Description |
-|-------|-------|-------------|
-| Phase 0 | P001-P004 | Planning & executor assignment |
-| Phase 1 | T001-T003 | Setup (3 tasks) |
-| Phase 2 | T004-T018 | Foundational (15 tasks) |
-| Phase 3 (US1) | T019-T030 | Telegram Login (12 tasks) |
-| Phase 4 (US2) | T031-T040 | Real-time Sync (10 tasks) |
-| Phase 5 (US3) | T041-T044 | Web-only Users (4 tasks) |
-| Phase 6 (US4) | T045-T049 | WebApp (5 tasks) |
-| Phase 7 (US5) | T050-T053 | Proactive Messaging (4 tasks) |
-| Phase 8 (US6) | T054-T060 | Account Linking (7 tasks) |
-| Phase 9 | T061-T064 | Data Migration (4 tasks) |
-| Phase 10 | T065-T069 | Polish (5 tasks) |
+| Phase | Tasks | Description | Status |
+|-------|-------|-------------|--------|
+| Phase 0 | P001-P004 | Planning & executor assignment | ⏳ |
+| Phase 1 | T001-T003 | Setup (3 tasks) | ✅ |
+| Phase 2 | T004-T018 | Foundational (15 tasks) | ✅ |
+| Phase 3 (US1) | T019-T030 | Telegram Login (12 tasks) | ✅ |
+| Phase 4 (US2) | T031-T040 | Real-time Sync (10 tasks) | ✅ |
+| Phase 4+ | T040a-T040o | Code Review Fixes (15 tasks) | ✅ |
+| Phase 5 (US3) | T041-T044 | Web-only Users (4 tasks) | ⏳ |
+| Phase 6 (US4) | T045-T049 | WebApp (5 tasks) | ⏳ |
+| Phase 7 (US5) | T050-T053 | Proactive Messaging (4 tasks) | ⏳ |
+| Phase 8 (US6) | T054-T060 | Account Linking (7 tasks) | ⏳ |
+| Phase 9 | T061-T064 | Data Migration (4 tasks) | ⏳ |
+| Phase 10 | T065-T069 | Polish (5 tasks) | ⏳ |
 
-**Total**: 69 implementation tasks + 4 planning tasks = **73 tasks**
+**Total**: 69 implementation tasks + 15 code review fixes + 4 planning tasks = **88 tasks**
+**Completed**: 55 tasks (Phases 1-4 + Code Review Fixes)
 
 **Tasks per User Story**:
 - US1: 12 tasks (P1 - MVP)
