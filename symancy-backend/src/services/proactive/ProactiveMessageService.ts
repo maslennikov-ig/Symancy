@@ -13,6 +13,7 @@
 import { getSupabase } from "../../core/database.js";
 import { getLogger } from "../../core/logger.js";
 import { getDeliveryService } from "../delivery/DeliveryService.js";
+import { getEnv } from "../../config/env.js";
 
 // =============================================================================
 // TYPES
@@ -62,10 +63,11 @@ export interface ProactiveMessageResult {
 
 /**
  * Rate limit delay between sending messages (ms)
+ * Configurable via TELEGRAM_RATE_LIMIT_MS env var
+ * Default: 100ms (10 messages/second, safe for Telegram limits)
  * Telegram limit: ~30 messages/second to different users
- * We use 100ms (10 messages/second) to be safe
  */
-const RATE_LIMIT_DELAY_MS = 100;
+const RATE_LIMIT_DELAY_MS = getEnv().TELEGRAM_RATE_LIMIT_MS;
 
 /**
  * Error patterns that indicate user blocked the bot

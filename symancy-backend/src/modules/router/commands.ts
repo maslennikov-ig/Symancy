@@ -9,6 +9,7 @@ import { getLogger } from '../../core/logger.js';
 import { getSupabase } from '../../core/database.js';
 import { getCreditBalance } from '../credits/service.js';
 import { generateLinkToken } from '../../services/auth/LinkTokenService.js';
+import { getBotMessage } from '../../services/i18n/index.js';
 
 const logger = getLogger().child({ module: 'router:commands' });
 
@@ -17,13 +18,10 @@ const logger = getLogger().child({ module: 'router:commands' });
  * Premium fortune teller introduction
  */
 export async function handleCassandraCommand(ctx: BotContext): Promise<void> {
+  const lang = ctx.from?.language_code;
+
   try {
-    const message =
-      '🔮 Приветствую, смертный. Я — Кассандра, мистик высшего ранга.\n\n' +
-      'Моё искусство требует глубокого проникновения в символы судьбы. ' +
-      'Премиум-гадание стоит 3 кредита и раскроет сокровенные знаки вашего будущего.\n\n' +
-      'Пришлите фото кофейной гущи с подписью "кассандра" или "cassandra", ' +
-      'и я проведу ритуал прочтения вашей участи.';
+    const message = getBotMessage('cassandra.intro', lang);
 
     await ctx.reply(message);
 
@@ -31,13 +29,14 @@ export async function handleCassandraCommand(ctx: BotContext): Promise<void> {
       {
         userId: ctx.from?.id,
         username: ctx.from?.username,
+        language: lang,
         command: 'cassandra',
       },
       'Cassandra command executed'
     );
   } catch (error) {
     logger.error({ error, userId: ctx.from?.id }, 'Cassandra command failed');
-    await ctx.reply('Произошла ошибка. Попробуйте позже.');
+    await ctx.reply(getBotMessage('error.generic', lang));
   }
 }
 
@@ -46,18 +45,14 @@ export async function handleCassandraCommand(ctx: BotContext): Promise<void> {
  * Display bot commands and usage instructions
  */
 export async function handleHelpCommand(ctx: BotContext): Promise<void> {
+  const lang = ctx.from?.language_code;
+
   try {
-    const message =
-      '📖 *Справка по командам*\n\n' +
-      '/start — Начать работу с ботом\n' +
-      '/cassandra — Премиум гадалка Кассандра\n' +
-      '/credits — Проверить баланс кредитов\n' +
-      '/history — История ваших гаданий\n' +
-      '/help — Справка по командам\n\n' +
-      '☕️ *Как пользоваться:*\n' +
-      'Отправьте фото кофейной гущи для гадания. ' +
-      'Добавьте подпись "арина" для базового гадания (1 кредит) или ' +
-      '"кассандра" для премиум-гадания (3 кредита).';
+    const title = getBotMessage('help.title', lang);
+    const commands = getBotMessage('help.commands', lang);
+    const usage = getBotMessage('help.usage', lang);
+
+    const message = `${title}\n\n${commands}\n\n${usage}`;
 
     await ctx.reply(message, { parse_mode: 'Markdown' });
 
@@ -65,13 +60,14 @@ export async function handleHelpCommand(ctx: BotContext): Promise<void> {
       {
         userId: ctx.from?.id,
         username: ctx.from?.username,
+        language: lang,
         command: 'help',
       },
       'Help command executed'
     );
   } catch (error) {
     logger.error({ error, userId: ctx.from?.id }, 'Help command failed');
-    await ctx.reply('Произошла ошибка. Попробуйте позже.');
+    await ctx.reply(getBotMessage('error.generic', lang));
   }
 }
 
@@ -80,21 +76,24 @@ export async function handleHelpCommand(ctx: BotContext): Promise<void> {
  * Display user's credit balance and pricing
  */
 export async function handleCreditsCommand(ctx: BotContext): Promise<void> {
+  const lang = ctx.from?.language_code;
+
   try {
     if (!ctx.from) {
-      await ctx.reply('Не удалось определить пользователя.');
+      await ctx.reply(getBotMessage('error.userNotFound', lang));
       logger.warn({ command: 'credits' }, 'Missing ctx.from');
       return;
     }
 
     const balance = await getCreditBalance(ctx.from.id);
 
-    const message =
-      `💰 *Ваш баланс:* ${balance} кредит(ов)\n\n` +
-      '📊 *Цены на гадания:*\n' +
-      '• Арина (базовое) — 1 кредит\n' +
-      '• Кассандра (премиум) — 3 кредита\n\n' +
-      'Пополните баланс, чтобы продолжить гадания.';
+    const balanceMsg = getBotMessage('credits.balance', lang, {
+      balance: String(balance),
+    });
+    const pricingMsg = getBotMessage('credits.pricing', lang);
+    const topUpMsg = getBotMessage('credits.topUp', lang);
+
+    const message = `${balanceMsg}\n\n${pricingMsg}\n\n${topUpMsg}`;
 
     await ctx.reply(message, { parse_mode: 'Markdown' });
 
@@ -103,13 +102,14 @@ export async function handleCreditsCommand(ctx: BotContext): Promise<void> {
         userId: ctx.from.id,
         username: ctx.from.username,
         balance,
+        language: lang,
         command: 'credits',
       },
       'Credits command executed'
     );
   } catch (error) {
     logger.error({ error, userId: ctx.from?.id }, 'Credits command failed');
-    await ctx.reply('Не удалось получить баланс. Попробуйте позже.');
+    await ctx.reply(getBotMessage('error.balanceFailed', lang));
   }
 }
 
@@ -118,9 +118,11 @@ export async function handleCreditsCommand(ctx: BotContext): Promise<void> {
  * Display user's last 5 fortune readings
  */
 export async function handleHistoryCommand(ctx: BotContext): Promise<void> {
+  const lang = ctx.from?.language_code;
+
   try {
     if (!ctx.from) {
-      await ctx.reply('Не удалось определить пользователя.');
+      await ctx.reply(getBotMessage('error.userNotFound', lang));
       logger.warn({ command: 'history' }, 'Missing ctx.from');
       return;
     }
@@ -140,12 +142,12 @@ export async function handleHistoryCommand(ctx: BotContext): Promise<void> {
         { error, userId: ctx.from.id },
         'Failed to fetch analysis history'
       );
-      await ctx.reply('Не удалось загрузить историю. Попробуйте позже.');
+      await ctx.reply(getBotMessage('error.loadFailed', lang));
       return;
     }
 
     if (!readings || readings.length === 0) {
-      await ctx.reply('📜 У вас пока нет гаданий.');
+      await ctx.reply(getBotMessage('history.empty', lang));
       logger.info(
         { userId: ctx.from.id, command: 'history' },
         'No readings found'
@@ -161,7 +163,9 @@ export async function handleHistoryCommand(ctx: BotContext): Promise<void> {
       });
 
       const personaName =
-        reading.persona === 'cassandra' ? 'Кассандра' : 'Арина';
+        reading.persona === 'cassandra'
+          ? getBotMessage('history.personaCassandra', lang)
+          : getBotMessage('history.personaArina', lang);
 
       const preview =
         reading.interpretation.length > 80
@@ -171,7 +175,8 @@ export async function handleHistoryCommand(ctx: BotContext): Promise<void> {
       return `📅 ${date} | ${personaName}: ${preview}`;
     });
 
-    const message = '📜 *История ваших гаданий:*\n\n' + historyLines.join('\n\n');
+    const title = getBotMessage('history.title', lang);
+    const message = `${title}\n\n${historyLines.join('\n\n')}`;
 
     await ctx.reply(message, { parse_mode: 'Markdown' });
 
@@ -180,13 +185,14 @@ export async function handleHistoryCommand(ctx: BotContext): Promise<void> {
         userId: ctx.from.id,
         username: ctx.from.username,
         readingsCount: readings.length,
+        language: lang,
         command: 'history',
       },
       'History command executed'
     );
   } catch (error) {
     logger.error({ error, userId: ctx.from?.id }, 'History command failed');
-    await ctx.reply('Не удалось загрузить историю. Попробуйте позже.');
+    await ctx.reply(getBotMessage('error.loadFailed', lang));
   }
 }
 
@@ -195,9 +201,11 @@ export async function handleHistoryCommand(ctx: BotContext): Promise<void> {
  * Generate account linking token for connecting Telegram to web account
  */
 export async function handleLinkCommand(ctx: BotContext): Promise<void> {
+  const lang = ctx.from?.language_code;
+
   try {
     if (!ctx.from) {
-      await ctx.reply('Не удалось определить пользователя.');
+      await ctx.reply(getBotMessage('error.userNotFound', lang));
       logger.warn({ command: 'link' }, 'Missing ctx.from');
       return;
     }
@@ -217,23 +225,19 @@ export async function handleLinkCommand(ctx: BotContext): Promise<void> {
         { error: fetchError, telegramUserId },
         'Failed to fetch unified user'
       );
-      await ctx.reply('Не удалось проверить аккаунт. Попробуйте позже.');
+      await ctx.reply(getBotMessage('error.generic', lang));
       return;
     }
 
     if (!unifiedUser) {
       logger.warn({ telegramUserId }, 'Unified user not found for link command');
-      await ctx.reply(
-        'Аккаунт не найден. Сначала отправьте /start для регистрации.'
-      );
+      await ctx.reply(getBotMessage('link.notFound', lang));
       return;
     }
 
     // Check if already linked to web (has auth_id)
     if (unifiedUser.auth_id) {
-      const message =
-        '🔗 *Ваш аккаунт уже связан с веб-версией.*\n\n' +
-        'Вы можете войти на сайт symancy.ru с этим Telegram-аккаунтом.';
+      const message = getBotMessage('link.alreadyLinked', lang);
 
       await ctx.reply(message, { parse_mode: 'Markdown' });
 
@@ -250,13 +254,12 @@ export async function handleLinkCommand(ctx: BotContext): Promise<void> {
       sourceChannel: 'telegram',
     });
 
-    const message =
-      '🔗 *Связать аккаунт с веб-версией*\n\n' +
-      'Перейдите по ссылке в течение 10 минут, чтобы связать ваш Telegram-аккаунт с веб-версией:\n\n' +
-      `${result.linkUrl}\n\n` +
-      'После связывания вы сможете:\n' +
-      '• Использовать один аккаунт на сайте и в Telegram\n' +
-      '• Объединить кредиты и историю';
+    const linkMsg = getBotMessage('link.generateUrl', lang, {
+      url: result.linkUrl,
+    });
+    const benefitsMsg = getBotMessage('link.benefits', lang);
+
+    const message = `${linkMsg}\n\n${benefitsMsg}`;
 
     await ctx.reply(message, { parse_mode: 'Markdown' });
 
@@ -265,12 +268,13 @@ export async function handleLinkCommand(ctx: BotContext): Promise<void> {
         telegramUserId,
         unifiedUserId: unifiedUser.id,
         expiresAt: result.expiresAt,
+        language: lang,
         command: 'link',
       },
       'Link token generated successfully'
     );
   } catch (error) {
     logger.error({ error, userId: ctx.from?.id }, 'Link command failed');
-    await ctx.reply('Не удалось создать ссылку. Попробуйте позже.');
+    await ctx.reply(getBotMessage('error.linkFailed', lang));
   }
 }

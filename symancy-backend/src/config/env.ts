@@ -49,6 +49,9 @@ const EnvSchema = z.object({
   // Webhook Configuration
   WEBHOOK_BASE_URL: z.string().url().default("https://symancy.ru"),
 
+  // Telegram Rate Limiting
+  TELEGRAM_RATE_LIMIT_MS: z.coerce.number().min(10).max(1000).default(100),
+
   // Photo Storage
   PHOTO_STORAGE_PATH: z.string().default("./data/photos"),
 
