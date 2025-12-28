@@ -8,8 +8,9 @@
  */
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { SendMessageRequestSchema } from '../../types/omnichannel.js';
-import { verifyToken } from '../../services/auth/JwtService.js';
+import { verifyToken, isTelegramToken } from '../../services/auth/JwtService.js';
 import { getSupabase } from '../../core/database.js';
+import { findOrCreateByAuthId } from '../../services/user/UnifiedUserService.js';
 import { sendJob } from '../../core/queue.js';
 import { QUEUE_CHAT_REPLY } from '../../config/constants.js';
 import { getLogger } from '../../core/logger.js';
@@ -303,7 +304,38 @@ export async function sendMessageHandler(
     });
   }
 
-  const unifiedUserId = payload.sub;
+  // Resolve unified_user_id based on token type
+  // - Telegram tokens: payload.sub is already unified_users.id
+  // - Supabase Auth tokens: payload.sub is auth.users.id, need to lookup/create unified user
+  let unifiedUserId: string;
+
+  if (isTelegramToken(payload)) {
+    // Telegram user - sub is already the unified_users.id
+    unifiedUserId = payload.sub;
+    logger.debug({ unifiedUserId, telegramId: payload.telegram_id }, 'Telegram user authenticated');
+  } else {
+    // Web user (Supabase Auth) - sub is auth.users.id, need to get/create unified user
+    const authId = payload.sub;
+    logger.debug({ authId }, 'Web user authenticated, resolving unified user');
+
+    try {
+      // Find or create unified user for this Supabase Auth user
+      const unifiedUser = await findOrCreateByAuthId({
+        authId,
+        displayName: payload.email || undefined,
+        languageCode: 'ru', // Default, could be extracted from payload or request
+      });
+      unifiedUserId = unifiedUser.id;
+      logger.debug({ authId, unifiedUserId }, 'Resolved web user to unified user');
+    } catch (error) {
+      logger.error({ error, authId }, 'Failed to resolve unified user from auth_id');
+      return reply.status(500).send({
+        error: 'INTERNAL_ERROR',
+        message: 'Failed to resolve user',
+      });
+    }
+  }
+
   const { content, interface: interfaceType, content_type = 'text', temp_id, persona = 'arina' } = body;
 
   // Sanitize content

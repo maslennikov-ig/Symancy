@@ -27,7 +27,7 @@ interface ChatProps {
 const Chat: React.FC<ChatProps> = ({ language: propLanguage, t: propT }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, unifiedUser, isTelegramUser } = useAuth();
+  const { user, unifiedUser, isTelegramUser, session } = useAuth();
 
   const language = propLanguage || 'ru';
   const t = propT || ((key: keyof typeof translations.en) => i18n_t(key, language));
@@ -49,14 +49,10 @@ const Chat: React.FC<ChatProps> = ({ language: propLanguage, t: propT }) => {
   const [isLoading, setIsLoading] = useState(!conversationId);
   const [error, setError] = useState<string | null>(null);
 
-  // Get auth token (custom JWT for Telegram users, or Supabase session)
-  const getAuthToken = useCallback((): string | undefined => {
-    if (isTelegramUser) {
-      return getStoredToken() || undefined;
-    }
-    // For Supabase users, the token will be handled by Supabase client automatically
-    return undefined;
-  }, [isTelegramUser]);
+  // Compute auth token - custom JWT for Telegram users, or Supabase session token for web users
+  const authToken = isTelegramUser
+    ? getStoredToken() || undefined
+    : session?.access_token || undefined;
 
   // Create conversation if needed
   useEffect(() => {
@@ -73,7 +69,7 @@ const Chat: React.FC<ChatProps> = ({ language: propLanguage, t: propT }) => {
       const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
       const endpoint = `${apiUrl}/api/conversations`;
 
-      const token = getAuthToken();
+      const token = authToken;
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
@@ -117,7 +113,7 @@ const Chat: React.FC<ChatProps> = ({ language: propLanguage, t: propT }) => {
     sendMessage,
     isConnected,
     error: chatError,
-  } = useRealtimeChat(conversationId || '', getAuthToken());
+  } = useRealtimeChat(conversationId || '', authToken);
 
   const handleSendMessage = useCallback(
     async (content: string) => {

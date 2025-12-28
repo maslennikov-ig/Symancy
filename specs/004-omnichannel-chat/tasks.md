@@ -258,7 +258,8 @@
 
 - [X] T043 [US3] Show TelegramLinkPrompt to web-only users (is_telegram_linked=false) in appropriate layout component
   → Artifacts: [Chat.tsx](src/pages/Chat.tsx)
-- [ ] T044 [US3] Ensure chat works for web-only users with channel='web', interface='browser'
+- [X] T044 [US3] Ensure chat works for web-only users with channel='web', interface='browser'
+  → Artifacts: [send-message.ts](symancy-backend/src/api/messages/send-message.ts), [JwtService.ts](symancy-backend/src/services/auth/JwtService.ts), [Chat.tsx](src/pages/Chat.tsx)
 
 **Checkpoint**: User Story 3 complete - Web-only registration works with Telegram link prompt
 

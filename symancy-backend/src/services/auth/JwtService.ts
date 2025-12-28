@@ -29,6 +29,27 @@ export interface TelegramJwtPayload {
 }
 
 /**
+ * Generic JWT payload that works for both Telegram and Supabase Auth tokens
+ *
+ * - Telegram tokens have telegram_id
+ * - Supabase Auth tokens have sub = auth.users.id (no telegram_id)
+ */
+export interface GenericJwtPayload {
+  /** User identifier (unified_users.id for Telegram, auth.users.id for web) */
+  sub: string;
+  /** Telegram user ID (only present in Telegram tokens) */
+  telegram_id?: number;
+  /** Supabase standard role */
+  role: 'authenticated' | 'anon' | 'service_role';
+  /** Issued at (Unix timestamp in seconds) */
+  iat: number;
+  /** Expiration (Unix timestamp in seconds) */
+  exp: number;
+  /** Email (present in Supabase Auth tokens) */
+  email?: string;
+}
+
+/**
  * Token creation result
  */
 export interface TokenResult {
@@ -95,6 +116,7 @@ export function createTelegramUserToken(
  * Verify and decode a JWT token
  *
  * Validates the token signature using SUPABASE_JWT_SECRET.
+ * Works for both Telegram custom tokens and Supabase Auth session tokens.
  * Returns null if verification fails (invalid signature, expired, malformed).
  *
  * @param token - JWT token string to verify
@@ -105,12 +127,17 @@ export function createTelegramUserToken(
  * const payload = verifyToken(token);
  * if (payload) {
  *   console.log('Valid token for user:', payload.sub);
+ *   if (payload.telegram_id) {
+ *     console.log('Telegram user');
+ *   } else {
+ *     console.log('Web user (Supabase Auth)');
+ *   }
  * } else {
  *   console.log('Invalid or expired token');
  * }
  * ```
  */
-export function verifyToken(token: string): TelegramJwtPayload | null {
+export function verifyToken(token: string): GenericJwtPayload | null {
   const env = getEnv();
   const logger = getLogger().child({ module: 'jwt' });
 
@@ -119,9 +146,19 @@ export function verifyToken(token: string): TelegramJwtPayload | null {
     // This prevents algorithm confusion attacks (CVE-worthy vulnerability)
     return jwt.verify(token, env.SUPABASE_JWT_SECRET, {
       algorithms: ['HS256'],
-    }) as TelegramJwtPayload;
+    }) as GenericJwtPayload;
   } catch (error) {
     logger.warn({ error }, 'JWT verification failed');
     return null;
   }
+}
+
+/**
+ * Check if a JWT payload is from a Telegram user
+ *
+ * @param payload - JWT payload
+ * @returns True if the token is from a Telegram-authenticated user
+ */
+export function isTelegramToken(payload: GenericJwtPayload): payload is TelegramJwtPayload {
+  return typeof payload.telegram_id === 'number';
 }
