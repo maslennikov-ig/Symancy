@@ -273,7 +273,8 @@
 
 ### Backend WebApp Auth
 
-- [ ] T045 [P] [US4] Implement verifyWebAppInitData() in symancy-backend/src/services/auth/TelegramAuthService.ts (add to existing service)
+- [X] T045 [P] [US4] Implement verifyWebAppInitData() in symancy-backend/src/services/auth/TelegramAuthService.ts (add to existing service)
+  → Artifacts: [TelegramAuthService.ts](symancy-backend/src/services/auth/TelegramAuthService.ts)
 - [ ] T046 [US4] Implement POST /api/auth/webapp endpoint in symancy-backend/src/api/auth/webapp-auth.ts
 
 ### Frontend WebApp Support
@@ -474,7 +475,7 @@ Task: "Create authService in src/services/authService.ts"
 | Phase 3 (US1) | T019-T030 | Telegram Login (12 tasks) | ✅ |
 | Phase 4 (US2) | T031-T040 | Real-time Sync (10 tasks) | ✅ |
 | Phase 4+ | T040a-T040o | Code Review Fixes (15 tasks) | ✅ |
-| Phase 5 (US3) | T041-T044 | Web-only Users (4 tasks) | ⏳ |
+| Phase 5 (US3) | T041-T044 | Web-only Users (4 tasks) | ✅ |
 | Phase 6 (US4) | T045-T049 | WebApp (5 tasks) | ⏳ |
 | Phase 7 (US5) | T050-T053 | Proactive Messaging (4 tasks) | ⏳ |
 | Phase 8 (US6) | T054-T060 | Account Linking (7 tasks) | ⏳ |

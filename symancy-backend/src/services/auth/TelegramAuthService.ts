@@ -255,3 +255,222 @@ export function verifyTelegramAuthOrThrow(data: TelegramAuthData): number {
 
   return result.userId!;
 }
+
+/**
+ * WebApp user data structure from initData
+ */
+export interface WebAppUser {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  language_code?: string;
+  is_premium?: boolean;
+  photo_url?: string;
+}
+
+/**
+ * Parsed WebApp initData structure
+ */
+export interface WebAppInitData {
+  query_id?: string;
+  user?: WebAppUser;
+  auth_date: number;
+  hash: string;
+  start_param?: string;
+  chat_type?: string;
+  chat_instance?: string;
+}
+
+/**
+ * WebApp verification result
+ */
+export interface WebAppVerificationResult {
+  valid: boolean;
+  reason?: string;
+  user?: WebAppUser;
+  authDate?: number;
+}
+
+/**
+ * Maximum allowed age for WebApp authentication data (24 hours in milliseconds)
+ */
+const MAX_WEBAPP_AUTH_AGE_MS = 86400000; // 24 hours
+
+/**
+ * Verify Telegram WebApp initData
+ *
+ * WebApp uses a different verification algorithm than the Login Widget:
+ * 1. Parse the initData URL-encoded string
+ * 2. Create data-check-string from sorted params (excluding hash)
+ * 3. Secret key = HMAC-SHA256("WebAppData", bot_token) - note the reversed order!
+ * 4. Calculate HMAC-SHA256(data-check-string, secret_key)
+ * 5. Compare with provided hash
+ *
+ * @see https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
+ *
+ * @param initData - Raw initData string from Telegram.WebApp.initData
+ * @returns Verification result with user data if valid
+ *
+ * @example
+ * ```typescript
+ * const result = verifyWebAppInitData(initDataString);
+ * if (result.valid) {
+ *   console.log(`User ${result.user?.id} authenticated via WebApp`);
+ * } else {
+ *   console.error(`WebApp auth failed: ${result.reason}`);
+ * }
+ * ```
+ */
+export function verifyWebAppInitData(initData: string): WebAppVerificationResult {
+  const startTime = Date.now();
+  const logger = getLogger().child({ module: 'telegram-webapp-auth' });
+
+  try {
+    // Parse URL-encoded initData string
+    const params = new URLSearchParams(initData);
+    const hash = params.get('hash');
+
+    if (!hash) {
+      logger.warn('WebApp auth verification failed: missing hash');
+      return { valid: false, reason: 'Missing hash parameter' };
+    }
+
+    // Parse auth_date
+    const authDateStr = params.get('auth_date');
+    if (!authDateStr) {
+      logger.warn('WebApp auth verification failed: missing auth_date');
+      return { valid: false, reason: 'Missing auth_date parameter' };
+    }
+
+    const authDate = parseInt(authDateStr, 10);
+    if (isNaN(authDate)) {
+      logger.warn({ authDateStr }, 'WebApp auth verification failed: invalid auth_date');
+      return { valid: false, reason: 'Invalid auth_date format' };
+    }
+
+    // Check auth_date freshness
+    const authTimestamp = authDate * 1000;
+    const age = Date.now() - authTimestamp;
+
+    if (age > MAX_WEBAPP_AUTH_AGE_MS) {
+      const ageHours = Math.floor(age / 3600000);
+      logger.warn({ authDate, ageHours }, 'WebApp auth verification failed: auth_date too old');
+      return { valid: false, reason: `Authentication data expired (${ageHours} hours old)` };
+    }
+
+    if (age < 0) {
+      logger.warn({ authDate }, 'WebApp auth verification failed: auth_date in the future');
+      return { valid: false, reason: 'Authentication date is in the future' };
+    }
+
+    // Parse user data if present
+    let user: WebAppUser | undefined;
+    const userStr = params.get('user');
+    if (userStr) {
+      try {
+        user = JSON.parse(decodeURIComponent(userStr)) as WebAppUser;
+      } catch (parseError) {
+        logger.warn({ userStr, error: parseError }, 'WebApp auth verification failed: invalid user JSON');
+        return { valid: false, reason: 'Invalid user data format' };
+      }
+    }
+
+    // Create data-check-string: sorted key=value pairs (excluding hash), joined by \n
+    const checkParams: string[] = [];
+    params.forEach((value, key) => {
+      if (key !== 'hash') {
+        checkParams.push(`${key}=${value}`);
+      }
+    });
+    checkParams.sort();
+    const checkString = checkParams.join('\n');
+
+    // WebApp secret key = HMAC-SHA256("WebAppData", bot_token)
+    // Note: This is different from Login Widget where secret = SHA256(bot_token)
+    const env = getEnv();
+    const secretKey = crypto
+      .createHmac('sha256', 'WebAppData')
+      .update(env.TELEGRAM_BOT_TOKEN)
+      .digest();
+
+    // Calculate HMAC-SHA256(data-check-string, secret_key)
+    const calculatedHash = crypto
+      .createHmac('sha256', secretKey)
+      .update(checkString)
+      .digest('hex');
+
+    // Timing-safe comparison
+    let valid = false;
+    try {
+      const calculatedBuffer = Buffer.from(calculatedHash, 'hex');
+      const receivedBuffer = Buffer.from(hash, 'hex');
+
+      if (calculatedBuffer.length !== receivedBuffer.length) {
+        logger.warn({
+          userId: user?.id,
+          expectedLength: calculatedBuffer.length,
+          receivedLength: receivedBuffer.length,
+        }, 'WebApp auth verification failed: hash length mismatch');
+        return { valid: false, reason: 'Invalid signature' };
+      }
+
+      valid = crypto.timingSafeEqual(calculatedBuffer, receivedBuffer);
+    } catch (bufferError) {
+      logger.warn({
+        userId: user?.id,
+        error: bufferError instanceof Error ? bufferError.message : String(bufferError),
+      }, 'WebApp auth verification failed: invalid hash format');
+      return { valid: false, reason: 'Invalid signature format' };
+    }
+
+    const duration = Date.now() - startTime;
+
+    if (valid) {
+      logger.info({
+        userId: user?.id,
+        username: user?.username,
+        authAge: Math.floor(age / 1000),
+        durationMs: duration,
+      }, 'WebApp auth verification successful');
+      return {
+        valid: true,
+        user,
+        authDate,
+      };
+    } else {
+      logger.warn({
+        userId: user?.id,
+        expectedHashPrefix: calculatedHash.substring(0, 8),
+        receivedHashPrefix: hash.substring(0, 8),
+        durationMs: duration,
+      }, 'WebApp auth verification failed: invalid hash');
+      return { valid: false, reason: 'Invalid signature' };
+    }
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    logger.error({
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      durationMs: duration,
+    }, 'WebApp auth verification error');
+    return { valid: false, reason: 'Verification error' };
+  }
+}
+
+/**
+ * Verify WebApp initData and throw on failure
+ *
+ * @param initData - Raw initData string from Telegram.WebApp.initData
+ * @returns Verified user data
+ * @throws Error if verification fails
+ */
+export function verifyWebAppInitDataOrThrow(initData: string): WebAppUser {
+  const result = verifyWebAppInitData(initData);
+
+  if (!result.valid || !result.user) {
+    throw new Error(`WebApp authentication failed: ${result.reason || 'No user data'}`);
+  }
+
+  return result.user;
+}
