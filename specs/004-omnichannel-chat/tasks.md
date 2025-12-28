@@ -119,30 +119,42 @@
 
 ### Backend Auth Services
 
-- [ ] T019 [P] [US1] Implement TelegramAuthService with verifyTelegramAuth() in symancy-backend/src/services/auth/TelegramAuthService.ts
-- [ ] T020 [P] [US1] Implement JwtService with createTelegramUserToken() in symancy-backend/src/services/auth/JwtService.ts
-- [ ] T021 [P] [US1] Implement UnifiedUserService with findOrCreateByTelegramId() in symancy-backend/src/services/user/UnifiedUserService.ts
+- [X] T019 [P] [US1] Implement TelegramAuthService with verifyTelegramAuth() in symancy-backend/src/services/auth/TelegramAuthService.ts
+  → Artifacts: [TelegramAuthService.ts](symancy-backend/src/services/auth/TelegramAuthService.ts)
+- [X] T020 [P] [US1] Implement JwtService with createTelegramUserToken() in symancy-backend/src/services/auth/JwtService.ts
+  → Artifacts: [JwtService.ts](symancy-backend/src/services/auth/JwtService.ts)
+- [X] T021 [P] [US1] Implement UnifiedUserService with findOrCreateByTelegramId() in symancy-backend/src/services/user/UnifiedUserService.ts
+  → Artifacts: [UnifiedUserService.ts](symancy-backend/src/services/user/UnifiedUserService.ts)
 
 ### Backend Auth Endpoints
 
-- [ ] T022 [US1] Implement POST /api/auth/telegram endpoint in symancy-backend/src/api/auth/telegram-login.ts (depends on T019, T020, T021)
-- [ ] T023 [US1] Implement GET /api/auth/me endpoint in symancy-backend/src/api/auth/me.ts
-- [ ] T024 [US1] Register auth routes in Fastify router symancy-backend/src/routes/index.ts
+- [X] T022 [US1] Implement POST /api/auth/telegram endpoint in symancy-backend/src/api/auth/telegram-login.ts (depends on T019, T020, T021)
+  → Artifacts: [telegram-login.ts](symancy-backend/src/api/auth/telegram-login.ts)
+- [X] T023 [US1] Implement GET /api/auth/me endpoint in symancy-backend/src/api/auth/me.ts
+  → Artifacts: [me.ts](symancy-backend/src/api/auth/me.ts)
+- [X] T024 [US1] Register auth routes in Fastify router symancy-backend/src/app.ts
+  → Artifacts: [app.ts](symancy-backend/src/app.ts), [index.ts](symancy-backend/src/api/auth/index.ts)
 
 ### Frontend Auth Components
 
-- [ ] T025 [P] [US1] Create TelegramLoginButton component in src/components/features/auth/TelegramLoginButton.tsx (script injection per quickstart.md)
-- [ ] T026 [P] [US1] Create authService with telegramLogin() in src/services/authService.ts
+- [X] T025 [P] [US1] Create TelegramLoginButton component in src/components/features/auth/TelegramLoginButton.tsx (script injection per quickstart.md)
+  → Artifacts: [TelegramLoginButton.tsx](src/components/features/auth/TelegramLoginButton.tsx)
+- [X] T026 [P] [US1] Create authService with telegramLogin() in src/services/authService.ts
+  → Artifacts: [authService.ts](src/services/authService.ts)
 
 ### Frontend Auth Integration
 
-- [ ] T027 [US1] Update AuthContext to support custom JWT for Telegram users in src/contexts/AuthContext.tsx
-- [ ] T028 [US1] Update supabaseClient to accept custom JWT via accessToken in src/lib/supabaseClient.ts
-- [ ] T029 [US1] Add TelegramLoginButton to login page in src/pages/Login.tsx (or appropriate auth page)
+- [X] T027 [US1] Update AuthContext to support custom JWT for Telegram users in src/contexts/AuthContext.tsx
+  → Artifacts: [AuthContext.tsx](src/contexts/AuthContext.tsx)
+- [X] T028 [US1] Update supabaseClient to accept custom JWT via accessToken in src/lib/supabaseClient.ts
+  → Artifacts: [supabaseClient.ts](src/lib/supabaseClient.ts)
+- [X] T029 [US1] Add TelegramLoginButton to AuthModal in src/components/features/auth/AuthModal.tsx
+  → Artifacts: [AuthModal.tsx](src/components/features/auth/AuthModal.tsx)
 
 ### Credits Display (Shared)
 
-- [ ] T030 [US1] Update credits display component to fetch from unified user_credits table (if existing component needs update)
+- [X] T030 [US1] Update credits display component to fetch from unified user_credits table (if existing component needs update)
+  → Artifacts: [paymentService.ts](src/services/paymentService.ts)
 
 **Checkpoint**: User Story 1 complete - Telegram users can login on web and see shared credits
 

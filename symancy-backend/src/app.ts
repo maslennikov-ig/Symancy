@@ -16,6 +16,7 @@ import { registerPhotoWorker } from "./modules/photo-analysis/worker.js";
 import { registerChatWorker } from "./modules/chat/worker.js";
 import { setupScheduler, registerEngagementWorkers } from "./modules/engagement/index.js";
 import { validatePromptsExist } from "./chains/validation.js";
+import { registerAuthRoutes } from "./api/auth/index.js";
 
 const logger = getLogger();
 
@@ -108,6 +109,10 @@ async function startApi() {
       startedAt: new Date(Date.now() - process.uptime() * 1000).toISOString(),
     };
   });
+
+  // Register auth routes
+  registerAuthRoutes(fastify);
+  logger.info("Auth routes registered");
 
   await fastify.listen({ port: env.PORT, host: "0.0.0.0" });
   logger.info({ port: env.PORT }, "API server listening");

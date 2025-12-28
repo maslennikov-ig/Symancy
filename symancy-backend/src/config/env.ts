@@ -37,6 +37,9 @@ const EnvSchema = z.object({
   // OpenRouter (LLM API)
   OPENROUTER_API_KEY: z.string().startsWith("sk-or-"),
 
+  // Supabase JWT (for custom Telegram user tokens)
+  SUPABASE_JWT_SECRET: z.string().min(32, "JWT secret must be at least 32 characters"),
+
   // Optional Settings
   LOG_LEVEL: LogLevelSchema.default("info"),
   ADMIN_CHAT_ID: z.coerce.number().optional(),

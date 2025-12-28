@@ -5,7 +5,7 @@ import { Button } from '../../ui/button';
 import { GoogleIcon } from './GoogleIcon';
 import { AppleIcon } from './AppleIcon';
 import { FacebookIcon } from './FacebookIcon';
-import { TelegramIcon } from './TelegramIcon';
+import { TelegramLoginButton } from './TelegramLoginButton';
 import { LoaderIcon } from '../../icons/LoaderIcon';
 import { translations } from '../../../lib/i18n';
 import { ChevronDownIcon } from '../../icons/ChevronDownIcon';
@@ -22,7 +22,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, t }) => {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [showMore, setShowMore] = useState(false);
-    const { signInWithProvider } = useAuth();
+    const { signInWithProvider, signInWithTelegram } = useAuth();
 
     const handleMagicLinkSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -42,12 +42,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, t }) => {
         setLoading(false);
     };
 
-    // FIX: Use useMemo and the t function for internationalization, and add Telegram provider.
+    // OAuth providers (Telegram uses separate Login Widget below)
     const allProviders = useMemo(() => [
         { provider: 'google', Icon: GoogleIcon, label: t('auth.signInWithGoogle') },
         { provider: 'apple', Icon: AppleIcon, label: t('auth.signInWithApple') },
         { provider: 'facebook', Icon: FacebookIcon, label: t('auth.signInWithFacebook') },
-        { provider: 'telegram', Icon: TelegramIcon, label: t('auth.signInWithTelegram') },
     ] as const, [t]);
 
     const [defaultProviders, otherProviders] = useMemo(() => {
@@ -111,7 +110,24 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, t }) => {
                         <ChevronDownIcon className={`w-4 h-4 ml-1 transition-transform ${showMore ? 'rotate-180' : ''}`} />
                     </Button>
                 </div>
-                
+
+                {/* Telegram Login Widget */}
+                <div className="mt-4 flex justify-center">
+                    <TelegramLoginButton
+                        onAuth={async (telegramData) => {
+                            try {
+                                await signInWithTelegram(telegramData);
+                                onClose();
+                            } catch (error) {
+                                console.error('Telegram login error:', error);
+                                setMessage(error instanceof Error ? error.message : 'Telegram login failed');
+                            }
+                        }}
+                        size="large"
+                        radius={8}
+                    />
+                </div>
+
                 <div className="my-4 flex items-center">
                     <div className="flex-grow border-t border-border"></div>
                     <span className="flex-shrink mx-4 text-xs text-muted-foreground uppercase">{t('auth.divider')}</span>
