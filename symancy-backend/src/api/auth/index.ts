@@ -10,6 +10,8 @@ import type { FastifyInstance } from 'fastify';
 import { registerTelegramLoginRoute } from './telegram-login.js';
 import { registerMeRoute } from './me.js';
 import { registerWebappAuthRoute } from './webapp-auth.js';
+import { registerLinkTokenRoute } from './link-token.js';
+import { registerLinkRoute } from './link.js';
 
 /**
  * Register all authentication routes
@@ -18,6 +20,8 @@ import { registerWebappAuthRoute } from './webapp-auth.js';
  * - POST /api/auth/telegram - Telegram Login Widget authentication
  * - POST /api/auth/webapp - Telegram WebApp authentication
  * - GET /api/auth/me - Get current authenticated user
+ * - POST /api/auth/link-token - Generate link token for account linking
+ * - POST /api/auth/link - Link Telegram account to web account
  *
  * @param fastify - Fastify instance
  *
@@ -34,4 +38,6 @@ export function registerAuthRoutes(fastify: FastifyInstance): void {
   registerTelegramLoginRoute(fastify);
   registerWebappAuthRoute(fastify);
   registerMeRoute(fastify);
+  registerLinkTokenRoute(fastify);
+  registerLinkRoute(fastify);
 }

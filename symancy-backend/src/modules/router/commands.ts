@@ -1,13 +1,14 @@
 /**
  * Telegram Bot Command Handlers
  *
- * Handles bot commands: /cassandra, /help, /credits, /history
+ * Handles bot commands: /cassandra, /help, /credits, /history, /link
  */
 
 import type { BotContext } from './middleware.js';
 import { getLogger } from '../../core/logger.js';
 import { getSupabase } from '../../core/database.js';
 import { getCreditBalance } from '../credits/service.js';
+import { generateLinkToken } from '../../services/auth/LinkTokenService.js';
 
 const logger = getLogger().child({ module: 'router:commands' });
 
@@ -186,5 +187,90 @@ export async function handleHistoryCommand(ctx: BotContext): Promise<void> {
   } catch (error) {
     logger.error({ error, userId: ctx.from?.id }, 'History command failed');
     await ctx.reply('Не удалось загрузить историю. Попробуйте позже.');
+  }
+}
+
+/**
+ * Handle /link command
+ * Generate account linking token for connecting Telegram to web account
+ */
+export async function handleLinkCommand(ctx: BotContext): Promise<void> {
+  try {
+    if (!ctx.from) {
+      await ctx.reply('Не удалось определить пользователя.');
+      logger.warn({ command: 'link' }, 'Missing ctx.from');
+      return;
+    }
+
+    const supabase = getSupabase();
+    const telegramUserId = ctx.from.id;
+
+    // Get unified user by telegram_id
+    const { data: unifiedUser, error: fetchError } = await supabase
+      .from('unified_users')
+      .select('id, auth_id, telegram_id')
+      .eq('telegram_id', telegramUserId)
+      .single();
+
+    if (fetchError) {
+      logger.error(
+        { error: fetchError, telegramUserId },
+        'Failed to fetch unified user'
+      );
+      await ctx.reply('Не удалось проверить аккаунт. Попробуйте позже.');
+      return;
+    }
+
+    if (!unifiedUser) {
+      logger.warn({ telegramUserId }, 'Unified user not found for link command');
+      await ctx.reply(
+        'Аккаунт не найден. Сначала отправьте /start для регистрации.'
+      );
+      return;
+    }
+
+    // Check if already linked to web (has auth_id)
+    if (unifiedUser.auth_id) {
+      const message =
+        '🔗 *Ваш аккаунт уже связан с веб-версией.*\n\n' +
+        'Вы можете войти на сайт symancy.ru с этим Telegram-аккаунтом.';
+
+      await ctx.reply(message, { parse_mode: 'Markdown' });
+
+      logger.info(
+        { telegramUserId, unifiedUserId: unifiedUser.id, command: 'link' },
+        'User already linked to web'
+      );
+      return;
+    }
+
+    // Generate link token
+    const result = await generateLinkToken({
+      unifiedUserId: unifiedUser.id,
+      sourceChannel: 'telegram',
+    });
+
+    const message =
+      '🔗 *Связать аккаунт с веб-версией*\n\n' +
+      'Перейдите по ссылке в течение 10 минут, чтобы связать ваш Telegram-аккаунт с веб-версией:\n\n' +
+      `${result.linkUrl}\n\n` +
+      'После связывания вы сможете:\n' +
+      '• Использовать один аккаунт на сайте и в Telegram\n' +
+      '• Объединить кредиты и историю';
+
+    await ctx.reply(message, { parse_mode: 'Markdown' });
+
+    logger.info(
+      {
+        telegramUserId,
+        unifiedUserId: unifiedUser.id,
+        expiresAt: result.expiresAt,
+        command: 'link',
+      },
+      'Link token generated successfully'
+    );
+  } catch (error) {
+    logger.error({ error, userId: ctx.from?.id }, 'Link command failed');
+    await ctx.reply('Не удалось создать ссылку. Попробуйте позже.');
   }
 }

@@ -14,6 +14,7 @@ import {
   handleHelpCommand,
   handleCreditsCommand,
   handleHistoryCommand,
+  handleLinkCommand,
 } from "./commands.js";
 import {
   startOnboarding,
@@ -253,6 +254,25 @@ export function setupRouter(): void {
     }
   });
 
+  // Handle /link command
+  bot.command("link", async (ctx) => {
+    const botCtx = ctx as BotContext;
+    logger.info({ telegramUserId: ctx.from?.id }, "Received /link command");
+
+    // Block if onboarding not completed
+    if (requiresOnboarding(botCtx)) {
+      await sendOnboardingRequired(botCtx);
+      return;
+    }
+
+    try {
+      await handleLinkCommand(botCtx);
+    } catch (error) {
+      logger.error({ error, telegramUserId: ctx.from?.id }, "Error in /link command");
+      await ctx.reply("Ошибка в команде /link");
+    }
+  });
+
   // Handle photos - delegate to photo-analysis module
   bot.on("message:photo", async (ctx) => {
     const botCtx = ctx as BotContext;
@@ -347,6 +367,7 @@ export function setupRouter(): void {
       { command: "cassandra", description: "Премиум гадалка Кассандра" },
       { command: "credits", description: "Проверить баланс кредитов" },
       { command: "history", description: "История гаданий" },
+      { command: "link", description: "Связать с веб-версией" },
       { command: "help", description: "Справка по командам" },
     ])
     .then(() => logger.info("Bot commands menu set"))

@@ -23,6 +23,7 @@ const TestPayment = lazy(() => import('./pages/TestPayment'));
 const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
 const PaymentResult = lazy(() => import('./pages/PaymentResult'));
 const Chat = lazy(() => import('./pages/Chat'));
+const Link = lazy(() => import('./pages/Link'));
 import { MysticalBackground } from './components/features/MysticalCoffeeCupIllustration';
 import { OfficialLogo } from './components/icons/OfficialLogo';
 import { useAuth } from './contexts/AuthContext';
@@ -402,6 +403,7 @@ const App: React.FC = () => {
         <Route path="/terms" element={<Terms language={language} t={t} />} />
         <Route path="/contacts" element={<Contacts language={language} t={t} />} />
         <Route path="/test-payment" element={<TestPayment />} />
+        <Route path="/link" element={<Link language={language} t={t} />} />
         <Route
           path="/chat"
           element={
