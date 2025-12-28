@@ -126,14 +126,17 @@ export async function generateLinkToken(
 }
 
 /**
- * Validate and consume a link token
+ * Validate and consume a link token atomically
  *
- * Validates the token by:
- * 1. Finding it in the database
- * 2. Checking if it's not already used (used_at IS NULL)
- * 3. Checking if it's not expired (expires_at > now)
- * 4. Marking it as used (update used_at = now())
- * 5. Returning the unified user data
+ * Uses PostgreSQL function `consume_link_token` to atomically:
+ * 1. Find the token in the database
+ * 2. Check if it's not already used (used_at IS NULL)
+ * 3. Check if it's not expired (expires_at > now)
+ * 4. Mark it as used (update used_at = now())
+ * 5. Return the unified user data
+ *
+ * This atomic approach prevents race conditions where two requests
+ * could consume the same token simultaneously.
  *
  * The token can only be used once (single-use).
  *
@@ -159,78 +162,108 @@ export async function validateAndConsumeLinkToken(
 
   logger.debug({ tokenLength: token.length }, 'Validating link token');
 
-  // Find token in database (unused tokens only)
-  const { data: linkToken, error: fetchError } = await supabase
-    .from('link_tokens')
-    .select('*, unified_users(*)')
-    .eq('token', token)
-    .is('used_at', null)
-    .single();
+  // Use atomic RPC call to prevent race conditions
+  // The function atomically checks validity and marks as used in one operation
+  const { data, error } = await supabase.rpc('consume_link_token', {
+    token_value: token,
+  });
 
-  if (fetchError) {
-    // PGRST116 = no rows returned
-    if (fetchError.code === 'PGRST116') {
-      logger.warn({ tokenLength: token.length }, 'Token not found or already used');
-      return {
-        valid: false,
-        reason: 'TOKEN_NOT_FOUND',
-      };
-    }
-
-    logger.error({ error: fetchError }, 'Failed to fetch link token');
+  if (error) {
+    logger.error({ error }, 'Failed to consume link token');
     return {
       valid: false,
       reason: 'DATABASE_ERROR',
     };
   }
 
-  // Check if token is expired
-  const now = new Date();
-  const expiresAt = new Date(linkToken.expires_at);
-
-  if (expiresAt < now) {
-    logger.warn(
-      {
-        tokenId: linkToken.id,
-        expiresAt,
-        now,
-      },
-      'Token expired'
-    );
+  // No rows returned means token not found, expired, or already used
+  if (!data || data.length === 0) {
+    logger.warn({ tokenLength: token.length }, 'Token not found, expired, or already used');
     return {
       valid: false,
-      reason: 'TOKEN_EXPIRED',
+      reason: 'TOKEN_NOT_FOUND',
     };
   }
 
-  // Mark token as used
-  const { error: updateError } = await supabase
-    .from('link_tokens')
-    .update({ used_at: now.toISOString() })
-    .eq('id', linkToken.id);
+  const tokenData = data[0];
 
-  if (updateError) {
-    logger.error({ error: updateError, tokenId: linkToken.id }, 'Failed to mark token as used');
-    return {
-      valid: false,
-      reason: 'DATABASE_ERROR',
-    };
-  }
-
-  // Extract unified user from joined data
-  const unifiedUser = linkToken.unified_users as unknown as UnifiedUser;
+  // Reconstruct unified user from joined data returned by the function
+  const unifiedUser: UnifiedUser = {
+    id: tokenData.user_id,
+    telegram_id: tokenData.user_telegram_id,
+    auth_id: tokenData.user_auth_id,
+    whatsapp_phone: tokenData.user_whatsapp_phone,
+    wechat_openid: tokenData.user_wechat_openid,
+    display_name: tokenData.user_display_name,
+    avatar_url: tokenData.user_avatar_url,
+    language_code: tokenData.user_language_code,
+    timezone: tokenData.user_timezone,
+    is_telegram_linked: tokenData.user_is_telegram_linked,
+    onboarding_completed: tokenData.user_onboarding_completed,
+    is_banned: tokenData.user_is_banned,
+    primary_interface: tokenData.user_primary_interface,
+    notification_settings: tokenData.user_notification_settings ?? {},
+    created_at: tokenData.user_created_at,
+    updated_at: tokenData.user_updated_at,
+    last_active_at: tokenData.user_last_active_at,
+  };
 
   logger.info(
     {
-      tokenId: linkToken.id,
+      tokenId: tokenData.id,
       unifiedUserId: unifiedUser.id,
-      sourceChannel: linkToken.source_channel,
+      sourceChannel: tokenData.source_channel,
     },
-    'Link token validated and consumed successfully'
+    'Link token validated and consumed atomically'
   );
 
   return {
     valid: true,
     unifiedUser,
   };
+}
+
+/**
+ * Clean up expired link tokens
+ *
+ * Deletes tokens that expired more than 24 hours ago.
+ * Should be called periodically via scheduled job.
+ *
+ * @returns Number of deleted tokens
+ *
+ * @example
+ * ```typescript
+ * // Run cleanup job
+ * const deletedCount = await cleanupExpiredLinkTokens();
+ * console.log(`Cleaned up ${deletedCount} expired tokens`);
+ * ```
+ */
+export async function cleanupExpiredLinkTokens(): Promise<number> {
+  const logger = getLogger().child({ module: 'link-token-cleanup' });
+  const supabase = getSupabase();
+
+  // Delete tokens expired more than 24 hours ago
+  const cutoffDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const { data, error } = await supabase
+    .from('link_tokens')
+    .delete()
+    .lt('expires_at', cutoffDate.toISOString())
+    .select('id');
+
+  if (error) {
+    logger.error({ error }, 'Failed to cleanup expired link tokens');
+    return 0;
+  }
+
+  const deletedCount = data?.length || 0;
+
+  if (deletedCount > 0) {
+    logger.info(
+      { deletedCount, cutoffDate: cutoffDate.toISOString() },
+      'Expired link tokens cleaned up'
+    );
+  }
+
+  return deletedCount;
 }

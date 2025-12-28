@@ -10,21 +10,10 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { verifyToken } from '../../services/auth/JwtService.js';
 import { generateLinkToken } from '../../services/auth/LinkTokenService.js';
 import { getLogger } from '../../core/logger.js';
+import { getSupabase } from '../../core/database.js';
+import { extractBearerToken } from '../../utils/auth.js';
 
 const logger = getLogger().child({ module: 'link-token' });
-
-/**
- * Extract Bearer token from Authorization header
- *
- * @param authorization - Authorization header value
- * @returns Token string or null if invalid
- */
-function extractBearerToken(authorization?: string): string | null {
-  if (!authorization?.startsWith('Bearer ')) {
-    return null;
-  }
-  return authorization.slice(7);
-}
 
 /**
  * Handle POST /api/auth/link-token request
@@ -89,6 +78,23 @@ export async function linkTokenHandler(
     return reply.status(401).send({
       error: 'UNAUTHORIZED',
       message: 'Invalid or expired token',
+    });
+  }
+
+  // Verify user exists in unified_users
+  const supabase = getSupabase();
+
+  const { data: user, error: userError } = await supabase
+    .from('unified_users')
+    .select('id')
+    .eq('id', payload.sub)
+    .single();
+
+  if (userError || !user) {
+    logger.warn({ userId: payload.sub }, 'User not found for valid JWT');
+    return reply.status(404).send({
+      error: 'USER_NOT_FOUND',
+      message: 'User account not found',
     });
   }
 

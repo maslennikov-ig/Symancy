@@ -14,28 +14,19 @@ import { getUserById } from '../../services/user/UnifiedUserService.js';
 import { getSupabase } from '../../core/database.js';
 import { getLogger } from '../../core/logger.js';
 import type { UnifiedUser } from '../../types/omnichannel.js';
+import { extractBearerToken } from '../../utils/auth.js';
 
 const logger = getLogger().child({ module: 'link' });
-
-/**
- * Extract Bearer token from Authorization header
- *
- * @param authorization - Authorization header value
- * @returns Token string or null if invalid
- */
-function extractBearerToken(authorization?: string): string | null {
-  if (!authorization?.startsWith('Bearer ')) {
-    return null;
-  }
-  return authorization.slice(7);
-}
 
 /**
  * Link request body schema
  */
 const LinkRequestSchema = z.object({
-  /** Link token from /api/auth/link-token */
-  token: z.string().min(32, 'Token must be at least 32 characters'),
+  /** Link token from /api/auth/link-token - must be exactly 64 hex characters */
+  token: z
+    .string()
+    .length(64, 'Token must be exactly 64 characters')
+    .regex(/^[a-f0-9]{64}$/, 'Token must be a valid hexadecimal string'),
 });
 
 /**
@@ -261,51 +252,60 @@ export async function linkHandler(
       'Merging separate Telegram and web user records'
     );
 
-    // Merge credits manually by fetching both and updating target
-    try {
-      const { data: telegramCredits } = await supabase
-        .from('user_credits')
-        .select('*')
-        .eq('unified_user_id', telegramUser.id)
-        .single();
+    // Merge credits atomically using PostgreSQL function
+    // Note: user_credits.user_id maps to auth.users.id, which is unified_users.auth_id
+    if (telegramUser.auth_id && webUser.auth_id) {
+      const { data: mergeResult, error: mergeError } = await supabase.rpc(
+        'merge_user_credits',
+        {
+          source_user_id: telegramUser.auth_id,
+          target_user_id: webUser.auth_id,
+        }
+      );
 
-      const { data: webCredits } = await supabase
-        .from('user_credits')
-        .select('*')
-        .eq('unified_user_id', webUser.id)
-        .single();
-
-      if (telegramCredits && webCredits) {
-        // Merge credits: Add Telegram credits to web credits
-        await supabase
-          .from('user_credits')
-          .update({
-            credits_basic: webCredits.credits_basic + telegramCredits.credits_basic,
-            credits_pro: webCredits.credits_pro + telegramCredits.credits_pro,
-            credits_cassandra: webCredits.credits_cassandra + telegramCredits.credits_cassandra,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('unified_user_id', webUser.id);
-
+      if (mergeError) {
+        logger.error(
+          {
+            error: mergeError,
+            sourceUserId: telegramUser.id,
+            sourceAuthId: telegramUser.auth_id,
+            targetUserId: webUser.id,
+            targetAuthId: webUser.auth_id,
+          },
+          'Failed to merge credits (non-fatal, continuing)'
+        );
+        // Non-fatal: continue with account linking even if credits merge fails
+      } else if (mergeResult && mergeResult.length > 0) {
+        const merged = mergeResult[0];
         logger.info(
           {
             sourceUserId: telegramUser.id,
             targetUserId: webUser.id,
             mergedCredits: {
-              basic: telegramCredits.credits_basic + webCredits.credits_basic,
-              pro: telegramCredits.credits_pro + webCredits.credits_pro,
-              cassandra: telegramCredits.credits_cassandra + webCredits.credits_cassandra,
+              basic: merged.merged_basic,
+              pro: merged.merged_pro,
+              cassandra: merged.merged_cassandra,
             },
+            sourceDeleted: merged.source_deleted,
           },
-          'Credits merged successfully'
+          'Credits merged atomically'
+        );
+      } else {
+        logger.info(
+          { sourceUserId: telegramUser.id, targetUserId: webUser.id },
+          'No credits to merge (one or both users have no credit records)'
         );
       }
-    } catch (error) {
-      logger.error(
-        { error, sourceUserId: telegramUser.id, targetUserId: webUser.id },
-        'Failed to merge credits (non-fatal, continuing)'
+    } else {
+      logger.info(
+        {
+          sourceUserId: telegramUser.id,
+          sourceAuthId: telegramUser.auth_id,
+          targetUserId: webUser.id,
+          targetAuthId: webUser.auth_id,
+        },
+        'Skipping credit merge: one or both users have no auth_id'
       );
-      // Non-fatal: continue with account linking even if credits merge fails
     }
 
     // Delete the separate Telegram user record (cascades to related data)
