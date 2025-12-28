@@ -4,6 +4,7 @@
  */
 import type { BotContext } from "../router/middleware.js";
 import { onboardingGraph } from "../../graphs/onboarding/index.js";
+import { UserGoal } from "../../graphs/onboarding/state.js";
 import type { OnboardingState, UserGoalType } from "../../graphs/onboarding/state.js";
 import {
   createGoalsKeyboard,
@@ -15,8 +16,76 @@ import { sendJob } from "../../core/queue.js";
 import { getBotApi } from "../../core/telegram.js";
 import type { PhotoAnalysisJobData } from "../../types/telegram.js";
 import { QUEUE_ANALYZE_PHOTO } from "../../config/constants.js";
+import { z } from "zod";
 
 const logger = getLogger().child({ module: "onboarding:handler" });
+
+// =============================================================================
+// CONFIGURATION
+// =============================================================================
+
+/**
+ * Telegram file_id expiration time in milliseconds
+ * File IDs are valid for approximately 1 hour, we use 55 minutes for safety margin
+ */
+const FILE_ID_EXPIRATION_MS = 55 * 60 * 1000; // 55 minutes
+
+// =============================================================================
+// ZOD SCHEMAS - HIGH #4 FIX
+// =============================================================================
+
+/**
+ * Valid persona types for photo analysis
+ */
+const PersonaSchema = z.enum(["arina", "cassandra"]);
+
+/**
+ * Zod schema for onboarding_data stored in user_states
+ * Uses the same UserGoal schema as the graph state for consistency
+ */
+const OnboardingDataSchema = z.object({
+  goals: z.array(UserGoal).default([]),
+  pending_photo_file_id: z.string().optional(),
+  pending_photo_timestamp: z.number().optional(),
+  pending_photo_persona: PersonaSchema.optional(), // MEDIUM #9: Save persona from caption
+});
+
+/**
+ * Type for onboarding data stored in user_states.onboarding_data
+ */
+type OnboardingData = z.infer<typeof OnboardingDataSchema>;
+
+/**
+ * Safely parse onboarding_data with fallback to empty state
+ * @param data - Raw data from database (unknown type)
+ * @returns Validated OnboardingData
+ */
+function parseOnboardingData(data: unknown): OnboardingData {
+  try {
+    // Handle null/undefined
+    if (!data) {
+      return { goals: [] };
+    }
+
+    // Parse and validate
+    const result = OnboardingDataSchema.safeParse(data);
+
+    if (result.success) {
+      return result.data;
+    }
+
+    // Log validation errors but don't crash
+    logger.warn(
+      { error: result.error.format(), rawData: data },
+      "Invalid onboarding_data format, using defaults"
+    );
+
+    return { goals: [] };
+  } catch (error) {
+    logger.error({ error, rawData: data }, "Failed to parse onboarding_data");
+    return { goals: [] };
+  }
+}
 
 /**
  * Check if user is currently in onboarding flow
@@ -50,12 +119,20 @@ export async function isInOnboarding(ctx: BotContext): Promise<boolean> {
  * Start onboarding flow with a pending photo
  * Used when a new user sends a photo before completing onboarding
  * Saves the photo and sends a friendly Arina message before starting onboarding
+ *
+ * FIXES:
+ * - CRITICAL #1: Race condition prevention - checks if onboarding already started
+ * - CRITICAL #3: Adds timestamp for file_id expiration tracking
+ * - MEDIUM #9: Saves persona preference from photo caption
+ *
  * @param ctx - Bot context
  * @param photoFileId - Telegram file ID of the photo to process after onboarding
+ * @param persona - Optional persona preference from photo caption
  */
 export async function startOnboardingWithPendingPhoto(
   ctx: BotContext,
-  photoFileId: string
+  photoFileId: string,
+  persona?: "arina" | "cassandra"
 ): Promise<void> {
   const telegramUserId = ctx.from?.id;
   const chatId = ctx.chat?.id;
@@ -68,6 +145,45 @@ export async function startOnboardingWithPendingPhoto(
   const supabase = getSupabase();
 
   try {
+    // CRITICAL #1 FIX: Check if onboarding is already in progress
+    // This prevents race condition when user sends multiple photos rapidly
+    const { data: existingState } = await supabase
+      .from("user_states")
+      .select("onboarding_step, onboarding_data")
+      .eq("telegram_user_id", telegramUserId)
+      .single();
+
+    if (existingState?.onboarding_step) {
+      // Onboarding already started - just update pending photo, don't restart flow
+      logger.info(
+        { telegramUserId, photoFileId, currentStep: existingState.onboarding_step },
+        "User sent another photo during onboarding - updating pending photo"
+      );
+
+      // Update to newest photo (user probably wants this one processed)
+      const existingData = parseOnboardingData(existingState.onboarding_data);
+      const updatedData: OnboardingData = {
+        ...existingData,
+        pending_photo_file_id: photoFileId,
+        pending_photo_timestamp: Date.now(),
+        pending_photo_persona: persona || existingData.pending_photo_persona, // Keep previous if no new persona
+      };
+
+      await supabase
+        .from("user_states")
+        .update({
+          onboarding_data: JSON.stringify(updatedData),
+        })
+        .eq("telegram_user_id", telegramUserId);
+
+      // Send a short acknowledgment (not the full onboarding message)
+      await ctx.reply(
+        "☕ Записала! Эту фотографию посмотрю сразу после знакомства.",
+        { parse_mode: "HTML" }
+      );
+      return;
+    }
+
     logger.info(
       { telegramUserId, chatId, photoFileId },
       "Starting onboarding with pending photo"
@@ -81,14 +197,20 @@ export async function startOnboardingWithPendingPhoto(
       { parse_mode: "HTML" }
     );
 
+    // CRITICAL #3 FIX: Add timestamp for file_id expiration tracking
+    // MEDIUM #9 FIX: Save persona preference from caption
+    const onboardingData: OnboardingData = {
+      goals: [],
+      pending_photo_file_id: photoFileId,
+      pending_photo_timestamp: Date.now(),
+      pending_photo_persona: persona,
+    };
+
     // Update user_states to onboarding mode with pending photo
     await supabase.from("user_states").upsert({
       telegram_user_id: telegramUserId,
       onboarding_step: "welcome",
-      onboarding_data: JSON.stringify({
-        goals: [],
-        pending_photo_file_id: photoFileId,
-      }),
+      onboarding_data: JSON.stringify(onboardingData),
       updated_at: new Date().toISOString(),
     });
 
@@ -121,8 +243,25 @@ export async function startOnboardingWithPendingPhoto(
     );
   } catch (error) {
     logger.error({ error, telegramUserId, photoFileId }, "Failed to start onboarding with pending photo");
+
+    // HIGH #5 FIX: Cleanup on onboarding failure
+    // Clear any partially saved state to allow fresh restart
+    try {
+      await supabase
+        .from("user_states")
+        .update({
+          onboarding_step: null,
+          onboarding_data: JSON.stringify({}),
+        })
+        .eq("telegram_user_id", telegramUserId);
+
+      logger.info({ telegramUserId }, "Cleaned up failed onboarding state");
+    } catch (cleanupError) {
+      logger.error({ error: cleanupError, telegramUserId }, "Failed to cleanup onboarding state");
+    }
+
     await ctx.reply(
-      "Произошла ошибка при начале знакомства. Попробуйте снова позже."
+      "Произошла ошибка при начале знакомства. Попробуйте отправить фото ещё раз или нажмите /start."
     );
   }
 }
@@ -314,10 +453,9 @@ export async function handleOnboardingCallback(
       return;
     }
 
-    const onboardingData = userState.onboarding_data || { goals: [] };
-    let selectedGoals: UserGoalType[] = Array.isArray(onboardingData.goals)
-      ? (onboardingData.goals as UserGoalType[])
-      : [];
+    // HIGH #4 FIX: Use Zod schema for safe parsing
+    const onboardingData = parseOnboardingData(userState.onboarding_data);
+    let selectedGoals: UserGoalType[] = [...onboardingData.goals];
 
     // Handle different callback types
     if (parsed.type === "goal") {
@@ -337,11 +475,18 @@ export async function handleOnboardingCallback(
 
       await ctx.editMessageReplyMarkup({ reply_markup: newKeyboard });
 
-      // Save updated goals to state
+      // Save updated goals to state, preserving pending photo data
+      const updatedGoalsData: OnboardingData = {
+        goals: selectedGoals,
+        pending_photo_file_id: onboardingData.pending_photo_file_id,
+        pending_photo_timestamp: onboardingData.pending_photo_timestamp,
+        pending_photo_persona: onboardingData.pending_photo_persona,
+      };
+
       await supabase
         .from("user_states")
         .update({
-          onboarding_data: JSON.stringify({ goals: selectedGoals }),
+          onboarding_data: JSON.stringify(updatedGoalsData),
         })
         .eq("telegram_user_id", telegramUserId);
 
@@ -367,17 +512,26 @@ export async function handleOnboardingCallback(
 
       const result = await onboardingGraph.invoke(graphState);
 
+      // CRITICAL #2 FIX: Preserve pending_photo_file_id when clearing goals
+      // Only clear goals array, keep photo data for timezone step
+      const preservedData: OnboardingData = {
+        goals: [], // Clear goals (already saved to profile by graph)
+        pending_photo_file_id: onboardingData.pending_photo_file_id,
+        pending_photo_timestamp: onboardingData.pending_photo_timestamp,
+        pending_photo_persona: onboardingData.pending_photo_persona,
+      };
+
       // Update user state
       await supabase
         .from("user_states")
         .update({
           onboarding_step: result.step,
-          onboarding_data: JSON.stringify({}), // Clear temporary data
+          onboarding_data: JSON.stringify(preservedData),
         })
         .eq("telegram_user_id", telegramUserId);
 
       logger.info(
-        { telegramUserId, selectedGoals, nextStep: result.step },
+        { telegramUserId, selectedGoals, nextStep: result.step, hasPendingPhoto: !!preservedData.pending_photo_file_id },
         "Goals confirmed"
       );
     } else if (parsed.type === "tz") {
@@ -391,9 +545,9 @@ export async function handleOnboardingCallback(
       await ctx.answerCallbackQuery({ text: "Часовой пояс сохранён" });
 
       // Check for pending photo BEFORE clearing onboarding_data
-      const pendingPhotoFileId = onboardingData.pending_photo_file_id as
-        | string
-        | undefined;
+      const pendingPhotoFileId = onboardingData.pending_photo_file_id;
+      const pendingPhotoTimestamp = onboardingData.pending_photo_timestamp;
+      const pendingPhotoPersona = onboardingData.pending_photo_persona;
 
       // Invoke graph with timezone
       const graphState: OnboardingState = {
@@ -426,8 +580,30 @@ export async function handleOnboardingCallback(
 
       // If onboarding completed and there's a pending photo, process it
       if (result.completed && pendingPhotoFileId) {
+        // CRITICAL #3 FIX: Check if file_id has expired
+        const isExpired = pendingPhotoTimestamp
+          ? Date.now() - pendingPhotoTimestamp > FILE_ID_EXPIRATION_MS
+          : false;
+
+        if (isExpired) {
+          logger.warn(
+            { telegramUserId, pendingPhotoFileId, pendingPhotoTimestamp },
+            "Pending photo file_id has expired"
+          );
+
+          // Notify user that photo expired and ask to resend
+          await ctx.api.sendMessage(
+            chatId,
+            "✨ Отлично, теперь я знаю вас немного лучше!\n\n" +
+              "К сожалению, ваша фотография устарела пока мы знакомились. " +
+              "Пожалуйста, отправьте её ещё раз, и я сразу начну гадание! ☕",
+            { parse_mode: "HTML" }
+          );
+          return;
+        }
+
         logger.info(
-          { telegramUserId, pendingPhotoFileId },
+          { telegramUserId, pendingPhotoFileId, pendingPhotoPersona },
           "Processing pending photo after onboarding completion"
         );
 
@@ -439,8 +615,8 @@ export async function handleOnboardingCallback(
           { parse_mode: "HTML" }
         );
 
-        // Queue the pending photo for processing
-        await processPendingPhoto(telegramUserId, chatId, pendingPhotoFileId);
+        // Queue the pending photo for processing (MEDIUM #9: pass saved persona)
+        await processPendingPhoto(telegramUserId, chatId, pendingPhotoFileId, pendingPhotoPersona);
       }
     } else {
       logger.warn({ parsed }, "Unhandled callback type");
@@ -458,18 +634,29 @@ export async function handleOnboardingCallback(
 /**
  * Process a pending photo that was saved before onboarding
  * Called after onboarding completes to analyze the saved photo
+ *
+ * FIXES:
+ * - HIGH #6: Always notifies user on failure
+ * - MEDIUM #9: Uses saved persona preference from photo caption
+ *
  * @param telegramUserId - Telegram user ID
  * @param chatId - Chat ID to send messages to
  * @param fileId - Telegram file ID of the pending photo
+ * @param persona - Optional persona preference (defaults to "arina")
  */
 async function processPendingPhoto(
   telegramUserId: number,
   chatId: number,
-  fileId: string
+  fileId: string,
+  persona?: "arina" | "cassandra"
 ): Promise<void> {
-  try {
-    const api = getBotApi();
+  const api = getBotApi();
+  let loadingMessageId: number | undefined;
 
+  // Use saved persona or default to Arina
+  const selectedPersona = persona || "arina";
+
+  try {
     // Get user profile for name
     const supabase = getSupabase();
     const { data: profile } = await supabase
@@ -483,14 +670,15 @@ async function processPendingPhoto(
       chatId,
       "🔮 Настраиваюсь на вашу энергию и всматриваюсь в узоры кофейной гущи..."
     );
+    loadingMessageId = loadingMessage.message_id;
 
-    // Prepare job data
+    // Prepare job data (MEDIUM #9: use saved persona)
     const jobData: PhotoAnalysisJobData = {
       telegramUserId,
       chatId,
       messageId: loadingMessage.message_id,
       fileId,
-      persona: "arina", // Default to Arina for new users
+      persona: selectedPersona,
       language: "ru",
       userName: profile?.name || undefined,
     };
@@ -516,9 +704,33 @@ async function processPendingPhoto(
       "Pending photo analysis job queued successfully"
     );
   } catch (error) {
+    // HIGH #6 FIX: Always notify user on failure
     logger.error(
       { error, telegramUserId, fileId },
       "Failed to process pending photo"
     );
+
+    try {
+      // Try to update loading message if it exists
+      if (loadingMessageId) {
+        await api.editMessageText(
+          chatId,
+          loadingMessageId,
+          "❌ Произошла ошибка при обработке фотографии. Пожалуйста, отправьте её ещё раз."
+        );
+      } else {
+        // Otherwise send new message
+        await api.sendMessage(
+          chatId,
+          "❌ Произошла ошибка при обработке фотографии. Пожалуйста, отправьте её ещё раз."
+        );
+      }
+    } catch (notifyError) {
+      // Log but don't throw - user notification is best-effort
+      logger.error(
+        { error: notifyError, telegramUserId },
+        "Failed to notify user about photo processing error"
+      );
+    }
   }
 }

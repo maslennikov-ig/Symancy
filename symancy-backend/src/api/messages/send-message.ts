@@ -17,6 +17,56 @@ import { getLogger } from '../../core/logger.js';
 const logger = getLogger().child({ module: 'messages' });
 
 /**
+ * Maximum message length (matches Telegram limit)
+ */
+const MAX_MESSAGE_LENGTH = 4000;
+
+/**
+ * UUID validation regex (RFC 4122 compliant)
+ */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Validate UUID format
+ * Prevents SQL injection by ensuring input is a valid UUID
+ *
+ * @param value - String to validate
+ * @returns True if valid UUID format
+ */
+function isValidUUID(value: string): boolean {
+  return UUID_REGEX.test(value);
+}
+
+/**
+ * Sanitize metadata fields
+ * Only allows whitelisted keys with validated values
+ *
+ * @param metadata - Raw metadata object
+ * @returns Sanitized metadata
+ */
+function sanitizeMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {};
+  const allowedKeys = ['temp_id', 'telegram_message_id', 'telegram_chat_id'];
+
+  for (const key of allowedKeys) {
+    if (key in metadata) {
+      const value = metadata[key];
+
+      if (typeof value === 'string') {
+        // Remove control characters and limit length
+        sanitized[key] = value
+          .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+          .slice(0, 255);
+      } else if (typeof value === 'number' && Number.isFinite(value)) {
+        sanitized[key] = value;
+      }
+    }
+  }
+
+  return sanitized;
+}
+
+/**
  * Sanitize message content
  * - Remove control characters (null bytes, etc.)
  * - Normalize excessive whitespace
@@ -231,8 +281,20 @@ export async function sendMessageHandler(
   // Extract token (remove "Bearer " prefix)
   const token = authHeader.slice(7);
 
-  // Verify JWT token
-  const payload = verifyToken(token);
+  // CRITICAL-2 FIX: Verify JWT token with exception handling
+  let payload;
+  try {
+    payload = verifyToken(token);
+  } catch (error) {
+    logger.warn(
+      { error: error instanceof Error ? error.message : 'Unknown error' },
+      'JWT verification failed with exception'
+    );
+    return reply.status(401).send({
+      error: 'UNAUTHORIZED',
+      message: 'Invalid or expired token',
+    });
+  }
 
   if (!payload) {
     return reply.status(401).send({
@@ -255,6 +317,18 @@ export async function sendMessageHandler(
     });
   }
 
+  // MED-8 FIX: Add maximum length validation
+  if (sanitizedContent.length > MAX_MESSAGE_LENGTH) {
+    logger.warn(
+      { unifiedUserId, length: sanitizedContent.length },
+      'Message content too long'
+    );
+    return reply.status(400).send({
+      error: 'INVALID_REQUEST',
+      message: `Message too long. Maximum ${MAX_MESSAGE_LENGTH} characters.`,
+    });
+  }
+
   logger.info(
     { unifiedUserId, interfaceType, contentLength: sanitizedContent.length },
     'Processing send message request'
@@ -267,11 +341,24 @@ export async function sendMessageHandler(
     let conversationId: string;
 
     if (body.conversation_id) {
+      // CRITICAL-1 FIX: Validate UUID format BEFORE database query
+      // This prevents SQL injection by ensuring input is a valid UUID
+      if (!isValidUUID(body.conversation_id)) {
+        logger.warn(
+          { unifiedUserId, conversationId: body.conversation_id },
+          'Invalid conversation ID format'
+        );
+        return reply.status(400).send({
+          error: 'INVALID_REQUEST',
+          message: 'Invalid conversation ID format',
+        });
+      }
+
       // Use provided conversation ID (validate it belongs to user)
       const { data: conv, error: convError } = await supabase
         .from('conversations')
         .select('id')
-        .eq('id', body.conversation_id)
+        .eq('id', body.conversation_id)  // Safe: UUID validated above
         .eq('unified_user_id', unifiedUserId)
         .single();
 
@@ -298,6 +385,10 @@ export async function sendMessageHandler(
       });
     }
 
+    // HIGH-8 FIX: Sanitize metadata before insert
+    const rawMetadata = temp_id ? { temp_id } : {};
+    const sanitizedMetadata = sanitizeMetadata(rawMetadata);
+
     // Insert user message into messages table
     const { data: message, error: messageError } = await supabase
       .from('messages')
@@ -308,7 +399,7 @@ export async function sendMessageHandler(
         role: 'user',
         content: sanitizedContent,  // Use sanitized content
         content_type,
-        metadata: temp_id ? { temp_id } : {},
+        metadata: sanitizedMetadata,  // HIGH-8: Use sanitized metadata
         processing_status: 'pending',
       })
       .select('id')
@@ -358,10 +449,19 @@ export async function sendMessageHandler(
 /**
  * Register the send message route with Fastify
  *
- * Registers POST /api/messages endpoint.
+ * Registers POST /api/messages endpoint with stricter rate limiting.
  *
  * @param fastify - Fastify instance
  */
 export function registerSendMessageRoute(fastify: FastifyInstance) {
-  fastify.post('/api/messages', sendMessageHandler);
+  // HIGH-3 FIX: Add stricter rate limiting for message sending
+  // More restrictive than global limit since this triggers LLM calls
+  fastify.post('/api/messages', {
+    config: {
+      rateLimit: {
+        max: 20,  // 20 messages per minute per user
+        timeWindow: '1 minute',
+      },
+    },
+  }, sendMessageHandler);
 }

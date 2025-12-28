@@ -1,4 +1,5 @@
 import React from 'react';
+import DOMPurify from 'dompurify';
 import type { Message } from '../../../types/omnichannel';
 import { ChannelIndicator } from './ChannelIndicator';
 import { translations } from '../../../lib/i18n';
@@ -37,7 +38,21 @@ export function MessageBubble({ message, showChannelIndicator = false, t }: Mess
     return `${hours}:${minutes}`;
   };
 
+  // Security: HIGH-4 FIX - HTML escape function to prevent XSS attacks
+  const escapeHtml = (text: string): string => {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  };
+
   const renderTextContent = (text: string): React.ReactNode => {
+    // Security: HIGH-4 FIX - Sanitize content to prevent XSS attacks
+    // DOMPurify removes all HTML tags and dangerous content, leaving only plain text
+    const sanitized = DOMPurify.sanitize(text, {
+      ALLOWED_TAGS: [], // No HTML tags allowed
+      ALLOWED_ATTR: [], // No attributes allowed
+    });
+
     // Basic markdown support: **bold**, *italic*
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
@@ -47,25 +62,25 @@ export function MessageBubble({ message, showChannelIndicator = false, t }: Mess
     const regex = /(\*\*(.+?)\*\*|\*(.+?)\*)/g;
     let match;
 
-    while ((match = regex.exec(text)) !== null) {
-      // Add text before match
+    while ((match = regex.exec(sanitized)) !== null) {
+      // Add text before match (escaped to prevent XSS)
       if (match.index > lastIndex) {
-        parts.push(text.substring(lastIndex, match.index));
+        parts.push(escapeHtml(sanitized.substring(lastIndex, match.index)));
       }
 
-      // Add formatted text
+      // Add formatted text (escaped to prevent XSS)
       if (match[2]) {
         // **bold**
         parts.push(
           <strong key={`bold-${key++}`} style={{ fontWeight: 700 }}>
-            {match[2]}
+            {escapeHtml(match[2])}
           </strong>
         );
       } else if (match[3]) {
         // *italic*
         parts.push(
           <em key={`italic-${key++}`} style={{ fontStyle: 'italic' }}>
-            {match[3]}
+            {escapeHtml(match[3])}
           </em>
         );
       }
@@ -73,12 +88,12 @@ export function MessageBubble({ message, showChannelIndicator = false, t }: Mess
       lastIndex = regex.lastIndex;
     }
 
-    // Add remaining text
-    if (lastIndex < text.length) {
-      parts.push(text.substring(lastIndex));
+    // Add remaining text (escaped to prevent XSS)
+    if (lastIndex < sanitized.length) {
+      parts.push(escapeHtml(sanitized.substring(lastIndex)));
     }
 
-    return parts.length > 0 ? parts : text;
+    return parts.length > 0 ? parts : escapeHtml(sanitized);
   };
 
   const renderContent = () => {

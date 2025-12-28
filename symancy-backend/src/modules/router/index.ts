@@ -48,6 +48,38 @@ async function sendOnboardingRequired(ctx: BotContext): Promise<void> {
 }
 
 /**
+ * Parse persona preference from photo caption
+ * Returns persona name if found, undefined otherwise
+ *
+ * MEDIUM #9 FIX: Save persona from caption
+ */
+function parsePersonaFromCaption(caption: string | undefined): "arina" | "cassandra" | undefined {
+  if (!caption) return undefined;
+
+  const lowerCaption = caption.toLowerCase().trim();
+
+  // Check for Cassandra keywords
+  if (
+    lowerCaption.includes("кассандра") ||
+    lowerCaption.includes("cassandra") ||
+    lowerCaption.includes("премиум") ||
+    lowerCaption.includes("premium")
+  ) {
+    return "cassandra";
+  }
+
+  // Check for explicit Arina keywords
+  if (
+    lowerCaption.includes("арина") ||
+    lowerCaption.includes("arina")
+  ) {
+    return "arina";
+  }
+
+  return undefined;
+}
+
+/**
  * Handle photo from user who hasn't completed onboarding
  * Saves photo for later processing and starts friendly onboarding
  */
@@ -65,13 +97,17 @@ async function handlePhotoBeforeOnboarding(ctx: BotContext): Promise<void> {
   }
   const fileId = largestPhoto.file_id;
 
+  // MEDIUM #9 FIX: Parse persona from caption
+  const caption = ctx.message?.caption;
+  const persona = parsePersonaFromCaption(caption);
+
   logger.info(
-    { telegramUserId: ctx.from?.id, fileId },
+    { telegramUserId: ctx.from?.id, fileId, caption, persona },
     "New user sent photo before onboarding - saving and starting friendly onboarding"
   );
 
   // Start onboarding with pending photo (will save fileId and send friendly message)
-  await startOnboardingWithPendingPhoto(ctx, fileId);
+  await startOnboardingWithPendingPhoto(ctx, fileId, persona);
 }
 
 /**

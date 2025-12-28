@@ -408,17 +408,47 @@ export class DeliveryService {
 
   /**
    * Determine if error is transient (should retry)
+   * HIGH-7 FIX: Default to RETRY for unknown errors (fail-safe approach)
    */
   private isTransientError(error: unknown): boolean {
     const errorString = error instanceof Error ? error.message : String(error);
+    const errorCode = error instanceof Error && 'code' in error ? (error as { code?: string }).code : null;
 
-    // Check for permanent errors first
+    // Check for EXPLICIT permanent errors first
     if (PERMANENT_ERROR_PATTERNS.some((pattern) => pattern.test(errorString))) {
+      this.logger.debug({ errorString }, 'Classified as permanent error');
       return false;
     }
 
-    // Check for transient errors
-    return TRANSIENT_ERROR_PATTERNS.some((pattern) => pattern.test(errorString));
+    // Check for known transient errors
+    if (TRANSIENT_ERROR_PATTERNS.some((pattern) => pattern.test(errorString))) {
+      this.logger.debug({ errorString }, 'Classified as transient error');
+      return true;
+    }
+
+    // Check common network error codes
+    const transientCodes = [
+      'ECONNRESET',
+      'ETIMEDOUT',
+      'ENOTFOUND',
+      'ECONNABORTED',
+      'ECONNREFUSED',
+      'ENETUNREACH',
+      'EAI_AGAIN',
+    ];
+
+    if (errorCode && transientCodes.includes(errorCode)) {
+      this.logger.debug({ errorCode }, 'Classified as transient by error code');
+      return true;
+    }
+
+    // HIGH-7 FIX: Default to RETRY for unknown errors (fail-safe)
+    // Better to retry a non-transient error than to fail a transient one
+    this.logger.warn(
+      { errorString, errorCode },
+      'Unknown error type, defaulting to TRANSIENT (will retry)'
+    );
+    return true;
   }
 
   /**

@@ -33,6 +33,15 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
   // Maximum messages to keep in memory to prevent memory leak (Issue #12)
   const MAX_MESSAGES_IN_MEMORY = 100;
 
+  // HIGH-1: Race condition prevention flag for reconnection logic
+  const reconnectInProgressRef = useRef(false);
+
+  // HIGH-2: Set for O(1) message deduplication instead of O(n) array search
+  const seenMessageIdsRef = useRef(new Set<string>());
+
+  // HIGH-6: Mount tracking to prevent setState after unmount
+  const isMountedRef = useRef(true);
+
   /**
    * Calculate exponential backoff delay (pure utility function)
    */
@@ -108,6 +117,12 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
         },
         (payload) => {
           const newMessage = payload.new as Message;
+
+          // HIGH-2: O(1) deduplication check using Set
+          if (seenMessageIdsRef.current.has(newMessage.id)) {
+            return;
+          }
+
           setMessages((prev) => {
             // Check if this is a confirmation of an optimistic message (Issue #24)
             const optimisticIndex = prev.findIndex(
@@ -122,19 +137,25 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
               // Replace optimistic message with real one
               const updated = [...prev];
               updated[optimisticIndex] = newMessage;
+              seenMessageIdsRef.current.add(newMessage.id);
               return updated;
             }
 
-            // Check for duplicate by ID
+            // Check for duplicate by ID (fallback)
             if (prev.some((m) => m.id === newMessage.id)) {
               return prev;
             }
 
             const updated = [...prev, newMessage];
+            seenMessageIdsRef.current.add(newMessage.id);
 
             // Keep only last N messages to prevent memory leak (Issue #12)
+            // Also prune the Set to match the trimmed messages
             if (updated.length > MAX_MESSAGES_IN_MEMORY) {
-              return updated.slice(-MAX_MESSAGES_IN_MEMORY);
+              const trimmed = updated.slice(-MAX_MESSAGES_IN_MEMORY);
+              const validIds = new Set(trimmed.map((m) => m.id));
+              seenMessageIdsRef.current = validIds;
+              return trimmed;
             }
 
             return updated;
@@ -149,7 +170,8 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
           setError(null);
           reconnectAttemptsRef.current = 0;
 
-          // Clear reconnect timeout on success
+          // HIGH-1: Clear reconnect flags on successful connection
+          reconnectInProgressRef.current = false;
           if (reconnectTimeoutRef.current) {
             window.clearTimeout(reconnectTimeoutRef.current);
             reconnectTimeoutRef.current = null;
@@ -157,20 +179,22 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
         } else {
           setIsConnected(false);
 
-          // Only schedule ONE reconnect (prevent duplicate reconnects)
+          // HIGH-1: Prevent race condition in reconnection - check in-progress flag
           if (
             (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') &&
             reconnectAttemptsRef.current < maxReconnectAttempts &&
-            !reconnectTimeoutRef.current  // Prevent duplicate reconnects
+            !reconnectInProgressRef.current // Prevent duplicate reconnect attempts
           ) {
+            reconnectInProgressRef.current = true; // Set flag immediately
             const delay = getReconnectDelay();
             console.warn(
               `Connection ${status}. Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current + 1}/${maxReconnectAttempts})...`
             );
 
             reconnectTimeoutRef.current = window.setTimeout(() => {
-              reconnectTimeoutRef.current = null;  // Clear ref before subscribe
+              reconnectTimeoutRef.current = null;
               reconnectAttemptsRef.current += 1;
+              reconnectInProgressRef.current = false; // Clear flag before reconnect
               subscribe();
             }, delay);
           } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
@@ -187,6 +211,9 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
    */
   const sendMessage = useCallback(
     async (content: string, interfaceType: InterfaceType) => {
+      // HIGH-6: Check mount status before setState
+      if (!isMountedRef.current) return;
+
       // Abort previous request if still in flight (Issue #8)
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -215,7 +242,14 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
 
       setMessages((prev) => [...prev, optimisticMessage]);
 
+      // HIGH-6: Fetch timeout (30 seconds)
+      const REQUEST_TIMEOUT = 30000;
+      const timeoutId = setTimeout(() => {
+        abortController.abort();
+      }, REQUEST_TIMEOUT);
+
       try {
+        if (!isMountedRef.current) return;
         setError(null);
 
         // Determine API base URL
@@ -237,7 +271,12 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
           signal: abortController.signal, // Add abort signal (Issue #8)
         });
 
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
+          // HIGH-6: Check mount before setState
+          if (!isMountedRef.current) return;
+
           // Rollback optimistic update on error (Issue #24)
           setMessages((prev) => prev.filter((m) => m.id !== tempId));
 
@@ -246,6 +285,9 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
         }
 
         const result = await response.json();
+
+        // HIGH-6: Check mount before setState
+        if (!isMountedRef.current) return;
 
         // The realtime subscription will handle replacing with the real message
         // For now, just update the processing status and keep temp message
@@ -263,11 +305,16 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
 
         return result;
       } catch (err) {
+        clearTimeout(timeoutId);
+
         // Don't set error state if aborted (component unmounted) (Issue #8)
         if (err instanceof Error && err.name === 'AbortError') {
           console.log('Request aborted');
           return;
         }
+
+        // HIGH-6: Check mount before setState
+        if (!isMountedRef.current) return;
 
         // Rollback optimistic update on error (Issue #24)
         setMessages((prev) => prev.filter((m) => m.id !== tempId));
@@ -301,21 +348,33 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
     // Cleanup on unmount
     return () => {
       mounted = false;
+
+      // HIGH-6: Mark as unmounted to prevent setState after cleanup
+      isMountedRef.current = false;
+
       if (channelRef.current) {
         channelRef.current.unsubscribe();
         channelRef.current = null;
       }
+
+      // HIGH-1: Reset reconnect flags
       if (reconnectTimeoutRef.current) {
         window.clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
       }
+      reconnectInProgressRef.current = false;
+
       // Abort pending fetch request (Issue #8)
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
       }
+
+      // HIGH-2: Clear message ID deduplication Set
+      seenMessageIdsRef.current.clear();
     };
-  }, [loadMessages, subscribe, conversationId, customToken]);
+    // HIGH-5: Only depend on memoized functions, not their dependencies
+  }, [loadMessages, subscribe]);
 
   return {
     messages,
