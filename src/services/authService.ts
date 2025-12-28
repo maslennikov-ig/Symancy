@@ -63,6 +63,11 @@ const TOKEN_KEY = 'symancy_token';
 const TOKEN_EXPIRY_KEY = 'symancy_token_expires';
 
 /**
+ * Refresh threshold: warn when token expires within 5 minutes
+ */
+const TOKEN_REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
+
+/**
  * Store JWT token and expiration in localStorage
  *
  * @param token - JWT token to store
@@ -87,10 +92,20 @@ export function getStoredToken(): string | null {
     return null;
   }
 
+  const expiryDate = new Date(expiresAt);
+  const now = new Date();
+
   // Check if expired
-  if (new Date(expiresAt) < new Date()) {
+  if (expiryDate <= now) {
     clearToken();
     return null;
+  }
+
+  // Warn if token expires soon (for future refresh logic)
+  const timeUntilExpiry = expiryDate.getTime() - now.getTime();
+  if (timeUntilExpiry < TOKEN_REFRESH_THRESHOLD_MS) {
+    console.warn(`Token expires in ${Math.floor(timeUntilExpiry / 1000)}s. Consider refreshing.`);
+    // TODO: Implement token refresh logic when backend supports it
   }
 
   return token;

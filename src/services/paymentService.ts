@@ -27,6 +27,7 @@ interface EdgeFunctionError {
 /**
  * Creates a payment by calling the create-payment Edge Function.
  * Returns a confirmation token for the YooMoney widget.
+ * Supports both Supabase Auth and Telegram JWT authentication.
  *
  * @param productType - The type of product to purchase
  * @param returnUrl - Optional return URL after payment (defaults to current origin)
@@ -37,10 +38,18 @@ export async function createPayment(
   productType: ProductType,
   returnUrl?: string
 ): Promise<CreatePaymentResponse> {
-  // Get current session for auth header
-  const { data: { session } } = await supabase.auth.getSession();
+  // Check Telegram token first, then fall back to Supabase session
+  const telegramToken = getStoredToken();
+  let accessToken: string | null = null;
 
-  if (!session?.access_token) {
+  if (telegramToken) {
+    accessToken = telegramToken;
+  } else {
+    const { data: { session } } = await supabase.auth.getSession();
+    accessToken = session?.access_token ?? null;
+  }
+
+  if (!accessToken) {
     throw new Error('Not authenticated');
   }
 
@@ -48,7 +57,7 @@ export async function createPayment(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
+      'Authorization': `Bearer ${accessToken}`,
     },
     body: JSON.stringify({
       product_type: productType,

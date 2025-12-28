@@ -43,6 +43,7 @@ const EnvSchema = z.object({
   // Optional Settings
   LOG_LEVEL: LogLevelSchema.default("info"),
   ADMIN_CHAT_ID: z.coerce.number().optional(),
+  FRONTEND_URL: z.string().url().optional(),
 
   // Photo Storage
   PHOTO_STORAGE_PATH: z.string().default("./data/photos"),

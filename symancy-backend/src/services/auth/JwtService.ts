@@ -115,7 +115,11 @@ export function verifyToken(token: string): TelegramJwtPayload | null {
   const logger = getLogger().child({ module: 'jwt' });
 
   try {
-    return jwt.verify(token, env.SUPABASE_JWT_SECRET) as TelegramJwtPayload;
+    // SECURITY: Explicitly restrict to HS256 algorithm only
+    // This prevents algorithm confusion attacks (CVE-worthy vulnerability)
+    return jwt.verify(token, env.SUPABASE_JWT_SECRET, {
+      algorithms: ['HS256'],
+    }) as TelegramJwtPayload;
   } catch (error) {
     logger.warn({ error }, 'JWT verification failed');
     return null;

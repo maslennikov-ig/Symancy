@@ -1,10 +1,12 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://johspxgvkbrysxhilmbg.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvaHNweGd2a2JyeXN4aGlsbWJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxMTcyNjcsImV4cCI6MjA4MTY5MzI2N30.CkT-rsnbaUMveIOEYnpzUxOxZ-4LvpwHicB4xQ9L0_Y';
+// SECURITY: Credentials loaded from environment variables
+// Never hardcode credentials in source code
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Supabase URL and Anon Key must be provided.");
+    throw new Error("VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be provided in environment variables.");
 }
 
 // Default client for anonymous/Supabase Auth users

@@ -28,24 +28,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [isTelegramUser, setIsTelegramUser] = useState(false);
 
     useEffect(() => {
+        // Cancellation flag to prevent state updates after unmount
+        let cancelled = false;
+
         const initAuth = async () => {
             // Check for Telegram token first
             const telegramToken = getStoredToken();
             if (telegramToken) {
                 try {
                     const user = await getCurrentUser(telegramToken);
+                    if (cancelled) return;
+
                     setUnifiedUser(user);
                     setIsTelegramUser(true);
+
+                    // Clean up any existing Supabase session to prevent dual-session state
+                    const { data: { session: existingSession } } = await supabase.auth.getSession();
+                    if (existingSession && !cancelled) {
+                        await supabase.auth.signOut();
+                    }
+
                     setLoading(false);
                     return;
                 } catch (error) {
+                    if (cancelled) return;
                     console.error('Telegram token validation failed:', error);
                     clearToken();
                 }
             }
 
+            if (cancelled) return;
+
             // Fall back to Supabase session
             const { data: { session } } = await supabase.auth.getSession();
+            if (cancelled) return;
+
             setSession(session);
             setUser(session?.user ?? null);
             setLoading(false);
@@ -53,18 +70,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         initAuth();
 
+        // Store isTelegramUser in a ref-like variable for the callback
+        let isTelegramUserRef = false;
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (cancelled) return;
             // Only update if not a Telegram user
-            if (!isTelegramUser) {
+            if (!isTelegramUserRef) {
                 setSession(session);
                 setUser(session?.user ?? null);
             }
         });
 
+        // Update the ref when isTelegramUser changes
+        isTelegramUserRef = isTelegramUser;
+
         return () => {
+            cancelled = true;
             subscription.unsubscribe();
         };
-    }, [isTelegramUser]);
+    }, []); // Empty dependency array - run only once on mount
 
     const signIn = async (email: string) => {
         const { error } = await supabase.auth.signInWithOtp({ 

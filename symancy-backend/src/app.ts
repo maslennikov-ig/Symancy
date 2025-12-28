@@ -3,6 +3,8 @@
  * Initializes Fastify server, Telegram bot, and pg-boss queue
  */
 import Fastify from "fastify";
+import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import { access, mkdir } from "fs/promises";
 import { constants } from "fs";
 import { getEnv, isApiMode, isWorkerMode } from "./config/env.js";
@@ -49,6 +51,57 @@ async function startApi() {
   const fastify = Fastify({
     logger: false, // We use our own Pino logger
   });
+
+  // SECURITY: Configure CORS for frontend origins
+  await fastify.register(cors, {
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        'http://localhost:5173',      // Vite dev server
+        'http://localhost:4173',      // Vite preview
+        'https://symancy.ru',         // Production
+        'https://www.symancy.ru',     // Production with www
+        env.FRONTEND_URL              // Configurable via env
+      ].filter(Boolean);
+
+      // Allow requests with no origin (e.g., mobile apps, server-to-server)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        logger.warn({ origin }, 'CORS request from unauthorized origin');
+        callback(new Error('Not allowed by CORS'), false);
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+  logger.info("CORS configured");
+
+  // SECURITY: Configure rate limiting to prevent abuse
+  await fastify.register(rateLimit, {
+    global: true,
+    max: 100,                          // 100 requests per minute globally
+    timeWindow: '1 minute',
+    cache: 10000,                      // Cache size for rate limiting
+    allowList: ['127.0.0.1'],          // Whitelist localhost for testing
+    errorResponseBuilder: (request, context) => {
+      logger.warn({
+        ip: request.ip,
+        url: request.url,
+        max: context.max,
+        after: context.after,
+        banned: context.ban,
+      }, 'Rate limit exceeded');
+      return {
+        error: 'RATE_LIMIT_EXCEEDED',
+        message: 'Too many requests. Please try again later.',
+        retryAfter: context.after,
+      };
+    },
+  });
+  logger.info("Rate limiting configured");
 
   // Health check endpoint with database check
   fastify.get("/health", async (_request, reply) => {

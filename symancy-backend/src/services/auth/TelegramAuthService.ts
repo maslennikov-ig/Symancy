@@ -151,11 +151,38 @@ export function verifyTelegramAuth(data: TelegramAuthData): VerificationResult {
       .update(checkString)
       .digest('hex');
 
-    // Compare hashes (timing-safe comparison)
-    const valid = crypto.timingSafeEqual(
-      Buffer.from(calculatedHash, 'hex'),
-      Buffer.from(hash, 'hex')
-    );
+    // SECURITY: Timing-safe comparison with length validation
+    // Buffer length check prevents timing side-channel via exception handling
+    let valid = false;
+    try {
+      const calculatedBuffer = Buffer.from(calculatedHash, 'hex');
+      const receivedBuffer = Buffer.from(hash, 'hex');
+
+      // Check lengths before timing-safe comparison to prevent timing leak
+      if (calculatedBuffer.length !== receivedBuffer.length) {
+        getLogger().warn({
+          userId: data.id,
+          expectedLength: calculatedBuffer.length,
+          receivedLength: receivedBuffer.length,
+        }, 'Telegram auth verification failed: hash length mismatch');
+        return {
+          valid: false,
+          reason: 'Invalid signature',
+        };
+      }
+
+      valid = crypto.timingSafeEqual(calculatedBuffer, receivedBuffer);
+    } catch (bufferError) {
+      // Catch buffer conversion errors (malformed hex)
+      getLogger().warn({
+        userId: data.id,
+        error: bufferError instanceof Error ? bufferError.message : String(bufferError),
+      }, 'Telegram auth verification failed: invalid hash format');
+      return {
+        valid: false,
+        reason: 'Invalid signature',
+      };
+    }
 
     const duration = Date.now() - startTime;
 

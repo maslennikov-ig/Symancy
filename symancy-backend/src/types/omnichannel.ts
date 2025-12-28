@@ -186,15 +186,42 @@ export type LinkToken = z.infer<typeof LinkTokenSchema>;
 
 /**
  * Telegram Login Widget Auth Data
+ *
+ * Enhanced validation with:
+ * - Maximum field lengths (prevents DoS)
+ * - Username format validation (Telegram format)
+ * - Photo URL domain validation (SSRF protection)
+ * - Hash format validation (SHA256 hex)
  */
 export const TelegramAuthDataSchema = z.object({
   id: z.number().int().positive(),
-  first_name: z.string(),
-  last_name: z.string().optional(),
-  username: z.string().optional(),
-  photo_url: z.string().url().optional(),
-  auth_date: z.number().int().positive(),
-  hash: z.string(),
+  first_name: z.string().min(1).max(64),  // Telegram's max
+  last_name: z.string().max(64).optional(),
+  username: z.string()
+    .max(32)
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username must only contain letters, numbers, and underscores')
+    .optional(),
+  photo_url: z.string()
+    .url()
+    .max(256)
+    .refine((url) => {
+      try {
+        const hostname = new URL(url).hostname;
+        return hostname.endsWith('telegram.org') || hostname.endsWith('t.me');
+      } catch {
+        return false;
+      }
+    }, 'Photo URL must be from telegram.org or t.me')
+    .optional(),
+  auth_date: z.number().int().positive()
+    .refine((date) => {
+      const now = Math.floor(Date.now() / 1000);
+      // Allow 60s clock skew for future dates
+      return date <= now + 60;
+    }, 'auth_date cannot be in the future'),
+  hash: z.string()
+    .length(64, 'Hash must be exactly 64 characters (SHA256 hex)')
+    .regex(/^[a-f0-9]+$/, 'Hash must be lowercase hex'),
 });
 
 export type TelegramAuthData = z.infer<typeof TelegramAuthDataSchema>;

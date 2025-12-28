@@ -21,7 +21,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, t }) => {
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
     const [showMore, setShowMore] = useState(false);
+    const [telegramLoading, setTelegramLoading] = useState(false);
     const { signInWithProvider, signInWithTelegram } = useAuth();
 
     const handleMagicLinkSignIn = async (e: React.FormEvent) => {
@@ -115,18 +117,33 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, t }) => {
                 <div className="mt-4 flex justify-center">
                     <TelegramLoginButton
                         onAuth={async (telegramData) => {
+                            setTelegramLoading(true);
+                            setError(null);
+                            setMessage('');
                             try {
                                 await signInWithTelegram(telegramData);
                                 onClose();
-                            } catch (error) {
-                                console.error('Telegram login error:', error);
-                                setMessage(error instanceof Error ? error.message : 'Telegram login failed');
+                            } catch (err) {
+                                console.error('Telegram login error:', err);
+                                const errorMessage = err instanceof Error
+                                    ? err.message
+                                    : t('auth.telegram.failed');
+                                setError(errorMessage);
+                            } finally {
+                                setTelegramLoading(false);
                             }
                         }}
                         size="large"
                         radius={8}
                     />
                 </div>
+
+                {/* Error message */}
+                {error && (
+                    <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm text-center">
+                        {error}
+                    </div>
+                )}
 
                 <div className="my-4 flex items-center">
                     <div className="flex-grow border-t border-border"></div>

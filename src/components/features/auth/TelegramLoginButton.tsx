@@ -148,9 +148,9 @@ export function TelegramLoginButton({
       // Remove global callback
       delete window.onTelegramAuth;
 
-      // Remove script from DOM
-      if (containerRef.current && script.parentNode === containerRef.current) {
-        containerRef.current.removeChild(script);
+      // Remove script from DOM (even if parent changed due to re-render)
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
       }
     };
   }, [handleAuth, size, radius, requestAccess]);

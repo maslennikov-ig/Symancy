@@ -19,6 +19,8 @@
     "setup:bot": "tsx scripts/setup-bot.ts"
   },
   "dependencies": {
+    "@fastify/cors": "^11.2.0",
+    "@fastify/rate-limit": "^10.3.0",
     "@grammyjs/auto-retry": "^2.0.2",
     "@grammyjs/transformer-throttler": "^1.2.1",
     "@langchain/community": "^0.3.57",
