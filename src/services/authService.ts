@@ -30,6 +30,30 @@ export async function telegramLogin(telegramData: TelegramAuthData): Promise<Aut
 }
 
 /**
+ * Authenticate with Telegram WebApp initData
+ *
+ * @param initData - Raw initData string from Telegram.WebApp.initData
+ * @returns Promise<AuthResponse> - Authentication response with user, token, and expiration
+ * @throws Error if authentication fails
+ */
+export async function webAppLogin(initData: string): Promise<AuthResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/auth/webapp`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ init_data: initData }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'WebApp login failed' }));
+    throw new Error(error.message || 'WebApp login failed');
+  }
+
+  return response.json();
+}
+
+/**
  * Get current user from stored token
  *
  * @param token - JWT token from localStorage

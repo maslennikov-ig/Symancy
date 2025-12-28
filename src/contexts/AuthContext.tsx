@@ -3,7 +3,8 @@ import React, { createContext, useState, useEffect, useContext, ReactNode } from
 import { supabase } from '../lib/supabaseClient';
 import { Session, User, Provider } from '@supabase/supabase-js';
 import type { UnifiedUser, TelegramAuthData } from '../types/omnichannel';
-import { telegramLogin, getCurrentUser, storeToken, getStoredToken, clearToken } from '../services/authService';
+import { telegramLogin, webAppLogin, getCurrentUser, storeToken, getStoredToken, clearToken } from '../services/authService';
+import { isTelegramWebApp } from '../hooks/useTelegramWebApp';
 
 interface AuthContextType {
     user: User | null;
@@ -32,7 +33,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         let cancelled = false;
 
         const initAuth = async () => {
-            // Check for Telegram token first
+            // Priority 1: Check for Telegram WebApp initData (auto-auth in Mini Apps)
+            if (isTelegramWebApp()) {
+                const initData = window.Telegram?.WebApp?.initData;
+                if (initData) {
+                    try {
+                        const response = await webAppLogin(initData);
+                        if (cancelled) return;
+
+                        storeToken(response.token, response.expires_at);
+                        setUnifiedUser(response.user);
+                        setIsTelegramUser(true);
+
+                        // Clean up any existing Supabase session
+                        const { data: { session: existingSession } } = await supabase.auth.getSession();
+                        if (existingSession && !cancelled) {
+                            await supabase.auth.signOut();
+                        }
+
+                        setLoading(false);
+                        return;
+                    } catch (error) {
+                        if (cancelled) return;
+                        console.error('WebApp auto-auth failed:', error);
+                        // Continue to other auth methods
+                    }
+                }
+            }
+
+            // Priority 2: Check for stored Telegram token
             const telegramToken = getStoredToken();
             if (telegramToken) {
                 try {
@@ -59,7 +88,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             if (cancelled) return;
 
-            // Fall back to Supabase session
+            // Priority 3: Fall back to Supabase session
             const { data: { session } } = await supabase.auth.getSession();
             if (cancelled) return;
 
