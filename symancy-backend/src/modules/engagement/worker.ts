@@ -6,22 +6,23 @@
  * 1. inactive-reminder: Users inactive for 7+ days
  * 2. weekly-checkin: Monday morning check-in
  * 3. daily-fortune: Daily fortune for users with spiritual goal
+ *
+ * Updated for Omnichannel (Phase 7):
+ * - Uses ProactiveMessageService for user queries (unified_users table)
+ * - Checks is_telegram_linked before sending (per spec US5)
+ * - Handles bot blocked errors and marks users inactive
  */
 import type { Job } from "pg-boss";
-import { getBot } from "../../core/telegram.js";
-import { getSupabase } from "../../core/database.js";
 import { getLogger } from "../../core/logger.js";
 import { registerWorker } from "../../core/queue.js";
+import { getProactiveMessageService } from "../../services/proactive/index.js";
 import {
-  findInactiveUsers,
   createInactiveReminderMessage,
 } from "./triggers/inactive.js";
 import {
-  findWeeklyCheckInUsers,
   createWeeklyCheckInMessage,
 } from "./triggers/weekly-checkin.js";
 import {
-  findDailyFortuneUsers,
   createDailyFortuneMessage,
 } from "./triggers/daily-fortune.js";
 import { cleanupExpiredPhotos } from "./triggers/photo-cleanup.js";
@@ -29,45 +30,13 @@ import { cleanupExpiredPhotos } from "./triggers/photo-cleanup.js";
 const logger = getLogger().child({ module: "engagement-worker" });
 
 /**
- * Rate limit delay between sending messages (ms)
- * Telegram limit: ~30 messages/second to different users
- * We use 100ms (10 messages/second) to be safe
- */
-const RATE_LIMIT_DELAY_MS = 100;
-
-/**
- * Sleep helper for rate limiting
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Log sent message to engagement_log table
- */
-async function logSentMessage(
-  telegramUserId: number,
-  messageType: string
-): Promise<void> {
-  const supabase = getSupabase();
-
-  const { error } = await supabase.from("engagement_log").insert({
-    telegram_user_id: telegramUserId,
-    message_type: messageType,
-  });
-
-  if (error) {
-    logger.warn(
-      { error, telegramUserId, messageType },
-      "Failed to log sent message"
-    );
-    // Don't throw - logging failure is not critical
-  }
-}
-
-/**
  * Process inactive reminder job
- * Finds inactive users and sends reminder messages
+ * Finds inactive users (from unified_users) and sends reminder messages
+ *
+ * Updated for Omnichannel: Uses ProactiveMessageService
+ * - Queries unified_users instead of profiles
+ * - Only sends to users with is_telegram_linked=true
+ * - Handles bot blocked errors
  */
 export async function processInactiveReminder(job: Job): Promise<void> {
   const jobLogger = logger.child({ jobId: job.id, type: "inactive-reminder" });
@@ -75,7 +44,8 @@ export async function processInactiveReminder(job: Job): Promise<void> {
   jobLogger.info("Starting inactive reminder processing");
 
   try {
-    const users = await findInactiveUsers();
+    const proactiveService = getProactiveMessageService();
+    const users = await proactiveService.findInactiveUsers();
 
     if (users.length === 0) {
       jobLogger.info("No inactive users to remind");
@@ -84,38 +54,20 @@ export async function processInactiveReminder(job: Job): Promise<void> {
 
     jobLogger.info({ count: users.length }, "Sending inactive reminders");
 
-    const bot = getBot();
-    let successCount = 0;
-    let failureCount = 0;
-
-    for (const user of users) {
-      try {
-        const message = createInactiveReminderMessage(user.name);
-
-        await bot.api.sendMessage(user.chatId, message, {
-          parse_mode: "HTML",
-        });
-
-        // Log sent message
-        await logSentMessage(user.telegramUserId, "inactive-reminder");
-
-        successCount++;
-        jobLogger.debug({ userId: user.telegramUserId }, "Sent reminder");
-
-        // Rate limiting
-        await sleep(RATE_LIMIT_DELAY_MS);
-      } catch (error) {
-        failureCount++;
-        jobLogger.warn(
-          { error, userId: user.telegramUserId },
-          "Failed to send reminder to user"
-        );
-        // Continue with other users
-      }
-    }
+    // Use batch send with rate limiting
+    const results = await proactiveService.sendBatchEngagementMessages(
+      users,
+      "inactive-reminder",
+      (user) => createInactiveReminderMessage(user.displayName)
+    );
 
     jobLogger.info(
-      { total: users.length, success: successCount, failed: failureCount },
+      {
+        total: results.total,
+        success: results.success,
+        failed: results.failed,
+        blocked: results.blocked,
+      },
       "Inactive reminder processing completed"
     );
   } catch (error) {
@@ -127,6 +79,11 @@ export async function processInactiveReminder(job: Job): Promise<void> {
 /**
  * Process weekly check-in job
  * Sends Monday morning check-in to all active users
+ *
+ * Updated for Omnichannel: Uses ProactiveMessageService
+ * - Queries unified_users instead of profiles
+ * - Only sends to users with is_telegram_linked=true
+ * - Handles bot blocked errors
  */
 export async function processWeeklyCheckIn(job: Job): Promise<void> {
   const jobLogger = logger.child({ jobId: job.id, type: "weekly-checkin" });
@@ -134,7 +91,8 @@ export async function processWeeklyCheckIn(job: Job): Promise<void> {
   jobLogger.info("Starting weekly check-in processing");
 
   try {
-    const users = await findWeeklyCheckInUsers();
+    const proactiveService = getProactiveMessageService();
+    const users = await proactiveService.findWeeklyCheckInUsers();
 
     if (users.length === 0) {
       jobLogger.info("No users for weekly check-in");
@@ -143,38 +101,20 @@ export async function processWeeklyCheckIn(job: Job): Promise<void> {
 
     jobLogger.info({ count: users.length }, "Sending weekly check-ins");
 
-    const bot = getBot();
-    let successCount = 0;
-    let failureCount = 0;
-
-    for (const user of users) {
-      try {
-        const message = createWeeklyCheckInMessage(user.name);
-
-        await bot.api.sendMessage(user.chatId, message, {
-          parse_mode: "HTML",
-        });
-
-        // Log sent message
-        await logSentMessage(user.telegramUserId, "weekly-checkin");
-
-        successCount++;
-        jobLogger.debug({ userId: user.telegramUserId }, "Sent check-in");
-
-        // Rate limiting
-        await sleep(RATE_LIMIT_DELAY_MS);
-      } catch (error) {
-        failureCount++;
-        jobLogger.warn(
-          { error, userId: user.telegramUserId },
-          "Failed to send check-in to user"
-        );
-        // Continue with other users
-      }
-    }
+    // Use batch send with rate limiting
+    const results = await proactiveService.sendBatchEngagementMessages(
+      users,
+      "weekly-checkin",
+      (user) => createWeeklyCheckInMessage(user.displayName)
+    );
 
     jobLogger.info(
-      { total: users.length, success: successCount, failed: failureCount },
+      {
+        total: results.total,
+        success: results.success,
+        failed: results.failed,
+        blocked: results.blocked,
+      },
       "Weekly check-in processing completed"
     );
   } catch (error) {
@@ -186,6 +126,11 @@ export async function processWeeklyCheckIn(job: Job): Promise<void> {
 /**
  * Process daily fortune job
  * Sends daily fortune to users with spiritual goal
+ *
+ * Updated for Omnichannel: Uses ProactiveMessageService
+ * - Queries unified_users instead of profiles
+ * - Only sends to users with is_telegram_linked=true
+ * - Handles bot blocked errors
  */
 export async function processDailyFortune(job: Job): Promise<void> {
   const jobLogger = logger.child({ jobId: job.id, type: "daily-fortune" });
@@ -193,7 +138,8 @@ export async function processDailyFortune(job: Job): Promise<void> {
   jobLogger.info("Starting daily fortune processing");
 
   try {
-    const users = await findDailyFortuneUsers();
+    const proactiveService = getProactiveMessageService();
+    const users = await proactiveService.findDailyFortuneUsers();
 
     if (users.length === 0) {
       jobLogger.info("No users for daily fortune");
@@ -202,37 +148,23 @@ export async function processDailyFortune(job: Job): Promise<void> {
 
     jobLogger.info({ count: users.length }, "Sending daily fortunes");
 
-    const bot = getBot();
-    const message = createDailyFortuneMessage(); // Same message for all users
-    let successCount = 0;
-    let failureCount = 0;
+    // Create message once (same for all users)
+    const message = createDailyFortuneMessage();
 
-    for (const user of users) {
-      try {
-        await bot.api.sendMessage(user.chatId, message, {
-          parse_mode: "HTML",
-        });
-
-        // Log sent message
-        await logSentMessage(user.telegramUserId, "daily-fortune");
-
-        successCount++;
-        jobLogger.debug({ userId: user.telegramUserId }, "Sent fortune");
-
-        // Rate limiting
-        await sleep(RATE_LIMIT_DELAY_MS);
-      } catch (error) {
-        failureCount++;
-        jobLogger.warn(
-          { error, userId: user.telegramUserId },
-          "Failed to send fortune to user"
-        );
-        // Continue with other users
-      }
-    }
+    // Use batch send with rate limiting
+    const results = await proactiveService.sendBatchEngagementMessages(
+      users,
+      "daily-fortune",
+      () => message // Same message for all
+    );
 
     jobLogger.info(
-      { total: users.length, success: successCount, failed: failureCount },
+      {
+        total: results.total,
+        success: results.success,
+        failed: results.failed,
+        blocked: results.blocked,
+      },
       "Daily fortune processing completed"
     );
   } catch (error) {

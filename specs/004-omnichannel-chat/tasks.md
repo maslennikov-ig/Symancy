@@ -302,18 +302,22 @@
 
 ### Backend Proactive Service
 
-- [ ] T050 [P] [US5] Create ProactiveMessageService in symancy-backend/src/services/proactive/ProactiveMessageService.ts
-- [ ] T051 [US5] Implement sendEngagementMessage() that checks is_telegram_linked before sending
+- [X] T050 [P] [US5] Create ProactiveMessageService in symancy-backend/src/services/proactive/ProactiveMessageService.ts
+  → Artifacts: [ProactiveMessageService.ts](symancy-backend/src/services/proactive/ProactiveMessageService.ts), [index.ts](symancy-backend/src/services/proactive/index.ts), [README.md](symancy-backend/src/services/proactive/README.md)
+- [X] T051 [US5] Implement sendEngagementMessage() that checks is_telegram_linked before sending
+  → Artifacts: (included in T050 - ProactiveMessageService.sendEngagementMessage method)
 
-### Backend Job Queue (Optional - if pg-boss not already configured for this)
+### Backend Job Queue (Updated existing workers)
 
-- [ ] T052 [US5] Create proactive message pg-boss worker in symancy-backend/src/workers/proactive-worker.ts
+- [X] T052 [US5] Update engagement workers to use ProactiveMessageService (existing pg-boss workers already exist)
+  → Artifacts: [worker.ts](symancy-backend/src/modules/engagement/worker.ts)
 
 ### Telegram Delivery with Error Handling
 
-- [ ] T053 [US5] Update DeliveryService to handle bot blocked (USER_BLOCKED_BOT) and mark user inactive in symancy-backend/src/services/delivery/DeliveryService.ts
+- [X] T053 [US5] Update DeliveryService to handle bot blocked (USER_BLOCKED_BOT) and mark user inactive in symancy-backend/src/services/delivery/DeliveryService.ts
+  → Artifacts: [DeliveryService.ts](symancy-backend/src/services/delivery/DeliveryService.ts), [ProactiveMessageService.ts](symancy-backend/src/services/proactive/ProactiveMessageService.ts)
 
-**Checkpoint**: User Story 5 complete - Proactive messaging works for Telegram users only
+**Checkpoint**: User Story 5 complete - Proactive messaging works for Telegram users only ✅
 
 ---
 
@@ -481,13 +485,13 @@ Task: "Create authService in src/services/authService.ts"
 | Phase 4+ | T040a-T040o | Code Review Fixes (15 tasks) | ✅ |
 | Phase 5 (US3) | T041-T044 | Web-only Users (4 tasks) | ✅ |
 | Phase 6 (US4) | T045-T049 | WebApp (5 tasks) | ✅ |
-| Phase 7 (US5) | T050-T053 | Proactive Messaging (4 tasks) | ⏳ |
+| Phase 7 (US5) | T050-T053 | Proactive Messaging (4 tasks) | ✅ |
 | Phase 8 (US6) | T054-T060 | Account Linking (7 tasks) | ⏳ |
 | Phase 9 | T061-T064 | Data Migration (4 tasks) | ⏳ |
 | Phase 10 | T065-T069 | Polish (5 tasks) | ⏳ |
 
 **Total**: 69 implementation tasks + 15 code review fixes + 4 planning tasks = **88 tasks**
-**Completed**: 64 tasks (Phases 1-6 + Code Review Fixes)
+**Completed**: 68 tasks (Phases 1-7 + Code Review Fixes)
 
 **Tasks per User Story**:
 - US1: 12 tasks (P1 - MVP)

@@ -85,6 +85,18 @@ const PERMANENT_ERROR_PATTERNS = [
   /Bad Request/i,
 ];
 
+/**
+ * Error patterns that indicate user blocked the bot (T053)
+ * These should trigger user status update (mark as inactive)
+ */
+const USER_BLOCKED_ERROR_PATTERNS = [
+  /bot was blocked/i,
+  /user is deactivated/i,
+  /BLOCKED_BY_USER/i,
+  /Forbidden: bot was blocked by the user/i,
+  /chat not found/i,  // Often means user deleted account or blocked
+];
+
 // =============================================================================
 // DELIVERY SERVICE
 // =============================================================================
@@ -456,6 +468,25 @@ export class DeliveryService {
    */
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  // ===========================================================================
+  // PUBLIC HELPERS (T053)
+  // ===========================================================================
+
+  /**
+   * Check if an error message indicates the user blocked the bot
+   *
+   * Per spec (US5 T053): When bot is blocked, system should:
+   * 1. Detect the error (this method)
+   * 2. Mark user as inactive (caller responsibility via ProactiveMessageService)
+   *
+   * @param errorMessage - Error message to check
+   * @returns true if error indicates user blocked the bot
+   */
+  public isUserBlockedError(errorMessage?: string): boolean {
+    if (!errorMessage) return false;
+    return USER_BLOCKED_ERROR_PATTERNS.some((pattern) => pattern.test(errorMessage));
   }
 }
 
