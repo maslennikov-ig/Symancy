@@ -6,6 +6,7 @@ import { translations, Lang, t as i18n_t } from '../lib/i18n';
 import { useAuth } from '../contexts/AuthContext';
 import { LoaderIcon } from '../components/icons/LoaderIcon';
 import { getStoredToken } from '../services/authService';
+import { TelegramLinkPrompt } from '../components/features/auth/TelegramLinkPrompt';
 
 interface ChatProps {
   language?: Lang;
@@ -29,7 +30,17 @@ const Chat: React.FC<ChatProps> = ({ language: propLanguage, t: propT }) => {
   const { user, unifiedUser, isTelegramUser } = useAuth();
 
   const language = propLanguage || 'ru';
-  const t = propT || ((key: any) => i18n_t(key, language));
+  const t = propT || ((key: keyof typeof translations.en) => i18n_t(key, language));
+
+  // Show Telegram link prompt for web-only users (not already dismissed)
+  const [showTelegramPrompt, setShowTelegramPrompt] = useState(() => {
+    // Only show for authenticated, non-Telegram users who haven't dismissed
+    const dismissed = localStorage.getItem('telegramLinkPromptDismissed') === 'true';
+    return !dismissed;
+  });
+
+  // Determine if user is a web-only user (authenticated but not via Telegram)
+  const isWebOnlyUser = user && !isTelegramUser;
 
   // Get or create conversation ID
   const [conversationId, setConversationId] = useState<string | null>(
@@ -175,6 +186,22 @@ const Chat: React.FC<ChatProps> = ({ language: propLanguage, t: propT }) => {
         </button>
         <h1 className="text-xl font-semibold text-foreground">{t('chat.title')}</h1>
       </header>
+
+      {/* Telegram Link Prompt for web-only users */}
+      {isWebOnlyUser && showTelegramPrompt && (
+        <div className="px-4 py-2 bg-accent/30">
+          <TelegramLinkPrompt
+            language={language}
+            t={t}
+            variant="inline"
+            onDismiss={() => setShowTelegramPrompt(false)}
+            onLinked={() => {
+              setShowTelegramPrompt(false);
+              // Optionally refresh to update auth state
+            }}
+          />
+        </div>
+      )}
 
       {/* Chat window - takes remaining space */}
       <div className="flex-1 overflow-hidden">
