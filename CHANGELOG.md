@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.5] - 2025-12-28
+
+### Added
+- **omnichannel**: complete Phase 3 - Telegram User with Web Access (63687cf)
+- **omnichannel**: complete Phase 2 - foundational infrastructure (30a42b1)
+- **omnichannel**: Phase 1 setup - add dependencies and env config (9d461a5)
+
+### Fixed
+- **services**: update 12 source file(s) (0903276)
+- **backend**: add missing @vitest/coverage-v8 dependency (26878b9)
+
 ## [0.5.4] - 2025-12-27
 
 ### Changed

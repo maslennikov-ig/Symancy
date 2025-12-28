@@ -2,6 +2,25 @@
 
 User-facing release notes for all versions.
 
+## v0.5.5
+
+_Released on 2025-12-28_
+
+### ✨ New Features
+
+- **omnichannel**: Complete Phase 3 - Telegram User with Web Access
+- **omnichannel**: Complete Phase 2 - foundational infrastructure
+- **omnichannel**: Phase 1 setup - add dependencies and env config
+
+### 🐛 Bug Fixes
+
+- **services**: Update 12 source file(s)
+- **backend**: Add missing @vitest/coverage-v8 dependency
+
+---
+
+_This release was automatically generated from 5 commits._
+
 ## v0.5.4
 
 _Released on 2025-12-27_
