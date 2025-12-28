@@ -2,6 +2,41 @@
 
 User-facing release notes for all versions.
 
+## v0.5.6
+
+_Released on 2025-12-28_
+
+### ✨ New Features
+
+- **symancy-backend/src/types/omnichannel.ts**: Add 1 source file(s), update 11 source file(s), +1 more
+- **omnichannel**: Phase 8 Account Linking (US6)
+- **omnichannel**: Phase 7 complete - Proactive Messaging (US5)
+- **omnichannel**: T049 WebApp menu button
+- **omnichannel**: T048 WebApp auto-authentication
+- **omnichannel**: T047 useTelegramWebApp hook
+- **omnichannel**: T046 POST /api/auth/webapp endpoint
+- **omnichannel**: T045 - Implement verifyWebAppInitData()
+- **omnichannel**: T044 - Enable chat for web-only users
+- **omnichannel**: T043 - Show TelegramLinkPrompt to web-only users
+- **omnichannel**: T042 - UnifiedUserService for web users
+- **omnichannel**: T041 - TelegramLinkPrompt component
+- **onboarding**: Save and process photo sent before onboarding
+- **omnichannel**: Phase 4 complete - T033-T040 messages API and chat page
+- **omnichannel**: Phase 4 tasks T031-T038 - messaging services and chat UI
+
+### 🐛 Bug Fixes
+
+- **omnichannel**: Remaining code review fixes (MEDIUM-2, LOW-1,2,4)
+- **omnichannel**: Code review fixes for Phase 7+8
+- **phase6**: Code review fixes for WebApp authentication
+- **Security**: Comprehensive code review fixes for Phase 4
+- **phase4**: Code review fixes - major and minor improvements
+- **webhook**: Auto-set webhook on startup, add health monitoring
+
+---
+
+_This release was automatically generated from 24 commits._
+
 ## v0.5.5
 
 _Released on 2025-12-28_

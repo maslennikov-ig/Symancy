@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.6] - 2025-12-28
+
+### Added
+- **symancy-backend/src/types/omnichannel.ts**: add 1 source file(s), update 11 source file(s), +1 more (dabbd6d)
+- **omnichannel**: Phase 8 Account Linking (US6) (4ea07a2)
+- **omnichannel**: Phase 7 complete - Proactive Messaging (US5) (339707e)
+- **omnichannel**: T049 WebApp menu button (b0ac16b)
+- **omnichannel**: T048 WebApp auto-authentication (4b8b79b)
+- **omnichannel**: T047 useTelegramWebApp hook (248c37c)
+- **omnichannel**: T046 POST /api/auth/webapp endpoint (8dc7799)
+- **omnichannel**: T045 - Implement verifyWebAppInitData() (bb6617d)
+- **omnichannel**: T044 - Enable chat for web-only users (030cba4)
+- **omnichannel**: T043 - Show TelegramLinkPrompt to web-only users (796b743)
+- **omnichannel**: T042 - UnifiedUserService for web users (7be6b38)
+- **omnichannel**: T041 - TelegramLinkPrompt component (ca24921)
+- **onboarding**: save and process photo sent before onboarding (c61b7f0)
+- **omnichannel**: Phase 4 complete - T033-T040 messages API and chat page (af80fd5)
+- **omnichannel**: Phase 4 tasks T031-T038 - messaging services and chat UI (2037c42)
+
+### Fixed
+- **omnichannel**: remaining code review fixes (MEDIUM-2, LOW-1,2,4) (0f54d4f)
+- **omnichannel**: code review fixes for Phase 7+8 (349304e)
+- **phase6**: code review fixes for WebApp authentication (d4dd92f)
+- **security**: comprehensive code review fixes for Phase 4 (6ff832a)
+- **phase4**: code review fixes - major and minor improvements (1fe84a1)
+- **webhook**: auto-set webhook on startup, add health monitoring (c52f9fb)
+
+### Other
+- Phase 8 complete - mark T054-T060 done (74c54b5)
+- Phase 6 complete - Telegram WebApp Experience (d99cc85)
+- **tasks**: add missing artifacts to Phase 4 tasks (3cf34d8)
+
 ## [0.5.5] - 2025-12-28
 
 ### Added
