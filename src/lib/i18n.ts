@@ -195,6 +195,7 @@ export const translations = {
     'chat.channel.telegram': 'via Telegram',
     'chat.channel.web': 'via Web',
     'error.title': 'Error',
+    'error.reload': 'Reload Page',
   },
   ru: {
     'header.title': 'Кофейный Психолог',
@@ -392,6 +393,7 @@ export const translations = {
     'chat.channel.telegram': 'через Telegram',
     'chat.channel.web': 'через Веб',
     'error.title': 'Ошибка',
+    'error.reload': 'Перезагрузить страницу',
   },
   zh: {
     'header.title': '咖啡心理学家',
@@ -589,6 +591,7 @@ export const translations = {
     'chat.channel.telegram': '通过 Telegram',
     'chat.channel.web': '通过网页',
     'error.title': '错误',
+    'error.reload': '重新加载页面',
   },
 };
 

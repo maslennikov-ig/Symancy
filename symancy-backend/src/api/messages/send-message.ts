@@ -17,6 +17,22 @@ import { getLogger } from '../../core/logger.js';
 const logger = getLogger().child({ module: 'messages' });
 
 /**
+ * Sanitize message content
+ * - Remove control characters (null bytes, etc.)
+ * - Normalize excessive whitespace
+ * - Trim leading/trailing whitespace
+ *
+ * @param content - Raw message content
+ * @returns Sanitized content
+ */
+function sanitizeMessageContent(content: string): string {
+  return content
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')  // Remove control chars
+    .replace(/\s+/g, ' ')  // Normalize whitespace to single space
+    .trim();
+}
+
+/**
  * Send Message request body
  *
  * Matches SendMessageRequest from OpenAPI spec
@@ -187,10 +203,18 @@ export async function sendMessageHandler(
   // Validate request body using Zod schema
   const parseResult = SendMessageRequestSchema.safeParse(body);
   if (!parseResult.success) {
+    logger.warn(
+      { errors: parseResult.error.flatten(), body },
+      'Invalid message request'
+    );
+
     return reply.status(400).send({
       error: 'INVALID_REQUEST',
       message: 'Invalid message data',
-      details: parseResult.error.flatten(),
+      // Only expose details in development
+      ...(process.env.NODE_ENV === 'development' && {
+        details: parseResult.error.flatten(),
+      }),
     });
   }
 
@@ -220,8 +244,19 @@ export async function sendMessageHandler(
   const unifiedUserId = payload.sub;
   const { content, interface: interfaceType, content_type = 'text', temp_id, persona = 'arina' } = body;
 
+  // Sanitize content
+  const sanitizedContent = sanitizeMessageContent(content);
+
+  if (sanitizedContent.length === 0) {
+    logger.warn({ unifiedUserId }, 'Message content empty after sanitization');
+    return reply.status(400).send({
+      error: 'INVALID_REQUEST',
+      message: 'Message content is empty',
+    });
+  }
+
   logger.info(
-    { unifiedUserId, interfaceType, contentLength: content.length },
+    { unifiedUserId, interfaceType, contentLength: sanitizedContent.length },
     'Processing send message request'
   );
 
@@ -271,7 +306,7 @@ export async function sendMessageHandler(
         channel: 'web',
         interface: interfaceType,
         role: 'user',
-        content,
+        content: sanitizedContent,  // Use sanitized content
         content_type,
         metadata: temp_id ? { temp_id } : {},
         processing_status: 'pending',
@@ -291,7 +326,7 @@ export async function sendMessageHandler(
       unified_user_id: unifiedUserId,
       conversation_id: conversationId,
       message_id: message.id,
-      content,
+      content: sanitizedContent,  // Use sanitized content
       persona,
       interface: interfaceType,
     });

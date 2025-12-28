@@ -11,6 +11,10 @@ import {
 } from "./keyboards.js";
 import { getSupabase } from "../../core/database.js";
 import { getLogger } from "../../core/logger.js";
+import { sendJob } from "../../core/queue.js";
+import { getBotApi } from "../../core/telegram.js";
+import type { PhotoAnalysisJobData } from "../../types/telegram.js";
+import { QUEUE_ANALYZE_PHOTO } from "../../config/constants.js";
 
 const logger = getLogger().child({ module: "onboarding:handler" });
 
@@ -39,6 +43,87 @@ export async function isInOnboarding(ctx: BotContext): Promise<boolean> {
   } catch (error) {
     logger.error({ error, telegramUserId }, "Failed to check onboarding status");
     return false;
+  }
+}
+
+/**
+ * Start onboarding flow with a pending photo
+ * Used when a new user sends a photo before completing onboarding
+ * Saves the photo and sends a friendly Arina message before starting onboarding
+ * @param ctx - Bot context
+ * @param photoFileId - Telegram file ID of the photo to process after onboarding
+ */
+export async function startOnboardingWithPendingPhoto(
+  ctx: BotContext,
+  photoFileId: string
+): Promise<void> {
+  const telegramUserId = ctx.from?.id;
+  const chatId = ctx.chat?.id;
+
+  if (!telegramUserId || !chatId) {
+    logger.warn("Missing telegramUserId or chatId in context");
+    return;
+  }
+
+  const supabase = getSupabase();
+
+  try {
+    logger.info(
+      { telegramUserId, chatId, photoFileId },
+      "Starting onboarding with pending photo"
+    );
+
+    // Send friendly Arina message acknowledging the photo
+    await ctx.reply(
+      "☕ О, вижу интересную чашку! Я с радостью расскажу, что вижу в кофейной гуще...\n\n" +
+        "Но сначала давайте познакомимся — это займёт всего минуту, " +
+        "а потом я сразу вернусь к вашей фотографии! ✨",
+      { parse_mode: "HTML" }
+    );
+
+    // Update user_states to onboarding mode with pending photo
+    await supabase.from("user_states").upsert({
+      telegram_user_id: telegramUserId,
+      onboarding_step: "welcome",
+      onboarding_data: JSON.stringify({
+        goals: [],
+        pending_photo_file_id: photoFileId,
+      }),
+      updated_at: new Date().toISOString(),
+    });
+
+    // Invoke graph with welcome step
+    const initialState: OnboardingState = {
+      telegramUserId,
+      chatId,
+      step: "welcome",
+      name: null,
+      goals: [],
+      timezone: "Europe/Moscow",
+      notificationsEnabled: true,
+      completed: false,
+      bonusCreditGranted: false,
+    };
+
+    const result = await onboardingGraph.invoke(initialState);
+
+    // Update user state with new step (keep pending photo in onboarding_data)
+    await supabase
+      .from("user_states")
+      .update({
+        onboarding_step: result.step,
+      })
+      .eq("telegram_user_id", telegramUserId);
+
+    logger.info(
+      { telegramUserId, step: result.step, photoFileId },
+      "Onboarding with pending photo started successfully"
+    );
+  } catch (error) {
+    logger.error({ error, telegramUserId, photoFileId }, "Failed to start onboarding with pending photo");
+    await ctx.reply(
+      "Произошла ошибка при начале знакомства. Попробуйте снова позже."
+    );
   }
 }
 
@@ -305,6 +390,11 @@ export async function handleOnboardingCallback(
 
       await ctx.answerCallbackQuery({ text: "Часовой пояс сохранён" });
 
+      // Check for pending photo BEFORE clearing onboarding_data
+      const pendingPhotoFileId = onboardingData.pending_photo_file_id as
+        | string
+        | undefined;
+
       // Invoke graph with timezone
       const graphState: OnboardingState = {
         telegramUserId,
@@ -330,9 +420,28 @@ export async function handleOnboardingCallback(
         .eq("telegram_user_id", telegramUserId);
 
       logger.info(
-        { telegramUserId, timezone, completed: result.completed },
+        { telegramUserId, timezone, completed: result.completed, pendingPhotoFileId },
         "Timezone selected, onboarding flow updated"
       );
+
+      // If onboarding completed and there's a pending photo, process it
+      if (result.completed && pendingPhotoFileId) {
+        logger.info(
+          { telegramUserId, pendingPhotoFileId },
+          "Processing pending photo after onboarding completion"
+        );
+
+        // Send message that we're now processing the photo
+        await ctx.api.sendMessage(
+          chatId,
+          "✨ Отлично, теперь я знаю вас немного лучше!\n\n" +
+            "А теперь давайте посмотрим на вашу фотографию... ☕",
+          { parse_mode: "HTML" }
+        );
+
+        // Queue the pending photo for processing
+        await processPendingPhoto(telegramUserId, chatId, pendingPhotoFileId);
+      }
     } else {
       logger.warn({ parsed }, "Unhandled callback type");
       await ctx.answerCallbackQuery({ text: "Неизвестная операция" });
@@ -343,5 +452,73 @@ export async function handleOnboardingCallback(
       "Failed to handle onboarding callback"
     );
     await ctx.answerCallbackQuery({ text: "Произошла ошибка" });
+  }
+}
+
+/**
+ * Process a pending photo that was saved before onboarding
+ * Called after onboarding completes to analyze the saved photo
+ * @param telegramUserId - Telegram user ID
+ * @param chatId - Chat ID to send messages to
+ * @param fileId - Telegram file ID of the pending photo
+ */
+async function processPendingPhoto(
+  telegramUserId: number,
+  chatId: number,
+  fileId: string
+): Promise<void> {
+  try {
+    const api = getBotApi();
+
+    // Get user profile for name
+    const supabase = getSupabase();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("name")
+      .eq("telegram_user_id", telegramUserId)
+      .single();
+
+    // Send loading message
+    const loadingMessage = await api.sendMessage(
+      chatId,
+      "🔮 Настраиваюсь на вашу энергию и всматриваюсь в узоры кофейной гущи..."
+    );
+
+    // Prepare job data
+    const jobData: PhotoAnalysisJobData = {
+      telegramUserId,
+      chatId,
+      messageId: loadingMessage.message_id,
+      fileId,
+      persona: "arina", // Default to Arina for new users
+      language: "ru",
+      userName: profile?.name || undefined,
+    };
+
+    // Queue the job
+    const jobId = await sendJob(QUEUE_ANALYZE_PHOTO, jobData);
+
+    if (!jobId) {
+      logger.error(
+        { telegramUserId, fileId },
+        "Failed to enqueue pending photo analysis job"
+      );
+      await api.editMessageText(
+        chatId,
+        loadingMessage.message_id,
+        "❌ Не удалось обработать фотографию. Попробуйте отправить её ещё раз."
+      );
+      return;
+    }
+
+    logger.info(
+      { jobId, telegramUserId, fileId },
+      "Pending photo analysis job queued successfully"
+    );
+  } catch (error) {
+    logger.error(
+      { error, telegramUserId, fileId },
+      "Failed to process pending photo"
+    );
   }
 }

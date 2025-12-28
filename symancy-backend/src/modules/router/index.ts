@@ -16,6 +16,7 @@ import {
 } from "./commands.js";
 import {
   startOnboarding,
+  startOnboardingWithPendingPhoto,
   handleOnboardingText,
   handleOnboardingCallback,
   isInOnboarding,
@@ -44,6 +45,33 @@ async function sendOnboardingRequired(ctx: BotContext): Promise<void> {
     "👋 Сначала давайте познакомимся! Нажмите /start чтобы начать.",
     { parse_mode: "HTML" }
   );
+}
+
+/**
+ * Handle photo from user who hasn't completed onboarding
+ * Saves photo for later processing and starts friendly onboarding
+ */
+async function handlePhotoBeforeOnboarding(ctx: BotContext): Promise<void> {
+  const photos = ctx.message?.photo;
+  if (!photos || photos.length === 0) {
+    return;
+  }
+
+  // Get the largest photo (last in array)
+  const largestPhoto = photos[photos.length - 1];
+  if (!largestPhoto) {
+    logger.warn({ telegramUserId: ctx.from?.id }, 'Photo array empty despite length check');
+    return;
+  }
+  const fileId = largestPhoto.file_id;
+
+  logger.info(
+    { telegramUserId: ctx.from?.id, fileId },
+    "New user sent photo before onboarding - saving and starting friendly onboarding"
+  );
+
+  // Start onboarding with pending photo (will save fileId and send friendly message)
+  await startOnboardingWithPendingPhoto(ctx, fileId);
 }
 
 /**
@@ -193,9 +221,9 @@ export function setupRouter(): void {
     const botCtx = ctx as BotContext;
     logger.info({ telegramUserId: ctx.from?.id }, "Received photo message");
 
-    // Block if onboarding not completed
+    // If onboarding not completed - save photo and start friendly onboarding
     if (requiresOnboarding(botCtx)) {
-      await sendOnboardingRequired(botCtx);
+      await handlePhotoBeforeOnboarding(botCtx);
       return;
     }
 

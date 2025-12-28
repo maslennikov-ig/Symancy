@@ -12,6 +12,21 @@ import type { Conversation, Persona } from '../../types/omnichannel.js';
 const logger = getLogger().child({ module: 'conversation-service' });
 
 /**
+ * UUID validation regex (RFC 4122 compliant)
+ */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Validate UUID format
+ *
+ * @param value - String to validate
+ * @returns True if valid UUID format
+ */
+function isValidUUID(value: string): boolean {
+  return UUID_REGEX.test(value);
+}
+
+/**
  * Get or create an active conversation for a unified user
  *
  * This function:
@@ -104,6 +119,12 @@ export async function getConversationById(
 ): Promise<Conversation | null> {
   const supabase = getSupabase();
 
+  // Validate UUID format before database query
+  if (!isValidUUID(conversationId)) {
+    logger.error({ conversationId }, 'Invalid conversation ID format');
+    throw new Error('Invalid conversation ID format');
+  }
+
   logger.debug({ conversationId }, 'Getting conversation by ID');
 
   const { data, error } = await supabase
@@ -136,6 +157,12 @@ export async function getConversationById(
 export async function incrementMessageCount(conversationId: string): Promise<void> {
   const supabase = getSupabase();
 
+  // Validate UUID format before RPC call
+  if (!isValidUUID(conversationId)) {
+    logger.error({ conversationId }, 'Invalid conversation ID format');
+    throw new Error('Invalid conversation ID format');
+  }
+
   logger.debug({ conversationId }, 'Incrementing message count');
 
   const { error } = await supabase.rpc('increment_conversation_message_count', {
@@ -157,6 +184,12 @@ export async function incrementMessageCount(conversationId: string): Promise<voi
  */
 export async function archiveConversation(conversationId: string): Promise<void> {
   const supabase = getSupabase();
+
+  // Validate UUID format before database update
+  if (!isValidUUID(conversationId)) {
+    logger.error({ conversationId }, 'Invalid conversation ID format');
+    throw new Error('Invalid conversation ID format');
+  }
 
   logger.debug({ conversationId }, 'Archiving conversation');
 

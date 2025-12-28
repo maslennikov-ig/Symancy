@@ -30,14 +30,14 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
   const baseReconnectDelay = 1000; // 1 second
 
   /**
-   * Calculate exponential backoff delay
+   * Calculate exponential backoff delay (pure utility function)
    */
-  const getReconnectDelay = useCallback(() => {
+  const getReconnectDelay = () => {
     return Math.min(
       baseReconnectDelay * Math.pow(2, reconnectAttemptsRef.current),
       30000 // Max 30 seconds
     );
-  }, []);
+  };
 
   /**
    * Load initial messages from database
@@ -69,16 +69,26 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
   /**
    * Subscribe to real-time updates
    */
-  const subscribe = useCallback(() => {
-    // Clean up existing channel
+  const subscribe = useCallback(async () => {
+    // Clear pending reconnect first
+    if (reconnectTimeoutRef.current) {
+      window.clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    // Unsubscribe from existing channel
     if (channelRef.current) {
-      channelRef.current.unsubscribe();
+      try {
+        channelRef.current.unsubscribe();
+      } catch (err) {
+        console.warn('Error unsubscribing:', err);
+      }
       channelRef.current = null;
     }
 
-    // Set custom auth token if provided
+    // Set auth BEFORE subscribing (await it to prevent race condition!)
     if (customToken) {
-      supabase.realtime.setAuth(customToken);
+      await supabase.realtime.setAuth(customToken);
     }
 
     // Create new channel
@@ -109,25 +119,29 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
         if (status === 'SUBSCRIBED') {
           setIsConnected(true);
           setError(null);
-          reconnectAttemptsRef.current = 0; // Reset reconnect attempts on successful connection
+          reconnectAttemptsRef.current = 0;
+
+          // Clear reconnect timeout on success
+          if (reconnectTimeoutRef.current) {
+            window.clearTimeout(reconnectTimeoutRef.current);
+            reconnectTimeoutRef.current = null;
+          }
         } else {
           setIsConnected(false);
 
-          // Handle reconnection for error states
+          // Only schedule ONE reconnect (prevent duplicate reconnects)
           if (
             (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') &&
-            reconnectAttemptsRef.current < maxReconnectAttempts
+            reconnectAttemptsRef.current < maxReconnectAttempts &&
+            !reconnectTimeoutRef.current  // Prevent duplicate reconnects
           ) {
             const delay = getReconnectDelay();
             console.warn(
               `Connection ${status}. Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current + 1}/${maxReconnectAttempts})...`
             );
 
-            if (reconnectTimeoutRef.current) {
-              window.clearTimeout(reconnectTimeoutRef.current);
-            }
-
             reconnectTimeoutRef.current = window.setTimeout(() => {
+              reconnectTimeoutRef.current = null;  // Clear ref before subscribe
               reconnectAttemptsRef.current += 1;
               subscribe();
             }, delay);
@@ -138,7 +152,7 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
       });
 
     channelRef.current = channel;
-  }, [conversationId, customToken, getReconnectDelay]);
+  }, [conversationId, customToken]);
 
   /**
    * Send a message
@@ -182,11 +196,20 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
 
   // Load messages and subscribe on mount
   useEffect(() => {
-    loadMessages();
-    subscribe();
+    let mounted = true;
+
+    const init = async () => {
+      await loadMessages();
+      if (mounted) {
+        await subscribe();
+      }
+    };
+
+    init();
 
     // Cleanup on unmount
     return () => {
+      mounted = false;
       if (channelRef.current) {
         channelRef.current.unsubscribe();
         channelRef.current = null;
@@ -196,7 +219,7 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
         reconnectTimeoutRef.current = null;
       }
     };
-  }, [loadMessages, subscribe]);
+  }, [loadMessages, subscribe, conversationId, customToken]);
 
   return {
     messages,

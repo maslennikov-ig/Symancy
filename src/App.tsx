@@ -26,6 +26,7 @@ const Chat = lazy(() => import('./pages/Chat'));
 import { MysticalBackground } from './components/features/MysticalCoffeeCupIllustration';
 import { OfficialLogo } from './components/icons/OfficialLogo';
 import { useAuth } from './contexts/AuthContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './components/ui/card';
 import { Button } from './components/ui/button';
@@ -401,7 +402,14 @@ const App: React.FC = () => {
         <Route path="/terms" element={<Terms language={language} t={t} />} />
         <Route path="/contacts" element={<Contacts language={language} t={t} />} />
         <Route path="/test-payment" element={<TestPayment />} />
-        <Route path="/chat" element={<Chat language={language} t={t} />} />
+        <Route
+          path="/chat"
+          element={
+            <ErrorBoundary language={language}>
+              <Chat language={language} t={t} />
+            </ErrorBoundary>
+          }
+        />
       </Routes>
     </Suspense>
   );
