@@ -64,33 +64,48 @@
 
 ### Database Migrations (Sequential - order matters)
 
-- [ ] T004 Create migration: unified_users table with constraints and indexes (see data-model.md)
-- [ ] T005 Create migration: conversations table with FK to unified_users
-- [ ] T006 Create migration: messages table with FK to conversations
-- [ ] T007 Create migration: message_deliveries table with FK to messages
-- [ ] T008 Create migration: link_tokens table with FK to unified_users
-- [ ] T009 Create migration: enable Realtime for messages, message_deliveries tables
-- [ ] T010 Create migration: RLS policies for all new tables
+- [X] T004 Create migration: unified_users table with constraints and indexes (see data-model.md)
+  → Artifacts: Supabase MCP migration
+- [X] T005 Create migration: conversations table with FK to unified_users
+  → Artifacts: Supabase MCP migration
+- [X] T006 Create migration: messages table with FK to conversations
+  → Artifacts: Supabase MCP migration
+- [X] T007 Create migration: message_deliveries table with FK to messages
+  → Artifacts: Supabase MCP migration
+- [X] T008 Create migration: link_tokens table with FK to unified_users
+  → Artifacts: Supabase MCP migration
+- [X] T009 Create migration: enable Realtime for messages, message_deliveries tables
+  → Artifacts: Supabase MCP migration
+- [X] T010 Create migration: RLS policies for all new tables
+  → Artifacts: Supabase MCP migration (verified existing policies)
 
 ### Database Helper Functions
 
-- [ ] T011 Create SQL function: find_or_create_user_by_telegram() in migration
-- [ ] T012 Create SQL function: link_auth_to_telegram_user() for account merging in migration
-- [ ] T013 Create SQL function: get_or_create_conversation() in migration
-- [ ] T014 Create SQL function: check_and_increment_daily_limit() in migration
+- [X] T011 Create SQL function: find_or_create_user_by_telegram() in migration
+  → Artifacts: Supabase MCP migration
+- [X] T012 Create SQL function: link_auth_to_telegram_user() for account merging in migration
+  → Artifacts: Supabase MCP migration
+- [X] T013 Create SQL function: get_or_create_conversation() in migration
+  → Artifacts: Supabase MCP migration
+- [X] T014 Create SQL function: check_and_increment_daily_limit() in migration
+  → Artifacts: Supabase MCP migration
 
 ### Shared Types (Copy to both frontend and backend)
 
-- [ ] T015 Copy contracts/types.ts to src/types/omnichannel.ts (frontend)
-- [ ] T016 Copy contracts/types.ts to symancy-backend/src/types/omnichannel.ts (backend)
+- [X] T015 Copy contracts/types.ts to src/types/omnichannel.ts (frontend)
+  → Artifacts: [omnichannel.ts](src/types/omnichannel.ts) (pure TypeScript, no Zod)
+- [X] T016 Copy contracts/types.ts to symancy-backend/src/types/omnichannel.ts (backend)
+  → Artifacts: [omnichannel.ts](symancy-backend/src/types/omnichannel.ts) (with Zod schemas)
 
 ### grammY Plugin Configuration
 
-- [ ] T017 Configure auto-retry and throttler plugins in symancy-backend/src/app.ts (update bot initialization per quickstart.md)
+- [X] T017 Configure auto-retry and throttler plugins in symancy-backend/src/core/telegram.ts (update bot initialization per quickstart.md)
+  → Artifacts: [telegram.ts](symancy-backend/src/core/telegram.ts)
 
 ### i18n Keys
 
-- [ ] T018 Add linkTelegram and chat translation keys to src/lib/i18n.ts for all 3 languages (ru, en, zh) per quickstart.md
+- [X] T018 Add linkTelegram and chat translation keys to src/lib/i18n.ts for all 3 languages (ru, en, zh) per quickstart.md
+  → Artifacts: [i18n.ts](src/lib/i18n.ts)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 

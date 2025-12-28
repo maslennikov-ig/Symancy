@@ -4,6 +4,8 @@
  */
 import { Bot, webhookCallback } from "grammy";
 import type { Api } from "grammy";
+import { autoRetry } from "@grammyjs/auto-retry";
+import { apiThrottler } from "@grammyjs/transformer-throttler";
 import { getEnv } from "../config/env.js";
 import { getLogger } from "./logger.js";
 
@@ -14,14 +16,26 @@ let _bot: Bot | null = null;
 
 /**
  * Get or create the grammY Bot instance
+ * Configured with auto-retry and throttler plugins for rate limit handling
  */
 export function getBot(): Bot {
   if (!_bot) {
     const env = getEnv();
     _bot = new Bot(env.TELEGRAM_BOT_TOKEN);
 
+    // Apply throttler first (proactive rate limiting)
+    _bot.api.config.use(apiThrottler());
+
+    // Then auto-retry (reactive fallback for 429/5xx errors)
+    _bot.api.config.use(autoRetry({
+      maxRetryAttempts: 3,
+      maxDelaySeconds: 60,
+      rethrowInternalServerErrors: false,
+      rethrowHttpErrors: false,
+    }));
+
     const logger = getLogger().child({ module: "telegram" });
-    logger.info("Bot instance created");
+    logger.info("Bot instance created with auto-retry and throttler plugins");
   }
   return _bot;
 }

@@ -177,6 +177,20 @@ export const translations = {
     'tariff.card.type.basic': 'Basic',
     'tariff.card.type.pro': 'PRO',
     'tariff.card.type.cassandra': 'Cassandra',
+    // Omnichannel Chat - Telegram Link
+    'linkTelegram.title': 'Connect Telegram',
+    'linkTelegram.description': 'Get full access to all features',
+    'linkTelegram.benefit1': 'Notifications and reminders',
+    'linkTelegram.benefit2': 'Messages even when offline',
+    'linkTelegram.benefit3': 'Shared credits across channels',
+    'linkTelegram.button': 'Login with Telegram',
+    // Omnichannel Chat - Chat UI
+    'chat.sendPlaceholder': 'Type a message...',
+    'chat.sending': 'Sending...',
+    'chat.connectionLost': 'Connection lost. Reconnecting...',
+    'chat.connectionRestored': 'Connection restored',
+    'chat.channel.telegram': 'via Telegram',
+    'chat.channel.web': 'via Web',
   },
   ru: {
     'header.title': 'Кофейный Психолог',
@@ -356,6 +370,20 @@ export const translations = {
     'tariff.card.type.basic': 'Базовый',
     'tariff.card.type.pro': 'PRO',
     'tariff.card.type.cassandra': 'Кассандра',
+    // Omnichannel Chat - Telegram Link
+    'linkTelegram.title': 'Подключите Telegram',
+    'linkTelegram.description': 'Получите полный доступ к возможностям сервиса',
+    'linkTelegram.benefit1': 'Уведомления и напоминания',
+    'linkTelegram.benefit2': 'Сообщения даже когда вы офлайн',
+    'linkTelegram.benefit3': 'Общие кредиты во всех каналах',
+    'linkTelegram.button': 'Войти через Telegram',
+    // Omnichannel Chat - Chat UI
+    'chat.sendPlaceholder': 'Напишите сообщение...',
+    'chat.sending': 'Отправка...',
+    'chat.connectionLost': 'Соединение потеряно. Переподключение...',
+    'chat.connectionRestored': 'Соединение восстановлено',
+    'chat.channel.telegram': 'через Telegram',
+    'chat.channel.web': 'через Веб',
   },
   zh: {
     'header.title': '咖啡心理学家',
@@ -535,6 +563,20 @@ export const translations = {
     'tariff.card.type.basic': '基本',
     'tariff.card.type.pro': 'PRO',
     'tariff.card.type.cassandra': '卡桑德拉',
+    // Omnichannel Chat - Telegram Link
+    'linkTelegram.title': '连接 Telegram',
+    'linkTelegram.description': '获得所有功能的完整访问权限',
+    'linkTelegram.benefit1': '通知和提醒',
+    'linkTelegram.benefit2': '离线时也能收到消息',
+    'linkTelegram.benefit3': '跨渠道共享积分',
+    'linkTelegram.button': '通过 Telegram 登录',
+    // Omnichannel Chat - Chat UI
+    'chat.sendPlaceholder': '输入消息...',
+    'chat.sending': '发送中...',
+    'chat.connectionLost': '连接丢失。正在重新连接...',
+    'chat.connectionRestored': '连接已恢复',
+    'chat.channel.telegram': '通过 Telegram',
+    'chat.channel.web': '通过网页',
   },
 };
 
