@@ -10,10 +10,48 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { verifyWebAppInitData } from '../../services/auth/TelegramAuthService.js';
 import { createTelegramUserToken } from '../../services/auth/JwtService.js';
 import { findOrCreateByTelegramId } from '../../services/user/UnifiedUserService.js';
+import { type LanguageCode } from '../../types/omnichannel.js';
 import { getLogger } from '../../core/logger.js';
 import { z } from 'zod';
 
 const logger = getLogger().child({ module: 'webapp-auth' });
+
+/**
+ * Extract language code from WebApp user data and request headers
+ *
+ * Priority:
+ * 1. Telegram WebApp user data (language_code field if present)
+ * 2. Accept-Language header from browser
+ * 3. Default to 'ru'
+ *
+ * @param webAppUser - WebApp user data from initData (may contain language_code)
+ * @param request - Fastify request (for Accept-Language header)
+ * @returns Supported language code ('ru', 'en', or 'zh')
+ */
+function extractLanguageCode(
+  webAppUser: { language_code?: string },
+  request: FastifyRequest
+): LanguageCode {
+  // 1. Try from Telegram WebApp user data
+  if (webAppUser.language_code && typeof webAppUser.language_code === 'string') {
+    const lang = webAppUser.language_code.toLowerCase().split('-')[0];
+    if (lang && ['ru', 'en', 'zh'].includes(lang)) {
+      return lang as LanguageCode;
+    }
+  }
+
+  // 2. Try from Accept-Language header
+  const acceptLanguage = request.headers['accept-language'];
+  if (acceptLanguage) {
+    const lang = acceptLanguage.split(',')[0]?.split('-')[0]?.toLowerCase();
+    if (lang && ['ru', 'en', 'zh'].includes(lang)) {
+      return lang as LanguageCode;
+    }
+  }
+
+  // 3. Default to Russian
+  return 'ru';
+}
 
 /**
  * WebApp auth request body schema
@@ -127,31 +165,45 @@ export async function webappAuthHandler(
 
   const { user: webAppUser } = verification;
 
-  // Find or create user in database
-  const displayName = [webAppUser.first_name, webAppUser.last_name]
-    .filter(Boolean)
-    .join(' ');
+  try {
+    // Find or create user in database
+    const displayName = [webAppUser.first_name, webAppUser.last_name]
+      .filter(Boolean)
+      .join(' ');
 
-  const unifiedUser = await findOrCreateByTelegramId({
-    telegramId: webAppUser.id,
-    displayName,
-    languageCode: (webAppUser.language_code as 'ru' | 'en' | 'zh') || 'ru',
-  });
+    const languageCode = extractLanguageCode(webAppUser, request);
 
-  // Create JWT token (valid for 7 days by default)
-  const { token, expiresAt } = createTelegramUserToken(unifiedUser.id, webAppUser.id);
+    const unifiedUser = await findOrCreateByTelegramId({
+      telegramId: webAppUser.id,
+      displayName,
+      languageCode,
+    });
 
-  logger.info(
-    { userId: unifiedUser.id, telegramId: webAppUser.id },
-    'WebApp login successful'
-  );
+    // Create JWT token (valid for 7 days by default)
+    const { token, expiresAt } = createTelegramUserToken(unifiedUser.id, webAppUser.id);
 
-  // Return AuthResponse
-  return reply.send({
-    user: unifiedUser,
-    token,
-    expires_at: expiresAt.toISOString(),
-  });
+    logger.info(
+      { userId: unifiedUser.id, telegramId: webAppUser.id },
+      'WebApp login successful'
+    );
+
+    // Return AuthResponse
+    return reply.send({
+      user: unifiedUser,
+      token,
+      expires_at: expiresAt.toISOString(),
+    });
+  } catch (error) {
+    logger.error({ error, telegramId: webAppUser.id }, 'WebApp login failed');
+
+    return reply.status(500).send({
+      error: 'INTERNAL_ERROR',
+      message: 'Authentication failed due to server error',
+      ...(process.env.NODE_ENV === 'development' && {
+        details: error instanceof Error ? error.message : String(error),
+      }),
+    });
+  }
 }
 
 /**

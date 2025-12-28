@@ -2,9 +2,10 @@ import React, { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router';
 import imageCompression from 'browser-image-compression';
 import ChatOnboarding from './components/features/ChatOnboarding';
-import { analyzeCoffeeCup, AnalysisResponse, UserData } from './services/analysisService';
+import { analyzeCoffeeCup, AnalysisResponse, UserData, AnalysisError } from './services/analysisService';
 import { saveAnalysis, HistoryItem } from './services/historyService';
 import { createPayment } from './services/paymentService';
+import { ErrorCodes } from './constants/errorCodes';
 import Header from './components/layout/Header';
 import ImageUploader from './components/features/analysis/ImageUploader';
 import ResultDisplay from './components/features/analysis/ResultDisplay';
@@ -152,8 +153,31 @@ const App: React.FC = () => {
 
     } catch (err) {
         console.error(err);
-        // Handle insufficient credits error from Edge Function
-        if (err instanceof Error && err.message === 'INSUFFICIENT_CREDITS') {
+
+        // Handle structured errors with error codes
+        if (err instanceof AnalysisError) {
+            switch (err.code) {
+                case ErrorCodes.INSUFFICIENT_CREDITS:
+                    setPaymentMessage(t('error.creditRequired'));
+                    setShowTariffSelector(true);
+                    break;
+                case ErrorCodes.AI_SERVICE_UNAVAILABLE:
+                    setError(t('error.aiUnavailable'));
+                    break;
+                case ErrorCodes.RATE_LIMIT_EXCEEDED:
+                    setError(t('error.rateLimitExceeded'));
+                    break;
+                case ErrorCodes.INVALID_IMAGE:
+                    setError(t('error.invalidImage'));
+                    break;
+                case ErrorCodes.UNAUTHORIZED:
+                    setError(t('error.unauthorized'));
+                    break;
+                default:
+                    setError(t('error.analyzeFailed'));
+            }
+        } else if (err instanceof Error && err.message === 'INSUFFICIENT_CREDITS') {
+            // Fallback for legacy error format
             setPaymentMessage(t('error.creditRequired'));
             setShowTariffSelector(true);
         } else {

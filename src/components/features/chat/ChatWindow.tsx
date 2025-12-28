@@ -26,10 +26,19 @@ export function ChatWindow({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive (only if user is near bottom)
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    const container = messagesContainerRef.current;
+    const endElement = messagesEndRef.current;
+
+    if (!container || !endElement) return;
+
+    // Only auto-scroll if user is near bottom (within 100px)
+    const isNearBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+
+    if (isNearBottom) {
+      endElement.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
 

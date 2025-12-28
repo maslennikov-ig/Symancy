@@ -10,10 +10,44 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { verifyTelegramAuth } from '../../services/auth/TelegramAuthService.js';
 import { createTelegramUserToken } from '../../services/auth/JwtService.js';
 import { findOrCreateByTelegramId } from '../../services/user/UnifiedUserService.js';
-import { TelegramAuthDataSchema } from '../../types/omnichannel.js';
+import { TelegramAuthDataSchema, type LanguageCode } from '../../types/omnichannel.js';
 import { getLogger } from '../../core/logger.js';
 
 const logger = getLogger().child({ module: 'auth' });
+
+/**
+ * Extract language code from auth data and request headers
+ *
+ * Priority:
+ * 1. Telegram auth data (language_code field if present)
+ * 2. Accept-Language header from browser
+ * 3. Default to 'ru'
+ *
+ * @param body - Request body (may contain language_code)
+ * @param request - Fastify request (for Accept-Language header)
+ * @returns Supported language code ('ru', 'en', or 'zh')
+ */
+function extractLanguageCode(body: { language_code?: string }, request: FastifyRequest): LanguageCode {
+  // 1. Try from Telegram auth data (Telegram Login Widget may provide this)
+  if (body.language_code && typeof body.language_code === 'string') {
+    const lang = body.language_code.toLowerCase().split('-')[0];
+    if (lang && ['ru', 'en', 'zh'].includes(lang)) {
+      return lang as LanguageCode;
+    }
+  }
+
+  // 2. Try from Accept-Language header
+  const acceptLanguage = request.headers['accept-language'];
+  if (acceptLanguage) {
+    const lang = acceptLanguage.split(',')[0]?.split('-')[0]?.toLowerCase();
+    if (lang && ['ru', 'en', 'zh'].includes(lang)) {
+      return lang as LanguageCode;
+    }
+  }
+
+  // 3. Default to Russian
+  return 'ru';
+}
 
 /**
  * Telegram Login Widget request body
@@ -31,6 +65,8 @@ interface TelegramLoginBody {
   username?: string;
   /** User's profile photo URL (optional) */
   photo_url?: string;
+  /** User's language code (optional, e.g., 'ru', 'en') */
+  language_code?: string;
   /** Unix timestamp when authentication occurred */
   auth_date: number;
   /** HMAC-SHA256 signature for verification */
@@ -121,25 +157,39 @@ export async function telegramLoginHandler(
     });
   }
 
-  // Find or create user in database
-  const displayName = [body.first_name, body.last_name].filter(Boolean).join(' ');
-  const user = await findOrCreateByTelegramId({
-    telegramId: body.id,
-    displayName,
-    languageCode: 'ru', // Default, can be updated later via user preferences
-  });
+  try {
+    // Find or create user in database
+    const displayName = [body.first_name, body.last_name].filter(Boolean).join(' ');
+    const languageCode = extractLanguageCode(body, request);
 
-  // Create JWT token (valid for 7 days by default)
-  const { token, expiresAt } = createTelegramUserToken(user.id, body.id);
+    const user = await findOrCreateByTelegramId({
+      telegramId: body.id,
+      displayName,
+      languageCode,
+    });
 
-  logger.info({ userId: user.id, telegramId: body.id }, 'Telegram login successful');
+    // Create JWT token (valid for 7 days by default)
+    const { token, expiresAt } = createTelegramUserToken(user.id, body.id);
 
-  // Return AuthResponse
-  return reply.send({
-    user,
-    token,
-    expires_at: expiresAt.toISOString(),
-  });
+    logger.info({ userId: user.id, telegramId: body.id }, 'Telegram login successful');
+
+    // Return AuthResponse
+    return reply.send({
+      user,
+      token,
+      expires_at: expiresAt.toISOString(),
+    });
+  } catch (error) {
+    logger.error({ error, telegramId: body.id }, 'Telegram login failed');
+
+    return reply.status(500).send({
+      error: 'INTERNAL_ERROR',
+      message: 'Authentication failed due to server error',
+      ...(process.env.NODE_ENV === 'development' && {
+        details: error instanceof Error ? error.message : String(error),
+      }),
+    });
+  }
 }
 
 /**

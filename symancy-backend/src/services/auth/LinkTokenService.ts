@@ -187,6 +187,26 @@ export async function validateAndConsumeLinkToken(
 
   const tokenData = data[0];
 
+  // Validate required fields before constructing UnifiedUser
+  // This prevents runtime errors if the RPC returns malformed data
+  if (
+    !tokenData.user_id ||
+    !tokenData.user_display_name ||
+    !tokenData.user_created_at
+  ) {
+    logger.error(
+      {
+        tokenData: {
+          hasUserId: !!tokenData.user_id,
+          hasDisplayName: !!tokenData.user_display_name,
+          hasCreatedAt: !!tokenData.user_created_at,
+        },
+      },
+      'RPC returned incomplete user data'
+    );
+    return { valid: false, reason: 'DATABASE_ERROR' };
+  }
+
   // Reconstruct unified user from joined data returned by the function
   const unifiedUser: UnifiedUser = {
     id: tokenData.user_id,

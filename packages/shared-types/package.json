@@ -1,0 +1,45 @@
+{
+  "name": "@symancy/shared-types",
+  "version": "0.5.6",
+  "description": "Shared TypeScript types and Zod schemas for Symancy",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/symancy/coffee.git",
+    "directory": "packages/shared-types"
+  },
+  "bugs": {
+    "url": "https://github.com/symancy/coffee/issues"
+  },
+  "homepage": "https://github.com/symancy/coffee/tree/main/packages/shared-types#readme",
+  "keywords": [
+    "symancy",
+    "types",
+    "zod",
+    "typescript",
+    "omnichannel"
+  ],
+  "dependencies": {
+    "zod": "^4.2.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "private": true
+}

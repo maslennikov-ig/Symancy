@@ -4,6 +4,27 @@ import { supabase } from '@/lib/supabaseClient';
 import type { Message, InterfaceType, RealtimeStatus } from '@/types/omnichannel';
 
 /**
+ * Development-only logger (disabled in production builds)
+ */
+const logger = {
+  error: (message: string, data?: Record<string, unknown>) => {
+    if (import.meta.env.DEV) {
+      console.error(`[useRealtimeChat] ${message}`, data);
+    }
+  },
+  warn: (message: string, data?: Record<string, unknown>) => {
+    if (import.meta.env.DEV) {
+      console.warn(`[useRealtimeChat] ${message}`, data);
+    }
+  },
+  debug: (message: string, data?: Record<string, unknown>) => {
+    if (import.meta.env.DEV) {
+      console.log(`[useRealtimeChat] ${message}`, data);
+    }
+  },
+};
+
+/**
  * Hook for real-time chat with Supabase subscription and reconnection logic
  *
  * Features:
@@ -24,7 +45,6 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
   const [error, setError] = useState<string | null>(null);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const reconnectTimeoutRef = useRef<number | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   const maxReconnectAttempts = 5;
@@ -33,8 +53,14 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
   // Maximum messages to keep in memory to prevent memory leak (Issue #12)
   const MAX_MESSAGES_IN_MEMORY = 100;
 
-  // HIGH-1: Race condition prevention flag for reconnection logic
-  const reconnectInProgressRef = useRef(false);
+  // HIGH-1: Race condition prevention - compound ref for reconnection logic
+  const reconnectRef = useRef<{
+    inProgress: boolean;
+    timeoutId: number | null;
+  }>({
+    inProgress: false,
+    timeoutId: null,
+  });
 
   // HIGH-2: Set for O(1) message deduplication instead of O(n) array search
   const seenMessageIdsRef = useRef(new Set<string>());
@@ -67,14 +93,14 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
       const { data, error: fetchError } = await query;
 
       if (fetchError) {
-        console.error('Error loading messages:', fetchError);
+        logger.error('Error loading messages', { error: fetchError });
         setError('Failed to load messages');
         return;
       }
 
       setMessages(data || []);
     } catch (err) {
-      console.error('Error loading messages:', err);
+      logger.error('Error loading messages', { error: err });
       setError(err instanceof Error ? err.message : 'Unknown error');
     }
   }, [conversationId]);
@@ -83,10 +109,10 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
    * Subscribe to real-time updates
    */
   const subscribe = useCallback(async () => {
-    // Clear pending reconnect first
-    if (reconnectTimeoutRef.current) {
-      window.clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
+    // HIGH-1: Clear any pending reconnect timeout first to prevent race conditions
+    if (reconnectRef.current.timeoutId !== null) {
+      window.clearTimeout(reconnectRef.current.timeoutId);
+      reconnectRef.current.timeoutId = null;
     }
 
     // Unsubscribe from existing channel
@@ -94,7 +120,7 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
       try {
         channelRef.current.unsubscribe();
       } catch (err) {
-        console.warn('Error unsubscribing:', err);
+        logger.warn('Error unsubscribing', { error: err });
       }
       channelRef.current = null;
     }
@@ -170,31 +196,42 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
           setError(null);
           reconnectAttemptsRef.current = 0;
 
-          // HIGH-1: Clear reconnect flags on successful connection
-          reconnectInProgressRef.current = false;
-          if (reconnectTimeoutRef.current) {
-            window.clearTimeout(reconnectTimeoutRef.current);
-            reconnectTimeoutRef.current = null;
+          // HIGH-1: Clear reconnect state on successful connection
+          if (reconnectRef.current.timeoutId !== null) {
+            window.clearTimeout(reconnectRef.current.timeoutId);
+            reconnectRef.current.timeoutId = null;
           }
+          reconnectRef.current.inProgress = false;
         } else {
           setIsConnected(false);
 
-          // HIGH-1: Prevent race condition in reconnection - check in-progress flag
+          // HIGH-1: Prevent race condition in reconnection logic
           if (
             (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') &&
             reconnectAttemptsRef.current < maxReconnectAttempts &&
-            !reconnectInProgressRef.current // Prevent duplicate reconnect attempts
+            !reconnectRef.current.inProgress // Check if reconnect already in progress
           ) {
-            reconnectInProgressRef.current = true; // Set flag immediately
-            const delay = getReconnectDelay();
-            console.warn(
-              `Connection ${status}. Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current + 1}/${maxReconnectAttempts})...`
-            );
+            // Clear any existing timeout before starting a new one
+            if (reconnectRef.current.timeoutId !== null) {
+              window.clearTimeout(reconnectRef.current.timeoutId);
+              reconnectRef.current.timeoutId = null;
+            }
 
-            reconnectTimeoutRef.current = window.setTimeout(() => {
-              reconnectTimeoutRef.current = null;
+            // Set flag immediately to prevent concurrent reconnects
+            reconnectRef.current.inProgress = true;
+
+            const delay = getReconnectDelay();
+            logger.warn('Connection error - reconnecting', {
+              status,
+              delay,
+              attempt: reconnectAttemptsRef.current + 1,
+              maxAttempts: maxReconnectAttempts,
+            });
+
+            reconnectRef.current.timeoutId = window.setTimeout(() => {
+              reconnectRef.current.timeoutId = null; // Clear timeout ID
               reconnectAttemptsRef.current += 1;
-              reconnectInProgressRef.current = false; // Clear flag before reconnect
+              reconnectRef.current.inProgress = false; // Reset flag after timeout fires
               subscribe();
             }, delay);
           } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
@@ -309,7 +346,7 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
 
         // Don't set error state if aborted (component unmounted) (Issue #8)
         if (err instanceof Error && err.name === 'AbortError') {
-          console.log('Request aborted');
+          logger.debug('Request aborted');
           return;
         }
 
@@ -357,12 +394,12 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
         channelRef.current = null;
       }
 
-      // HIGH-1: Reset reconnect flags
-      if (reconnectTimeoutRef.current) {
-        window.clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
+      // HIGH-1: Clear reconnect timeout and reset state on unmount
+      if (reconnectRef.current.timeoutId !== null) {
+        window.clearTimeout(reconnectRef.current.timeoutId);
+        reconnectRef.current.timeoutId = null;
       }
-      reconnectInProgressRef.current = false;
+      reconnectRef.current.inProgress = false;
 
       // Abort pending fetch request (Issue #8)
       if (abortControllerRef.current) {

@@ -421,6 +421,7 @@ export class DeliveryService {
   /**
    * Determine if error is transient (should retry)
    * HIGH-7 FIX: Default to RETRY for unknown errors (fail-safe approach)
+   * MEDIUM-5 FIX: Added HTTP status code classification
    */
   private isTransientError(error: unknown): boolean {
     const errorString = error instanceof Error ? error.message : String(error);
@@ -454,11 +455,33 @@ export class DeliveryService {
       return true;
     }
 
+    // MEDIUM-5 FIX: Check HTTP status codes in error messages
+    const httpStatusMatch = errorString.match(/\b([45]\d{2})\b/);
+    if (httpStatusMatch && httpStatusMatch[1]) {
+      const statusCode = parseInt(httpStatusMatch[1], 10);
+
+      // 4xx errors (except 429 rate limit) are permanent
+      if (statusCode >= 400 && statusCode < 500 && statusCode !== 429) {
+        this.logger.debug({ statusCode }, 'Classified as permanent (4xx client error)');
+        return false;
+      }
+
+      // 5xx errors and 429 are transient
+      if (statusCode >= 500 || statusCode === 429) {
+        this.logger.debug({ statusCode }, 'Classified as transient (5xx or 429)');
+        return true;
+      }
+    }
+
     // HIGH-7 FIX: Default to RETRY for unknown errors (fail-safe)
     // Better to retry a non-transient error than to fail a transient one
     this.logger.warn(
-      { errorString, errorCode },
-      'Unknown error type, defaulting to TRANSIENT (will retry)'
+      {
+        errorString: errorString.substring(0, 200), // Truncate for logging
+        errorCode,
+        classification: 'UNKNOWN_DEFAULTING_TO_TRANSIENT',
+      },
+      '⚠️  Unknown error type encountered - defaulting to TRANSIENT (will retry). Consider adding pattern to classification rules.'
     );
     return true;
   }

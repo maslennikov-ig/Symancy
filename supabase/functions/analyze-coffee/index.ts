@@ -2,6 +2,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "npm:@supabase/supabase-js@2"
 import { ARINA_SYSTEM_PROMPT, CASSANDRA_SYSTEM_PROMPT, VISION_SYSTEM_PROMPT } from "./prompts.ts"
+import { getCreditType } from "./creditMapping.ts"
 
 // CORS headers (inlined to avoid shared module issues in deployment)
 const corsHeaders = {
@@ -35,23 +36,17 @@ Deno.serve(async (req) => {
     if (userError || !user) throw new Error("Unauthorized")
 
     // 2. PARSE REQUEST
-    const { image, mimeType, userData, mode = 'psychologist', language = 'ru' } = await req.json()
-    
+    const { image, mimeType, userData, mode = 'psychologist', creditType, language = 'ru' } = await req.json()
+
     if (!image) throw new Error("Image is required")
 
     // 3. CONSUME CREDIT (Atomic Transaction)
-    // We map 'psychologist' -> 'basic' credit (usually) and 'esoteric' -> 'cassandra' credit
-    // But for MVP simplicity, let's assume specific logic or pass creditType explicitly if needed.
-    // For now, let's derive credit type from mode.
-    let creditType = 'basic'
-    if (mode === 'esoteric') creditType = 'cassandra'
-    // If the user specifically bought 'pro', they might want 'pro' analysis. 
-    // This logic might need refinement in frontend to pass exact creditType.
-    // Defaulting to basic/cassandra for now based on mode.
+    // Determine credit type from mode or explicit override
+    const resolvedCreditType = getCreditType(mode, creditType)
 
     const { data: creditResult, error: creditError } = await supabaseClient.rpc('consume_credit', {
       p_user_id: user.id,
-      p_credit_type: creditType
+      p_credit_type: resolvedCreditType
     })
 
     if (creditError || !creditResult.success) {
@@ -92,7 +87,7 @@ Deno.serve(async (req) => {
     if (!visionResponse.ok) {
         const err = await visionResponse.text()
         console.error("Vision API Error:", err)
-        console.error("AI_FAILURE_AFTER_CREDIT", { userId: user.id, creditType, error: err })
+        console.error("AI_FAILURE_AFTER_CREDIT", { userId: user.id, creditType: resolvedCreditType, error: err })
         throw new Error("AI Vision service unavailable")
     }
 
@@ -142,7 +137,7 @@ Deno.serve(async (req) => {
     if (!interpretResponse.ok) {
         const err = await interpretResponse.text()
         console.error("Interpretation API Error:", err)
-        console.error("AI_FAILURE_AFTER_CREDIT", { userId: user.id, creditType, error: err })
+        console.error("AI_FAILURE_AFTER_CREDIT", { userId: user.id, creditType: resolvedCreditType, error: err })
         throw new Error("AI Interpretation service unavailable")
     }
 
