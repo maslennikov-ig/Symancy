@@ -4,6 +4,7 @@
  */
 import { getBot } from "../../core/telegram.js";
 import { getLogger } from "../../core/logger.js";
+import { getEnv } from "../../config/env.js";
 import { loadProfile, loadUserState, checkBanned, type BotContext } from "./middleware.js";
 import { rateLimitMiddleware } from "./rate-limit.js";
 import { handlePhotoMessage } from "../photo-analysis/handler.js";
@@ -350,6 +351,23 @@ export function setupRouter(): void {
     ])
     .then(() => logger.info("Bot commands menu set"))
     .catch((err) => logger.error({ error: err }, "Failed to set bot commands"));
+
+  // Set WebApp Chat Menu Button (if WEBAPP_URL configured)
+  const env = getEnv();
+  if (env.WEBAPP_URL) {
+    bot.api
+      .setChatMenuButton({
+        menu_button: {
+          type: "web_app",
+          text: "Открыть чат",
+          web_app: {
+            url: env.WEBAPP_URL,
+          },
+        },
+      })
+      .then(() => logger.info({ url: env.WEBAPP_URL }, "WebApp menu button set"))
+      .catch((err) => logger.error({ error: err }, "Failed to set WebApp menu button"));
+  }
 
   logger.info("Router setup complete");
 }

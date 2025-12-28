@@ -287,7 +287,8 @@
 
 ### Telegram Bot WebApp Button
 
-- [ ] T049 [US4] Add WebApp button to Telegram bot menu (grammY setMyCommands or inline keyboard)
+- [X] T049 [US4] Add WebApp button to Telegram bot menu (grammY setMyCommands or inline keyboard)
+  → Artifacts: [index.ts](symancy-backend/src/modules/router/index.ts), [env.ts](symancy-backend/src/config/env.ts), [.env.example](symancy-backend/.env.example)
 
 **Checkpoint**: User Story 4 complete - WebApp opens with seamless auth from Telegram
 
