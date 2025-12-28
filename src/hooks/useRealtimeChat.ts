@@ -26,8 +26,12 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const reconnectAttemptsRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const maxReconnectAttempts = 5;
   const baseReconnectDelay = 1000; // 1 second
+
+  // Maximum messages to keep in memory to prevent memory leak (Issue #12)
+  const MAX_MESSAGES_IN_MEMORY = 100;
 
   /**
    * Calculate exponential backoff delay (pure utility function)
@@ -105,11 +109,35 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
         (payload) => {
           const newMessage = payload.new as Message;
           setMessages((prev) => {
-            // Deduplicate messages
+            // Check if this is a confirmation of an optimistic message (Issue #24)
+            const optimisticIndex = prev.findIndex(
+              (m) =>
+                m.metadata?.temp_id &&
+                newMessage.metadata?.temp_id &&
+                m.metadata.temp_id === newMessage.metadata.temp_id &&
+                m.metadata.optimistic
+            );
+
+            if (optimisticIndex !== -1) {
+              // Replace optimistic message with real one
+              const updated = [...prev];
+              updated[optimisticIndex] = newMessage;
+              return updated;
+            }
+
+            // Check for duplicate by ID
             if (prev.some((m) => m.id === newMessage.id)) {
               return prev;
             }
-            return [...prev, newMessage];
+
+            const updated = [...prev, newMessage];
+
+            // Keep only last N messages to prevent memory leak (Issue #12)
+            if (updated.length > MAX_MESSAGES_IN_MEMORY) {
+              return updated.slice(-MAX_MESSAGES_IN_MEMORY);
+            }
+
+            return updated;
           });
         }
       )
@@ -155,15 +183,43 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
   }, [conversationId, customToken]);
 
   /**
-   * Send a message
+   * Send a message with AbortController (Issue #8) and optimistic updates (Issue #24)
    */
   const sendMessage = useCallback(
     async (content: string, interfaceType: InterfaceType) => {
+      // Abort previous request if still in flight (Issue #8)
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
+      // Generate temp ID for optimistic update (Issue #24)
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Optimistic update - show message immediately (Issue #24)
+      const optimisticMessage: Message = {
+        id: tempId,
+        conversation_id: conversationId,
+        channel: 'web',
+        interface: interfaceType,
+        role: 'user',
+        content,
+        content_type: 'text',
+        reply_to_message_id: null,
+        metadata: { temp_id: tempId, optimistic: true },
+        processing_status: 'pending',
+        created_at: new Date().toISOString(),
+      };
+
+      setMessages((prev) => [...prev, optimisticMessage]);
+
       try {
         setError(null);
 
         // Determine API base URL
-        const apiUrl = import.meta.env.VITE_API_URL || '';
+        const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
         const endpoint = `${apiUrl}/api/messages`;
 
         const response = await fetch(endpoint, {
@@ -176,19 +232,54 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
             conversation_id: conversationId,
             content,
             interface: interfaceType,
+            temp_id: tempId, // Send temp_id to server for matching
           }),
+          signal: abortController.signal, // Add abort signal (Issue #8)
         });
 
         if (!response.ok) {
+          // Rollback optimistic update on error (Issue #24)
+          setMessages((prev) => prev.filter((m) => m.id !== tempId));
+
           const errorData = await response.json().catch(() => ({ error: 'Failed to send message' }));
           throw new Error(errorData.error || 'Failed to send message');
         }
 
-        return await response.json();
+        const result = await response.json();
+
+        // The realtime subscription will handle replacing with the real message
+        // For now, just update the processing status and keep temp message
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === tempId
+              ? {
+                  ...m,
+                  id: result.message_id || tempId,
+                  metadata: { ...m.metadata, optimistic: false },
+                }
+              : m
+          )
+        );
+
+        return result;
       } catch (err) {
+        // Don't set error state if aborted (component unmounted) (Issue #8)
+        if (err instanceof Error && err.name === 'AbortError') {
+          console.log('Request aborted');
+          return;
+        }
+
+        // Rollback optimistic update on error (Issue #24)
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+
         const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
         setError(errorMessage);
         throw new Error(errorMessage);
+      } finally {
+        // Clear abort controller ref after request completes
+        if (abortControllerRef.current === abortController) {
+          abortControllerRef.current = null;
+        }
       }
     },
     [conversationId, customToken]
@@ -217,6 +308,11 @@ export function useRealtimeChat(conversationId: string, customToken?: string) {
       if (reconnectTimeoutRef.current) {
         window.clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
+      }
+      // Abort pending fetch request (Issue #8)
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
     };
   }, [loadMessages, subscribe, conversationId, customToken]);

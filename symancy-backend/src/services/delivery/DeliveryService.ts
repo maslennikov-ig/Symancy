@@ -129,6 +129,11 @@ export class DeliveryService {
   ): Promise<DeliveryResult> {
     const logger = this.logger.child({ method: "deliverToTelegram", chatId });
 
+    logger.debug(
+      { contentLength: content.length, options },
+      "Starting Telegram delivery"
+    );
+
     try {
       const result = await this.retryWithBackoff(
         async () => {
@@ -154,14 +159,17 @@ export class DeliveryService {
       );
 
       logger.info(
-        { externalMessageId: result.externalMessageId },
+        { externalMessageId: result.externalMessageId, deliveredAt: result.deliveredAt },
         "Telegram message delivered successfully"
       );
 
       return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error({ error, errorMessage }, "Failed to deliver Telegram message");
+      logger.error(
+        { error, errorMessage, isPermanent: !this.isTransientError(error) },
+        "Failed to deliver Telegram message after all retries"
+      );
 
       return {
         success: false,
@@ -192,6 +200,16 @@ export class DeliveryService {
       method: "deliverToRealtime",
       conversationId,
     });
+
+    logger.debug(
+      {
+        contentLength: content.length,
+        channel,
+        interface: interface_type,
+        role: options?.role || "assistant",
+      },
+      "Starting Realtime delivery"
+    );
 
     try {
       const result = await this.retryWithBackoff(
@@ -236,14 +254,17 @@ export class DeliveryService {
       );
 
       logger.info(
-        { messageId: result.externalMessageId },
+        { messageId: result.externalMessageId, deliveredAt: result.deliveredAt },
         "Realtime message delivered successfully"
       );
 
       return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error({ error, errorMessage }, "Failed to deliver Realtime message");
+      logger.error(
+        { error, errorMessage, isPermanent: !this.isTransientError(error) },
+        "Failed to deliver Realtime message after all retries"
+      );
 
       return {
         success: false,
@@ -273,37 +294,52 @@ export class DeliveryService {
   ): Promise<DeliveryResult> {
     const logger = this.logger.child({ method: "deliver", channel, interface: interface_type });
 
-    // Route based on channel and interface
-    if (channel === "telegram" && interface_type === "bot") {
-      if (!params.chatId) {
-        const error = "chatId required for telegram/bot delivery";
-        logger.error(error);
-        return { success: false, errorMessage: error };
+    try {
+      // Route based on channel and interface
+      if (channel === "telegram" && interface_type === "bot") {
+        if (!params.chatId) {
+          const error = "chatId required for telegram/bot delivery";
+          logger.error(error);
+          return { success: false, errorMessage: error };
+        }
+
+        logger.debug({ chatId: params.chatId }, "Routing to Telegram delivery");
+        return await this.deliverToTelegram(params.chatId, params.content, params.telegramOptions);
       }
 
-      return this.deliverToTelegram(params.chatId, params.content, params.telegramOptions);
-    }
+      if (channel === "web" && (interface_type === "browser" || interface_type === "webapp")) {
+        if (!params.conversationId) {
+          const error = "conversationId required for web delivery";
+          logger.error(error);
+          return { success: false, errorMessage: error };
+        }
 
-    if (channel === "web" && (interface_type === "browser" || interface_type === "webapp")) {
-      if (!params.conversationId) {
-        const error = "conversationId required for web delivery";
-        logger.error(error);
-        return { success: false, errorMessage: error };
+        logger.debug({ conversationId: params.conversationId }, "Routing to Realtime delivery");
+        return await this.deliverToRealtime(
+          params.conversationId,
+          params.content,
+          channel,
+          interface_type,
+          params.realtimeOptions
+        );
       }
 
-      return this.deliverToRealtime(
-        params.conversationId,
-        params.content,
-        channel,
-        interface_type,
-        params.realtimeOptions
-      );
-    }
+      // Unsupported channel/interface combination
+      const error = `Unsupported delivery route: ${channel}/${interface_type}`;
+      logger.error(error);
+      return { success: false, errorMessage: error };
+    } catch (error) {
+      // Defensive catch-all for unexpected errors
+      // deliverToTelegram and deliverToRealtime should never throw,
+      // but this ensures consistent error handling
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error({ error, errorMessage }, "Unexpected error in deliver method");
 
-    // Unsupported channel/interface combination
-    const error = `Unsupported delivery route: ${channel}/${interface_type}`;
-    logger.error(error);
-    return { success: false, errorMessage: error };
+      return {
+        success: false,
+        errorMessage: `Delivery failed: ${errorMessage}`,
+      };
+    }
   }
 
   // ===========================================================================

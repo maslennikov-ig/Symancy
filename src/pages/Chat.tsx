@@ -59,7 +59,7 @@ const Chat: React.FC<ChatProps> = ({ language: propLanguage, t: propT }) => {
       setIsLoading(true);
       setError(null);
 
-      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
       const endpoint = `${apiUrl}/api/conversations`;
 
       const token = getAuthToken();

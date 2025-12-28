@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, KeyboardEvent } from 'react';
+import { useState, useEffect, useRef, KeyboardEvent } from 'react';
 import { MessageBubble } from './MessageBubble';
 import { ChannelIndicator } from './ChannelIndicator';
 import { translations, Lang } from '../../../lib/i18n';
@@ -32,6 +32,16 @@ export function ChatWindow({
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  // Inject spinner keyframes for button animation
+  useEffect(() => {
+    if (!document.getElementById('spinner-keyframes')) {
+      const style = document.createElement('style');
+      style.id = 'spinner-keyframes';
+      style.textContent = `@keyframes spin { to { transform: rotate(360deg); } }`;
+      document.head.appendChild(style);
+    }
+  }, []);
 
   const handleSend = async () => {
     if (!inputValue.trim() || isSending || !isConnected) {
@@ -157,6 +167,7 @@ export function ChatWindow({
       >
         <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
           <textarea
+            aria-label={t('chat.inputLabel')}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -180,6 +191,7 @@ export function ChatWindow({
             }}
           />
           <button
+            aria-label={t('chat.send')}
             onClick={handleSend}
             disabled={!inputValue.trim() || isSending || !isConnected}
             style={{
@@ -199,9 +211,30 @@ export function ChatWindow({
                   : 'pointer',
               transition: 'all 0.2s ease',
               minWidth: '80px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
             }}
           >
-            {isSending ? t('chat.sending') : '→'}
+            {isSending ? (
+              <>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: '14px',
+                    height: '14px',
+                    border: '2px solid transparent',
+                    borderTopColor: 'white',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                  }}
+                />
+                <span>{t('chat.sending')}</span>
+              </>
+            ) : (
+              '→'
+            )}
           </button>
         </div>
       </div>

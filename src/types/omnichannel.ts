@@ -204,6 +204,7 @@ export interface SendMessageRequest {
   content: string;
   interface: 'webapp' | 'browser';
   content_type?: ContentType;
+  /** Temporary ID for optimistic UI updates (client-generated) */
   temp_id?: string;
   persona?: Persona;
 }
@@ -235,6 +236,16 @@ export interface ImageMessageMetadata {
   image_storage_path?: string;
   /** Associated analysis ID (for coffee reading images) */
   analysis_id?: string;
+}
+
+/**
+ * Metadata structure for optimistic updates
+ */
+export interface OptimisticMessageMetadata {
+  /** Temporary ID for optimistic updates */
+  temp_id?: string;
+  /** Flag indicating if message is optimistic (not yet confirmed by server) */
+  optimistic?: boolean;
 }
 
 // =============================================================================

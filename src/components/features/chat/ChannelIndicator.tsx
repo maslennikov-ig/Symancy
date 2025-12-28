@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { translations } from '../../../lib/i18n';
 
 type ChannelType = 'telegram' | 'web' | 'whatsapp' | 'wechat';
