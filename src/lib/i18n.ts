@@ -186,12 +186,15 @@ export const translations = {
     'linkTelegram.benefit3': 'Shared credits across channels',
     'linkTelegram.button': 'Login with Telegram',
     // Omnichannel Chat - Chat UI
+    'chat.title': 'Chat',
+    'chat.loading': 'Loading chat...',
     'chat.sendPlaceholder': 'Type a message...',
     'chat.sending': 'Sending...',
     'chat.connectionLost': 'Connection lost. Reconnecting...',
     'chat.connectionRestored': 'Connection restored',
     'chat.channel.telegram': 'via Telegram',
     'chat.channel.web': 'via Web',
+    'error.title': 'Error',
   },
   ru: {
     'header.title': 'Кофейный Психолог',
@@ -380,12 +383,15 @@ export const translations = {
     'linkTelegram.benefit3': 'Общие кредиты во всех каналах',
     'linkTelegram.button': 'Войти через Telegram',
     // Omnichannel Chat - Chat UI
+    'chat.title': 'Чат',
+    'chat.loading': 'Загрузка чата...',
     'chat.sendPlaceholder': 'Напишите сообщение...',
     'chat.sending': 'Отправка...',
     'chat.connectionLost': 'Соединение потеряно. Переподключение...',
     'chat.connectionRestored': 'Соединение восстановлено',
     'chat.channel.telegram': 'через Telegram',
     'chat.channel.web': 'через Веб',
+    'error.title': 'Ошибка',
   },
   zh: {
     'header.title': '咖啡心理学家',
@@ -574,12 +580,15 @@ export const translations = {
     'linkTelegram.benefit3': '跨渠道共享积分',
     'linkTelegram.button': '通过 Telegram 登录',
     // Omnichannel Chat - Chat UI
+    'chat.title': '聊天',
+    'chat.loading': '加载聊天中...',
     'chat.sendPlaceholder': '输入消息...',
     'chat.sending': '发送中...',
     'chat.connectionLost': '连接丢失。正在重新连接...',
     'chat.connectionRestored': '连接已恢复',
     'chat.channel.telegram': '通过 Telegram',
     'chat.channel.web': '通过网页',
+    'error.title': '错误',
   },
 };
 

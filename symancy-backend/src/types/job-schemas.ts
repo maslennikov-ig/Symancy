@@ -29,6 +29,9 @@ export const ChatReplyJobSchema = z.object({
   chatId: z.number().int(),
   messageId: z.number().int().positive(),
   text: z.string().min(1).max(10000),
+  // Omnichannel fields
+  omnichannelMessageId: z.string().uuid().optional(),
+  conversationId: z.string().uuid().optional(),
 });
 
 export type ChatReplyJobData = z.infer<typeof ChatReplyJobSchema>;

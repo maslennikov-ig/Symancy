@@ -9,6 +9,8 @@ import { hasCredits } from "../credits/service.js";
 import { sendJob } from "../../core/queue.js";
 import { isMaintenanceMode } from "../config/service.js";
 import { getSupabase } from "../../core/database.js";
+import { findOrCreateByTelegramId } from "../../services/user/UnifiedUserService.js";
+import { getOrCreateConversation } from "../../services/conversation/ConversationService.js";
 import {
   QUEUE_CHAT_REPLY,
   TELEGRAM_SAFE_LIMIT,
@@ -164,6 +166,74 @@ export async function handleTextMessage(ctx: BotContext): Promise<void> {
     return;
   }
 
+  // Get or create unified user for this Telegram user
+  // Map Telegram language code to our supported languages (ru, en, zh)
+  const telegramLang = ctx.from.language_code || 'ru';
+  const supportedLang = telegramLang.startsWith('zh') ? 'zh' :
+                       telegramLang.startsWith('en') ? 'en' : 'ru';
+
+  const unifiedUser = await findOrCreateByTelegramId({
+    telegramId: ctx.from.id,
+    displayName: [ctx.from.first_name, ctx.from.last_name].filter(Boolean).join(' '),
+    languageCode: supportedLang,
+  });
+
+  logger.debug(
+    { telegramUserId, unifiedUserId: unifiedUser.id },
+    'Unified user resolved'
+  );
+
+  // Get or create active conversation for this user
+  const conversation = await getOrCreateConversation(unifiedUser.id);
+
+  logger.debug(
+    {
+      telegramUserId,
+      conversationId: conversation.id,
+      messageCount: conversation.message_count,
+    },
+    'Active conversation resolved'
+  );
+
+  // Store incoming message to messages table with omnichannel fields
+  const supabase = getSupabase();
+  const { data: storedMessage, error: messageError } = await supabase
+    .from('messages')
+    .insert({
+      conversation_id: conversation.id,
+      channel: 'telegram',
+      interface: 'bot',
+      role: 'user',
+      content: text,
+      content_type: 'text',
+      metadata: {
+        telegram_message_id: ctx.message.message_id,
+        telegram_chat_id: chatId,
+      },
+      processing_status: 'pending',
+    })
+    .select('id')
+    .single();
+
+  if (messageError) {
+    logger.error(
+      { error: messageError, telegramUserId, conversationId: conversation.id },
+      'Failed to store message'
+    );
+    await ctx.reply('❌ Не удалось сохранить сообщение. Попробуйте ещё раз.');
+    return;
+  }
+
+  logger.info(
+    {
+      telegramUserId,
+      conversationId: conversation.id,
+      messageId: storedMessage.id,
+      textLength: text.length,
+    },
+    'Message stored successfully'
+  );
+
   // Send typing action (immediate feedback)
   await ctx.replyWithChatAction("typing");
 
@@ -173,6 +243,9 @@ export async function handleTextMessage(ctx: BotContext): Promise<void> {
     chatId,
     messageId: ctx.message.message_id,
     text,
+    // Add omnichannel fields
+    omnichannelMessageId: storedMessage.id,
+    conversationId: conversation.id,
   };
 
   // Enqueue job to pg-boss

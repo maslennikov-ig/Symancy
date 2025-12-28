@@ -175,8 +175,10 @@
 
 ### Backend Message Endpoint
 
-- [ ] T033 [US2] Implement POST /api/messages endpoint in symancy-backend/src/api/messages/send-message.ts (depends on T031, T032)
-- [ ] T034 [US2] Register message routes in Fastify router symancy-backend/src/routes/index.ts
+- [X] T033 [US2] Implement POST /api/messages endpoint in symancy-backend/src/api/messages/send-message.ts (depends on T031, T032)
+  → Artifacts: [send-message.ts](symancy-backend/src/api/messages/send-message.ts)
+- [X] T034 [US2] Register message routes in Fastify router symancy-backend/src/app.ts
+  → Artifacts: [index.ts](symancy-backend/src/api/messages/index.ts), [app.ts](symancy-backend/src/app.ts)
 
 ### Frontend Chat Components
 
@@ -191,11 +193,13 @@
 
 ### Frontend Chat Page
 
-- [ ] T039 [US2] Create web chat page that uses ChatWindow and useRealtimeChat in src/pages/Chat.tsx (or integrate into existing page)
+- [X] T039 [US2] Create web chat page that uses ChatWindow and useRealtimeChat in src/pages/Chat.tsx (or integrate into existing page)
+  → Artifacts: [Chat.tsx](src/pages/Chat.tsx)
 
 ### Telegram Bot Message Handling
 
-- [ ] T040 [US2] Update Telegram bot message handler to store messages with channel='telegram', interface='bot' in symancy-backend/ (update existing message handler)
+- [X] T040 [US2] Update Telegram bot message handler to store messages with channel='telegram', interface='bot' in symancy-backend/ (update existing message handler)
+  → Artifacts: [handler.ts](symancy-backend/src/modules/chat/handler.ts), [ConversationService.ts](symancy-backend/src/services/conversation/ConversationService.ts)
 
 **Checkpoint**: User Story 2 complete - Real-time sync works between web and Telegram
 
