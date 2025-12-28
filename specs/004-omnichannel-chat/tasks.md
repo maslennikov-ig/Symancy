@@ -275,7 +275,8 @@
 
 - [X] T045 [P] [US4] Implement verifyWebAppInitData() in symancy-backend/src/services/auth/TelegramAuthService.ts (add to existing service)
   → Artifacts: [TelegramAuthService.ts](symancy-backend/src/services/auth/TelegramAuthService.ts)
-- [ ] T046 [US4] Implement POST /api/auth/webapp endpoint in symancy-backend/src/api/auth/webapp-auth.ts
+- [X] T046 [US4] Implement POST /api/auth/webapp endpoint in symancy-backend/src/api/auth/webapp-auth.ts
+  → Artifacts: [webapp-auth.ts](symancy-backend/src/api/auth/webapp-auth.ts), [index.ts](symancy-backend/src/api/auth/index.ts)
 
 ### Frontend WebApp Support
 
