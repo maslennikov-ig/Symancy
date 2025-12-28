@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef, ReactNode } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Session, User, Provider } from '@supabase/supabase-js';
 import type { UnifiedUser, TelegramAuthData } from '../types/omnichannel';
@@ -28,6 +28,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [loading, setLoading] = useState(true);
     const [isTelegramUser, setIsTelegramUser] = useState(false);
 
+    // M1 FIX: Use proper React ref to track Telegram user state in subscription callback
+    const isTelegramUserRef = useRef(false);
+
     useEffect(() => {
         // Cancellation flag to prevent state updates after unmount
         let cancelled = false;
@@ -44,6 +47,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         storeToken(response.token, response.expires_at);
                         setUnifiedUser(response.user);
                         setIsTelegramUser(true);
+                        isTelegramUserRef.current = true;  // M1 FIX: Update ref immediately
 
                         // Clean up any existing Supabase session
                         const { data: { session: existingSession } } = await supabase.auth.getSession();
@@ -65,11 +69,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const telegramToken = getStoredToken();
             if (telegramToken) {
                 try {
-                    const user = await getCurrentUser(telegramToken);
+                    const fetchedUser = await getCurrentUser(telegramToken);
                     if (cancelled) return;
 
-                    setUnifiedUser(user);
+                    setUnifiedUser(fetchedUser);
                     setIsTelegramUser(true);
+                    isTelegramUserRef.current = true;  // M1 FIX: Update ref immediately
 
                     // Clean up any existing Supabase session to prevent dual-session state
                     const { data: { session: existingSession } } = await supabase.auth.getSession();
@@ -99,26 +104,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         initAuth();
 
-        // Store isTelegramUser in a ref-like variable for the callback
-        let isTelegramUserRef = false;
-
+        // M1 FIX: Use ref.current in subscription callback to get latest value
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             if (cancelled) return;
             // Only update if not a Telegram user
-            if (!isTelegramUserRef) {
+            if (!isTelegramUserRef.current) {
                 setSession(session);
                 setUser(session?.user ?? null);
             }
         });
 
-        // Update the ref when isTelegramUser changes
-        isTelegramUserRef = isTelegramUser;
-
         return () => {
             cancelled = true;
             subscription.unsubscribe();
         };
-    }, []); // Empty dependency array - run only once on mount
+    }, []); // Empty dependency array - safe now because we use mutable ref
 
     const signIn = async (email: string) => {
         const { error } = await supabase.auth.signInWithOtp({ 
@@ -140,6 +140,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         storeToken(response.token, response.expires_at);
         setUnifiedUser(response.user);
         setIsTelegramUser(true);
+        isTelegramUserRef.current = true;  // M1 FIX: Keep ref in sync
     };
 
     const signOut = async () => {
@@ -147,6 +148,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             clearToken();
             setUnifiedUser(null);
             setIsTelegramUser(false);
+            isTelegramUserRef.current = false;  // M1 FIX: Keep ref in sync
         } else {
             const { error } = await supabase.auth.signOut();
             if (error) console.error('Error logging out:', error.message);

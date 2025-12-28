@@ -217,6 +217,14 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
       setWebApp(tg);
       setIsReady(true);
     }
+
+    // L4 FIX: Cleanup function for future-proofing
+    // Currently no-op, but prepares for future event listener cleanup
+    return () => {
+      // Future: Remove event listeners if added
+      // tg?.MainButton.offClick(someHandler);
+      // tg?.BackButton.offClick(someHandler);
+    };
   }, []);
 
   // Check if running in WebApp context
@@ -266,7 +274,7 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
     webApp?.close();
   }, [webApp]);
 
-  // Popup functions with Promise wrappers
+  // M3 FIX: Popup functions with Promise wrappers and SSR/testing safety
   const showPopup = useCallback((params: {
     title?: string;
     message: string;
@@ -281,9 +289,18 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
         webApp.showPopup(params, (buttonId) => {
           resolve(buttonId);
         });
+      } else if (typeof window !== 'undefined' && window.alert) {
+        // M3 FIX: Safe fallback for browser environment
+        try {
+          window.alert(params.message);
+          resolve('ok');
+        } catch (error) {
+          console.error('Popup fallback failed:', error);
+          resolve('ok');
+        }
       } else {
-        // Fallback to browser alert
-        window.alert(params.message);
+        // M3 FIX: Graceful fallback for SSR/testing
+        console.warn('Popup not available:', params.message);
         resolve('ok');
       }
     });
@@ -295,8 +312,18 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
         webApp.showAlert(message, () => {
           resolve();
         });
+      } else if (typeof window !== 'undefined' && window.alert) {
+        // M3 FIX: Safe fallback for browser environment
+        try {
+          window.alert(message);
+          resolve();
+        } catch (error) {
+          console.error('Alert fallback failed:', error);
+          resolve();
+        }
       } else {
-        window.alert(message);
+        // M3 FIX: Graceful fallback for SSR/testing
+        console.warn('Alert not available:', message);
         resolve();
       }
     });
@@ -308,8 +335,18 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
         webApp.showConfirm(message, (confirmed) => {
           resolve(confirmed);
         });
+      } else if (typeof window !== 'undefined' && window.confirm) {
+        // M3 FIX: Safe fallback for browser environment
+        try {
+          resolve(window.confirm(message));
+        } catch (error) {
+          console.error('Confirm fallback failed:', error);
+          resolve(false);
+        }
       } else {
-        resolve(window.confirm(message));
+        // M3 FIX: Graceful fallback for SSR/testing (default to false for safety)
+        console.warn('Confirm not available:', message);
+        resolve(false);
       }
     });
   }, [webApp]);

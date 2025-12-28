@@ -8,8 +8,28 @@
  */
 
 import crypto from 'node:crypto';
+import { z } from 'zod';
 import { getEnv } from '../../config/env.js';
 import { getLogger } from '../../core/logger.js';
+
+/**
+ * M2 FIX: Maximum allowed size for user data JSON (10KB)
+ * Prevents DoS attacks via excessively large payloads
+ */
+const MAX_USER_DATA_SIZE = 10000;
+
+/**
+ * M2 FIX: Zod schema for WebApp user data validation
+ */
+const WebAppUserSchema = z.object({
+  id: z.number(),
+  first_name: z.string(),
+  last_name: z.string().optional(),
+  username: z.string().optional(),
+  language_code: z.string().optional(),
+  is_premium: z.boolean().optional(),
+  photo_url: z.string().optional(),
+});
 
 /**
  * Telegram authentication data structure from Login Widget
@@ -43,9 +63,10 @@ export interface VerificationResult {
 }
 
 /**
- * Maximum allowed age for authentication data (24 hours in milliseconds)
+ * L1 FIX: Maximum allowed age for authentication data (24 hours in milliseconds)
+ * Uses calculated constant for readability and verifiability
  */
-const MAX_AUTH_AGE_MS = 86400000; // 24 hours
+const MAX_AUTH_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
  * Verify Telegram Login Widget authentication data
@@ -293,9 +314,10 @@ export interface WebAppVerificationResult {
 }
 
 /**
- * Maximum allowed age for WebApp authentication data (24 hours in milliseconds)
+ * L1 FIX: Reuse shared constant for WebApp auth age
+ * Same 24-hour limit as Login Widget
  */
-const MAX_WEBAPP_AUTH_AGE_MS = 86400000; // 24 hours
+const MAX_WEBAPP_AUTH_AGE_MS = MAX_AUTH_AGE_MS;
 
 /**
  * Verify Telegram WebApp initData
@@ -368,10 +390,39 @@ export function verifyWebAppInitData(initData: string): WebAppVerificationResult
     let user: WebAppUser | undefined;
     const userStr = params.get('user');
     if (userStr) {
+      // M2 FIX: Prevent DoS with size limit before parsing
+      if (userStr.length > MAX_USER_DATA_SIZE) {
+        logger.warn(
+          { userStrLength: userStr.length },
+          'WebApp auth verification failed: user data too large'
+        );
+        return { valid: false, reason: 'User data exceeds size limit' };
+      }
+
       try {
-        user = JSON.parse(decodeURIComponent(userStr)) as WebAppUser;
+        const decoded = decodeURIComponent(userStr);
+        const parsed = JSON.parse(decoded);
+
+        // M2 FIX: Validate structure with Zod schema
+        const validation = WebAppUserSchema.safeParse(parsed);
+        if (!validation.success) {
+          logger.warn(
+            { errors: validation.error.flatten() },
+            'WebApp auth verification failed: invalid user schema'
+          );
+          return { valid: false, reason: 'Invalid user data structure' };
+        }
+
+        user = validation.data;
       } catch (parseError) {
-        logger.warn({ userStr, error: parseError }, 'WebApp auth verification failed: invalid user JSON');
+        // M2 FIX: Don't log full userStr (could contain sensitive data)
+        logger.warn(
+          {
+            userStrLength: userStr.length,
+            error: parseError instanceof Error ? parseError.message : String(parseError),
+          },
+          'WebApp auth verification failed: invalid user JSON'
+        );
         return { valid: false, reason: 'Invalid user data format' };
       }
     }
