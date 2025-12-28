@@ -329,27 +329,35 @@
 
 ### Backend Link Token
 
-- [ ] T054 [P] [US6] Implement generateLinkToken() in symancy-backend/src/services/auth/LinkTokenService.ts
-- [ ] T055 [P] [US6] Implement validateAndConsumeLinkToken() in symancy-backend/src/services/auth/LinkTokenService.ts
+- [x] T054 [P] [US6] Implement generateLinkToken() in symancy-backend/src/services/auth/LinkTokenService.ts
+- [x] T055 [P] [US6] Implement validateAndConsumeLinkToken() in symancy-backend/src/services/auth/LinkTokenService.ts
 
 ### Backend Link Endpoints
 
-- [ ] T056 [US6] Implement POST /api/auth/link-token endpoint in symancy-backend/src/api/auth/link-token.ts (depends on T054)
-- [ ] T057 [US6] Implement POST /api/auth/link endpoint in symancy-backend/src/api/auth/link.ts (depends on T055)
+- [x] T056 [US6] Implement POST /api/auth/link-token endpoint in symancy-backend/src/api/auth/link-token.ts (depends on T054)
+- [x] T057 [US6] Implement POST /api/auth/link endpoint in symancy-backend/src/api/auth/link.ts (depends on T055)
 
 ### Telegram Bot /link Command
 
-- [ ] T058 [US6] Implement /link command handler in symancy-backend/src/handlers/link-command.ts
+- [x] T058 [US6] Implement /link command handler in symancy-backend/src/modules/router/commands.ts
 
 ### Frontend Link Page
 
-- [ ] T059 [US6] Create /link page that consumes token and links accounts in src/pages/Link.tsx
+- [x] T059 [US6] Create /link page that consumes token and links accounts in src/pages/Link.tsx
 
 ### Account Merge Logic
 
-- [ ] T060 [US6] Implement account merge (credits sum, history preserve) in UnifiedUserService.linkAuthToTelegram()
+- [x] T060 [US6] Implement account merge (credits sum, history preserve) in symancy-backend/src/api/auth/link.ts (inline)
 
 **Checkpoint**: User Story 6 complete - /link command enables account linking
+
+→ Artifacts:
+- [LinkTokenService.ts](../../symancy-backend/src/services/auth/LinkTokenService.ts)
+- [link-token.ts](../../symancy-backend/src/api/auth/link-token.ts)
+- [link.ts](../../symancy-backend/src/api/auth/link.ts)
+- [commands.ts](../../symancy-backend/src/modules/router/commands.ts) (handleLinkCommand)
+- [Link.tsx](../../src/pages/Link.tsx)
+- [i18n.ts](../../src/lib/i18n.ts) (link.* translations)
 
 ---
 
@@ -486,12 +494,12 @@ Task: "Create authService in src/services/authService.ts"
 | Phase 5 (US3) | T041-T044 | Web-only Users (4 tasks) | ✅ |
 | Phase 6 (US4) | T045-T049 | WebApp (5 tasks) | ✅ |
 | Phase 7 (US5) | T050-T053 | Proactive Messaging (4 tasks) | ✅ |
-| Phase 8 (US6) | T054-T060 | Account Linking (7 tasks) | ⏳ |
+| Phase 8 (US6) | T054-T060 | Account Linking (7 tasks) | ✅ |
 | Phase 9 | T061-T064 | Data Migration (4 tasks) | ⏳ |
 | Phase 10 | T065-T069 | Polish (5 tasks) | ⏳ |
 
 **Total**: 69 implementation tasks + 15 code review fixes + 4 planning tasks = **88 tasks**
-**Completed**: 68 tasks (Phases 1-7 + Code Review Fixes)
+**Completed**: 75 tasks (Phases 1-8 + Code Review Fixes)
 
 **Tasks per User Story**:
 - US1: 12 tasks (P1 - MVP)
