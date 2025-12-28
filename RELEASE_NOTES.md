@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.7
+
+_Released on 2025-12-28_
+
+### ✨ New Features
+
+- **shared-types**: Add 9 source file(s), update 12 source file(s), +2 more
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.6
 
 _Released on 2025-12-28_
