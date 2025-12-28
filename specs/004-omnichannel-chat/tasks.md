@@ -280,7 +280,8 @@
 
 ### Frontend WebApp Support
 
-- [ ] T047 [US4] Create WebApp initialization hook that reads initData from Telegram.WebApp in src/hooks/useTelegramWebApp.ts
+- [X] T047 [US4] Create WebApp initialization hook that reads initData from Telegram.WebApp in src/hooks/useTelegramWebApp.ts
+  → Artifacts: [useTelegramWebApp.ts](src/hooks/useTelegramWebApp.ts)
 - [ ] T048 [US4] Update AuthContext to auto-authenticate from WebApp initData in src/contexts/AuthContext.tsx
 
 ### Telegram Bot WebApp Button
