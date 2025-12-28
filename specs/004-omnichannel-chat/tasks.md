@@ -251,7 +251,8 @@
 
 ### Backend Web User Support
 
-- [ ] T042 [US3] Update UnifiedUserService to support creating user from auth_id (Supabase Auth) in symancy-backend/src/services/user/UnifiedUserService.ts
+- [X] T042 [US3] Update UnifiedUserService to support creating user from auth_id (Supabase Auth) in symancy-backend/src/services/user/UnifiedUserService.ts
+  → Artifacts: [UnifiedUserService.ts](symancy-backend/src/services/user/UnifiedUserService.ts), Supabase MCP migration (find_or_create_user_by_auth_id)
 
 ### Frontend Integration
 

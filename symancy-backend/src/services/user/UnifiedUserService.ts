@@ -22,6 +22,18 @@ export interface CreateUserParams {
 }
 
 /**
+ * Parameters for creating a user by Supabase Auth ID (web users)
+ */
+export interface CreateWebUserParams {
+  /** Supabase Auth user ID */
+  authId: string;
+  /** User display name (email or profile name) */
+  displayName?: string;
+  /** User language code (defaults to 'ru') */
+  languageCode?: LanguageCode;
+}
+
+/**
  * Find or create a unified user by Telegram ID
  *
  * This function calls the database function `find_or_create_user_by_telegram`
@@ -182,4 +194,86 @@ export async function completeOnboarding(userId: string): Promise<void> {
   }
 
   logger.info({ userId }, 'Onboarding completed');
+}
+
+/**
+ * Find or create a unified user by Supabase Auth ID (web users)
+ *
+ * This function calls the database function `find_or_create_user_by_auth_id`
+ * which handles all the logic for finding existing users or creating new ones.
+ * Used for web-only registration (email/OAuth without Telegram).
+ *
+ * @param params - User creation parameters
+ * @returns The unified user (existing or newly created)
+ * @throws Error if database operation fails
+ */
+export async function findOrCreateByAuthId(
+  params: CreateWebUserParams
+): Promise<UnifiedUser> {
+  const logger = getLogger().child({ module: 'unified-user-service' });
+  const supabase = getSupabase();
+
+  const { authId, displayName, languageCode = 'ru' } = params;
+
+  logger.debug({ authId, displayName, languageCode }, 'Finding or creating web user');
+
+  const { data, error } = await supabase.rpc('find_or_create_user_by_auth_id', {
+    p_auth_id: authId,
+    p_display_name: displayName || null,
+    p_language_code: languageCode,
+  });
+
+  if (error) {
+    logger.error({ error, authId }, 'Failed to find or create web user');
+    throw new Error(`Failed to find or create web user: ${error.message}`);
+  }
+
+  // Cast to UnifiedUser (database function returns a single row)
+  const user = data as UnifiedUser;
+
+  logger.info(
+    {
+      userId: user.id,
+      authId,
+      isNew: !user.onboarding_completed,
+      displayName: user.display_name,
+      isTelegramLinked: user.is_telegram_linked,
+    },
+    'Web user found or created'
+  );
+
+  return user;
+}
+
+/**
+ * Get a unified user by Supabase Auth ID
+ *
+ * @param authId - The Supabase Auth user ID (UUID)
+ * @returns The unified user or null if not found
+ * @throws Error if database operation fails
+ */
+export async function getUserByAuthId(authId: string): Promise<UnifiedUser | null> {
+  const logger = getLogger().child({ module: 'unified-user-service' });
+  const supabase = getSupabase();
+
+  logger.debug({ authId }, 'Getting user by Auth ID');
+
+  const { data, error } = await supabase
+    .from('unified_users')
+    .select('*')
+    .eq('auth_id', authId)
+    .single();
+
+  if (error) {
+    // PGRST116 = no rows returned
+    if (error.code === 'PGRST116') {
+      logger.debug({ authId }, 'User not found');
+      return null;
+    }
+
+    logger.error({ error, authId }, 'Failed to get user by Auth ID');
+    throw new Error(`Failed to get user: ${error.message}`);
+  }
+
+  return data as UnifiedUser;
 }
