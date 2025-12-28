@@ -29,13 +29,14 @@ const projectRoot = path.resolve(__dirname, "../..");
  */
 let arinaSystemPrompt: string | null = null;
 let arinaChatPrompt: string | null = null;
+let arinaInvalidImagePrompt: string | null = null;
 
 /**
  * Load and cache Arina prompts from disk
  * Called once at module initialization or on first use
  */
 async function loadArinaPrompts(): Promise<void> {
-  if (arinaSystemPrompt && arinaChatPrompt) {
+  if (arinaSystemPrompt && arinaChatPrompt && arinaInvalidImagePrompt) {
     return; // Already loaded
   }
 
@@ -47,10 +48,15 @@ async function loadArinaPrompts(): Promise<void> {
     projectRoot,
     "prompts/arina/chat.txt"
   );
+  const invalidImagePromptPath = path.join(
+    projectRoot,
+    "prompts/arina/invalid-image.txt"
+  );
 
-  [arinaSystemPrompt, arinaChatPrompt] = await Promise.all([
+  [arinaSystemPrompt, arinaChatPrompt, arinaInvalidImagePrompt] = await Promise.all([
     readFile(systemPromptPath, "utf-8"),
     readFile(chatPromptPath, "utf-8"),
+    readFile(invalidImagePromptPath, "utf-8"),
   ]);
 }
 
@@ -265,5 +271,53 @@ export async function generateChatResponseDirect(
   return {
     text: response.content as string,
     tokensUsed,
+  };
+}
+
+/**
+ * Generate personalized response for invalid image
+ * Used when user sends a non-coffee-grounds image
+ *
+ * @param imageDescription - English description of what validation model saw
+ * @param options - Language and userName
+ * @returns ChatResponseResult with personalized rejection message
+ */
+export async function generateInvalidImageResponse(
+  imageDescription: string,
+  options: { language?: string; userName?: string } = {}
+): Promise<ChatResponseResult> {
+  const { language = "ru", userName = "дорогой друг" } = options;
+
+  // Load prompts (cached after first call)
+  await loadArinaPrompts();
+
+  if (!arinaSystemPrompt || !arinaInvalidImagePrompt) {
+    throw new Error("Failed to load Arina prompts");
+  }
+
+  // Replace placeholders in invalid image prompt
+  const invalidImagePromptText = replacePlaceholders(arinaInvalidImagePrompt, {
+    IMAGE_DESCRIPTION: imageDescription,
+    USER_NAME: userName,
+    LANGUAGE: language,
+  });
+
+  // Create messages for LangChain
+  // Use system prompt for persona + invalid image prompt for specific task
+  const invalidMessages: BaseMessage[] = [
+    new SystemMessage(arinaSystemPrompt),
+    new HumanMessage(invalidImagePromptText),
+  ];
+
+  // Create Arina model with lower token limit (short response expected)
+  const invalidModel = createArinaModel({ maxTokens: 300 });
+  const invalidResponse = await invalidModel.invoke(invalidMessages);
+
+  // Extract token usage from response metadata
+  const invalidTokensUsed = invalidResponse.usage_metadata?.total_tokens ?? 0;
+
+  return {
+    text: invalidResponse.content as string,
+    tokensUsed: invalidTokensUsed,
   };
 }

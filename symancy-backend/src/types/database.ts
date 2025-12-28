@@ -42,6 +42,10 @@ export interface UserState {
   last_analysis_id: string | null;
   daily_messages_count: number;
   last_message_date: string | null;
+  /** Daily invalid image counter (for troll protection) */
+  daily_invalid_count: number;
+  /** Reset timestamp for daily invalid counter */
+  daily_invalid_reset_at: string | null;
   updated_at: Date;
 }
 

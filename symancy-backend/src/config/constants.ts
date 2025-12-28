@@ -183,3 +183,43 @@ export const JOB_TIMEOUT_MS = 5 * 60 * 1000;
  * Health check timeout in milliseconds
  */
 export const HEALTH_CHECK_TIMEOUT_MS = 5000;
+
+// =============================================================================
+// Image Validation (Troll Protection)
+// =============================================================================
+
+/**
+ * Minimum confidence threshold to REJECT an image
+ * We only reject if model is THIS confident it's NOT coffee grounds
+ * Higher value = more permissive (reject only when very sure)
+ */
+export const REJECTION_CONFIDENCE_THRESHOLD = 0.75;
+
+/**
+ * Maximum number of personalized responses for invalid images per day
+ * After this limit, we send a simple fallback message (no API cost)
+ *
+ * Rationale for value "2":
+ * - Most users make at most 1 mistake (wrong photo, accidental send)
+ * - Value of 2 allows for genuine mistake + one retry
+ * - Serial trolls send 5+ invalid images, so 2 is enough to detect abuse
+ * - Each personalized response costs ~200 tokens, fallback costs 0
+ */
+export const MAX_DAILY_INVALID_RESPONSES = 2;
+
+/**
+ * Simple fallback messages when daily limit exceeded
+ * Used to save API costs while still being helpful
+ */
+export const INVALID_IMAGE_FALLBACK: Record<string, string> = {
+  ru: "Пожалуйста, пришли фото кофейной гущи в чашке ☕",
+  en: "Please send a photo of coffee grounds in a cup ☕",
+  zh: "请发送一张杯中咖啡渣的照片 ☕",
+};
+
+/**
+ * Get simple fallback message for language
+ */
+export function getInvalidImageFallback(language: string = "ru"): string {
+  return INVALID_IMAGE_FALLBACK[language] || INVALID_IMAGE_FALLBACK["ru"]!;
+}

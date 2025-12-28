@@ -107,6 +107,42 @@ export interface VisionChainInput {
 }
 
 /**
+ * Image validation category
+ * Classification of image content for coffee grounds validation
+ */
+export type ImageValidationCategory =
+  | "VALID_COFFEE"    // Coffee grounds in cup - proceed with analysis
+  | "EMPTY_CUP"       // Empty cup without grounds
+  | "TEA_LEAVES"      // Tea leaves instead of coffee
+  | "NOT_A_CUP"       // Random image, not related to cups
+  | "LOW_QUALITY";    // Too blurry/dark to analyze
+
+/**
+ * Image validation result
+ * Output from validation chain before main analysis
+ */
+export interface ImageValidationResult {
+  /** Whether the image is valid for coffee grounds analysis */
+  isValid: boolean;
+  /** Classification category */
+  category: ImageValidationCategory;
+  /** Confidence score 0-1 */
+  confidence: number;
+  /** English description of what the model sees in the image */
+  description: string;
+  /** Reason for rejection (if invalid) */
+  rejectionReason?: string;
+}
+
+/**
+ * Validation chain input
+ * Same as vision chain but separate for clarity
+ */
+export interface ValidationChainInput {
+  imageBase64: string;
+}
+
+/**
  * Interpretation chain input
  * Vision result with selected persona for interpretation
  */

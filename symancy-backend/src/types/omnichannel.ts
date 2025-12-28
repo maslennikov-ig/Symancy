@@ -95,7 +95,7 @@ export const UnifiedUserSchema = z.object({
 export type UnifiedUser = z.infer<typeof UnifiedUserSchema>;
 
 /**
- * User Credits - Credit balance entity
+ * User Credits - Credit balance entity (legacy, linked to unified_users)
  */
 export const UserCreditsSchema = z.object({
   id: z.string().uuid(),
@@ -108,6 +108,23 @@ export const UserCreditsSchema = z.object({
 });
 
 export type UserCredits = z.infer<typeof UserCreditsSchema>;
+
+/**
+ * Unified User Credits - New credit balance entity for omnichannel
+ * Matches unified_user_credits table schema
+ */
+export const UnifiedUserCreditsSchema = z.object({
+  id: z.string().uuid(),
+  unified_user_id: z.string().uuid(),
+  credits_basic: z.number().int().nonnegative().default(0),
+  credits_pro: z.number().int().nonnegative().default(0),
+  credits_cassandra: z.number().int().nonnegative().default(0),
+  free_credit_granted: z.boolean().default(false),
+  created_at: z.string().datetime(),
+  updated_at: z.string().datetime(),
+});
+
+export type UnifiedUserCredits = z.infer<typeof UnifiedUserCreditsSchema>;
 
 /**
  * Conversation - Chat session entity

@@ -83,14 +83,12 @@ export function ChatWindow({
       {/* Connection warning banner */}
       {!isConnected && (
         <div
+          className="chat-connection-warning"
           style={{
             padding: '12px 16px',
-            backgroundColor: '#fef3c7',
-            color: '#92400e',
             textAlign: 'center',
             fontSize: '0.875rem',
             fontWeight: 500,
-            borderBottom: '1px solid #fde68a',
           }}
         >
           {t('chat.connectionLost')}
@@ -239,7 +237,7 @@ export function ChatWindow({
         </div>
       </div>
 
-      {/* Typing animation styles */}
+      {/* Typing animation and connection warning styles */}
       <style>
         {`
           @keyframes typing {
@@ -251,6 +249,19 @@ export function ChatWindow({
               opacity: 1;
               transform: scale(1.2);
             }
+          }
+
+          /* LOW-6 FIX: Connection warning with dark mode support */
+          .chat-connection-warning {
+            background-color: #fef3c7;
+            color: #92400e;
+            border-bottom: 1px solid #fde68a;
+          }
+
+          .dark .chat-connection-warning {
+            background-color: rgba(120, 53, 15, 0.3);
+            color: #fcd34d;
+            border-bottom: 1px solid rgba(252, 211, 77, 0.3);
           }
         `}
       </style>

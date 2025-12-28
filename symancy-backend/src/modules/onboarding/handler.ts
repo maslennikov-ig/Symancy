@@ -16,6 +16,7 @@ import { sendJob } from "../../core/queue.js";
 import { getBotApi } from "../../core/telegram.js";
 import type { PhotoAnalysisJobData } from "../../types/telegram.js";
 import { QUEUE_ANALYZE_PHOTO } from "../../config/constants.js";
+import { grantInitialCredits } from "../credits/service.js";
 import { z } from "zod";
 
 const logger = getLogger().child({ module: "onboarding:handler" });
@@ -577,6 +578,29 @@ export async function handleOnboardingCallback(
         { telegramUserId, timezone, completed: result.completed, pendingPhotoFileId },
         "Timezone selected, onboarding flow updated"
       );
+
+      // Grant initial free credit when onboarding completes
+      if (result.completed) {
+        const grantResult = await grantInitialCredits(telegramUserId);
+
+        if (!grantResult.success) {
+          logger.error(
+            { telegramUserId, error: grantResult.error },
+            "Failed to grant initial credits - user may not be able to analyze photos"
+          );
+          // Continue with onboarding completion - don't block user
+        } else if (grantResult.alreadyGranted) {
+          logger.info(
+            { telegramUserId, balance: grantResult.balance },
+            "Free credit already granted (idempotent call)"
+          );
+        } else {
+          logger.info(
+            { telegramUserId, balance: grantResult.balance },
+            "Initial free credit granted on onboarding completion"
+          );
+        }
+      }
 
       // If onboarding completed and there's a pending photo, process it
       if (result.completed && pendingPhotoFileId) {

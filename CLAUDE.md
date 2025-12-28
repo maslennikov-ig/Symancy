@@ -138,6 +138,7 @@ Follow command-specific instructions. See `docs/Agents Ecosystem/AGENT-ORCHESTRA
 ## Reference Docs
 
 - **Project Architecture**: `docs/ARCHITECTURE.md` - Full system architecture
+- **Tariffs & Credits**: `docs/TARIFFS.md` - Pricing tiers, credit costs, free tier rules
 - Agent orchestration: `docs/Agents Ecosystem/AGENT-ORCHESTRATION.md`
 - Agents Architecture: `docs/Agents Ecosystem/ARCHITECTURE.md`
 - Quality gates: `docs/Agents Ecosystem/QUALITY-GATES-SPECIFICATION.md`
@@ -150,7 +151,10 @@ Follow command-specific instructions. See `docs/Agents Ecosystem/AGENT-ORCHESTRA
 ## Active Technologies
 - TypeScript 5.8.3, React 19.2.0, pnpm 10.x.
 - @supabase/supabase-js 2.84.0, Refine (Dashboard), YooMoney Checkout Widget.
-- Supabase PostgreSQL (Tables: `profiles`, `purchases`, `user_credits`, `analysis_history`).
+- Supabase PostgreSQL:
+  - **Legacy Tables**: `profiles`, `purchases`, `user_credits`, `analysis_history`
+  - **Omnichannel Tables**: `unified_users`, `conversations`, `messages`, `message_deliveries`, `link_tokens`, `unified_user_credits`
+- **Omnichannel Auth**: Telegram Login Widget + Custom JWT for Telegram users, Supabase Auth for web users
 
 ## UI/UX Requirements
 - **Languages**: 3 (`ru`, `en`, `zh`) - Russian, English, Chinese. See `docs/I18N_GUIDE.md`
@@ -169,4 +173,5 @@ Follow command-specific instructions. See `docs/Agents Ecosystem/AGENT-ORCHESTRA
 - **Docs**: `docs/` - Technical documentation
 
 ## Recent Changes
+- 004-omnichannel-chat: Unified chat system (Telegram + Web), Telegram Login Widget, WebApp auth, real-time messaging via Supabase Realtime, account linking (/link command), proactive messaging
 - 002-pre-mvp-payments: Added TypeScript 5.8.2, React 19.1.1 + @supabase/supabase-js 2.45.0, YooMoney Checkout Widget (CDN), react-yoomoneycheckoutwidget (wrapper)

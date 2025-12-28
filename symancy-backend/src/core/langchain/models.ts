@@ -31,6 +31,8 @@ interface ModelOptions {
   presencePenalty?: number;
   /** Maximum tokens in response */
   maxTokens?: number;
+  /** Request timeout in milliseconds */
+  timeout?: number;
 }
 
 /**
@@ -49,6 +51,7 @@ function createChatOpenAIInstance(
     frequencyPenalty,
     presencePenalty,
     maxTokens,
+    timeout,
   } = options;
 
   // Build model kwargs for additional parameters
@@ -66,6 +69,7 @@ function createChatOpenAIInstance(
     maxRetries,
     streaming,
     maxTokens,
+    timeout,
     modelKwargs: Object.keys(modelKwargs).length > 0 ? modelKwargs : undefined,
     configuration: {
       apiKey: env.OPENROUTER_API_KEY,

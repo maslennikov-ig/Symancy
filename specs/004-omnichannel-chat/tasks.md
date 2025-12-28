@@ -365,10 +365,14 @@
 
 **Purpose**: Migrate existing profiles and chat_messages to new unified schema
 
-- [ ] T061 Create migration: profiles → unified_users data migration
-- [ ] T062 Create migration: chat_messages → messages data migration (set channel='telegram', interface='bot')
-- [ ] T063 Create migration: existing user_credits → new user_credits with unified_user_id FK
-- [ ] T064 Create migration: add unified_user_id FK to existing tables (profiles, purchases, analysis_history)
+- [X] T061 Create migration: profiles → unified_users data migration
+  → Artifacts: Supabase MCP migration (migrate_profiles_to_unified_users)
+- [X] T062 Create migration: chat_messages → messages data migration (set channel='telegram', interface='bot')
+  → Artifacts: Supabase MCP migration (migrate_chat_messages_to_messages_v2)
+- [X] T063 Create migration: existing user_credits → new user_credits with unified_user_id FK
+  → Artifacts: Supabase MCP migration (create_unified_user_credits_and_migrate), [unified_user_credits](../../symancy-backend/src/types/database.ts)
+- [X] T064 Create migration: add unified_user_id FK to existing tables (profiles, purchases, analysis_history)
+  → Artifacts: Supabase MCP migration (add_unified_user_id_fk_to_existing_tables)
 
 ---
 
@@ -376,11 +380,16 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T065 [P] Run pnpm type-check in root and symancy-backend/
-- [ ] T066 [P] Run pnpm build to verify production build
-- [ ] T067 Validate quickstart.md testing checklist (all items pass)
-- [ ] T068 Update CLAUDE.md if any new patterns introduced
-- [ ] T069 [P] Generate TypeScript types from Supabase schema (if using generated types)
+- [X] T065 [P] Run pnpm type-check in root and symancy-backend/
+  → Artifacts: type-check passed in both directories
+- [X] T066 [P] Run pnpm build to verify production build
+  → Artifacts: Vite build completed (dist/), backend build completed
+- [X] T067 Validate quickstart.md testing checklist (all items pass)
+  → Artifacts: grammY plugins, migrations, types verified
+- [X] T068 Update CLAUDE.md if any new patterns introduced
+  → Artifacts: [CLAUDE.md](../../CLAUDE.md) (updated with omnichannel tables and auth info)
+- [X] T069 [P] Generate TypeScript types from Supabase schema (if using generated types)
+  → Artifacts: [omnichannel.ts](../../symancy-backend/src/types/omnichannel.ts) (added UnifiedUserCredits schema)
 
 ---
 
@@ -485,7 +494,7 @@ Task: "Create authService in src/services/authService.ts"
 
 | Phase | Tasks | Description | Status |
 |-------|-------|-------------|--------|
-| Phase 0 | P001-P004 | Planning & executor assignment | ⏳ |
+| Phase 0 | P001-P004 | Planning & executor assignment | ✅ |
 | Phase 1 | T001-T003 | Setup (3 tasks) | ✅ |
 | Phase 2 | T004-T018 | Foundational (15 tasks) | ✅ |
 | Phase 3 (US1) | T019-T030 | Telegram Login (12 tasks) | ✅ |
@@ -495,11 +504,11 @@ Task: "Create authService in src/services/authService.ts"
 | Phase 6 (US4) | T045-T049 | WebApp (5 tasks) | ✅ |
 | Phase 7 (US5) | T050-T053 | Proactive Messaging (4 tasks) | ✅ |
 | Phase 8 (US6) | T054-T060 | Account Linking (7 tasks) | ✅ |
-| Phase 9 | T061-T064 | Data Migration (4 tasks) | ⏳ |
-| Phase 10 | T065-T069 | Polish (5 tasks) | ⏳ |
+| Phase 9 | T061-T064 | Data Migration (4 tasks) | ✅ |
+| Phase 10 | T065-T069 | Polish (5 tasks) | ✅ |
 
 **Total**: 69 implementation tasks + 15 code review fixes + 4 planning tasks = **88 tasks**
-**Completed**: 75 tasks (Phases 1-8 + Code Review Fixes)
+**Completed**: 88 tasks (ALL PHASES COMPLETE 🎉)
 
 **Tasks per User Story**:
 - US1: 12 tasks (P1 - MVP)

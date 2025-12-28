@@ -22,9 +22,17 @@ import { getLogger } from "../../core/logger.js";
 import { registerWorker } from "../../core/queue.js";
 import { downloadAndResize, toBase64DataUrl } from "../../utils/image-processor.js";
 import { analyzeVision } from "../../chains/vision.chain.js";
+import { validateCoffeeGrounds } from "../../chains/validation.chain.js";
 import { consumeCredits, refundCredits } from "../credits/service.js";
 import { splitMessage } from "../../utils/message-splitter.js";
-import { QUEUE_ANALYZE_PHOTO, TELEGRAM_PHOTO_SIZE_LIMIT } from "../../config/constants.js";
+import {
+  QUEUE_ANALYZE_PHOTO,
+  TELEGRAM_PHOTO_SIZE_LIMIT,
+  REJECTION_CONFIDENCE_THRESHOLD,
+  MAX_DAILY_INVALID_RESPONSES,
+  getInvalidImageFallback,
+} from "../../config/constants.js";
+import { generateInvalidImageResponse } from "../../chains/chat.chain.js";
 import type { PhotoAnalysisJobData } from "../../types/telegram.js";
 import { arinaStrategy } from "./personas/arina.strategy.js";
 import { cassandraStrategy } from "./personas/cassandra.strategy.js";
@@ -161,6 +169,138 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
     // Extract just the base64 part (vision API expects base64 without data URL prefix)
     const base64Image = dataUrl.replace(/^data:image\/webp;base64,/, "");
     jobLogger.debug({ base64Length: base64Image.length }, "Image converted to base64");
+
+    // Step 3.5: Validate image contains coffee grounds (troll protection)
+    jobLogger.debug("Validating image content");
+    await bot.api.sendChatAction(chatId, "typing");
+
+    const validationResult = await withRetry(
+      () => validateCoffeeGrounds({ imageBase64: base64Image }),
+      {
+        maxAttempts: 2, // Fewer retries for validation
+        baseDelayMs: 1000,
+      }
+    );
+
+    jobLogger.info(
+      {
+        isValid: validationResult.isValid,
+        category: validationResult.category,
+        confidence: validationResult.confidence,
+      },
+      "Image validation completed"
+    );
+
+    // Check if image should be rejected
+    // IMPORTANT: We only reject if we're CONFIDENT it's NOT coffee grounds
+    // When in doubt, we ALWAYS proceed with analysis (false rejection is worse than false acceptance)
+    const shouldReject =
+      !validationResult.isValid &&
+      validationResult.confidence >= REJECTION_CONFIDENCE_THRESHOLD;
+
+    if (shouldReject) {
+      // Update analysis record to rejected
+      const { error: rejectUpdateError } = await supabase
+        .from("analysis_history")
+        .update({
+          status: "rejected",
+          error_message: `Validation failed: ${validationResult.category} (confidence: ${validationResult.confidence.toFixed(2)})`,
+          processing_time_ms: Date.now() - startTime,
+        })
+        .eq("id", analysisId);
+
+      if (rejectUpdateError) {
+        jobLogger.error({ error: rejectUpdateError }, "Failed to mark analysis as rejected");
+      }
+
+      // Get current invalid count using atomic SQL function (handles UTC day reset)
+      const { data: countData, error: countError } = await supabase
+        .rpc("get_invalid_count", { p_telegram_user_id: telegramUserId });
+
+      if (countError) {
+        jobLogger.error({ error: countError }, "Failed to get invalid count, using fallback");
+      }
+
+      const currentInvalidCount = countError ? 0 : (countData as number);
+      let rejectionMessage: string;
+      let usedPersonalizedResponse = false;
+
+      if (currentInvalidCount < MAX_DAILY_INVALID_RESPONSES) {
+        // Within limit: generate personalized response via chat model
+        jobLogger.debug(
+          { currentInvalidCount, maxAllowed: MAX_DAILY_INVALID_RESPONSES },
+          "Generating personalized invalid image response"
+        );
+
+        try {
+          const chatResponse = await withRetry(
+            () => generateInvalidImageResponse(
+              validationResult.description, // English description from validation
+              { language: language || "ru", userName }
+            ),
+            { maxAttempts: 2, baseDelayMs: 1000 }
+          );
+          rejectionMessage = chatResponse.text;
+          usedPersonalizedResponse = true;
+        } catch (chatError) {
+          // Fallback if chat generation fails - DON'T increment counter
+          jobLogger.warn({ error: chatError }, "Chat response generation failed, using fallback");
+          rejectionMessage = getInvalidImageFallback(language || "ru");
+          usedPersonalizedResponse = false;
+        }
+      } else {
+        // Exceeded limit: use simple fallback (no API cost)
+        jobLogger.info(
+          { currentInvalidCount },
+          "Daily invalid limit exceeded, using fallback message"
+        );
+        rejectionMessage = getInvalidImageFallback(language || "ru");
+      }
+
+      // Only increment counter if we used a personalized response
+      // Uses atomic SQL function to prevent race conditions
+      let finalCount = currentInvalidCount;
+      if (usedPersonalizedResponse) {
+        const { data: incrementData, error: incrementError } = await supabase
+          .rpc("increment_invalid_count", { p_telegram_user_id: telegramUserId });
+
+        if (incrementError) {
+          jobLogger.error({ error: incrementError }, "Failed to increment invalid count");
+        } else if (incrementData && incrementData.length > 0) {
+          finalCount = incrementData[0].new_count;
+          jobLogger.debug(
+            { newCount: finalCount, wasReset: incrementData[0].was_reset },
+            "Invalid count incremented"
+          );
+        }
+      }
+
+      await bot.api.editMessageText(chatId, messageId, rejectionMessage);
+
+      jobLogger.info(
+        {
+          category: validationResult.category,
+          confidence: validationResult.confidence,
+          dailyInvalidCount: finalCount,
+          usedPersonalized: usedPersonalizedResponse,
+        },
+        "Image rejected - confident this is not coffee grounds"
+      );
+
+      // Exit without consuming credits
+      return;
+    }
+
+    // If we're here, proceed with analysis (either valid OR uncertain)
+    if (!validationResult.isValid) {
+      jobLogger.info(
+        {
+          category: validationResult.category,
+          confidence: validationResult.confidence,
+        },
+        "Uncertain validation - proceeding with analysis (benefit of doubt)"
+      );
+    }
 
     // Step 4: Run vision analysis (with retry)
     jobLogger.debug("Running vision analysis");

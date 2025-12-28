@@ -134,8 +134,11 @@ export async function handlePhotoMessage(ctx: BotContext): Promise<void> {
   // Note: Credit check moved to worker for atomic credit consumption
   // This prevents race conditions where multiple requests can bypass credit check
 
+  // Get user language: profile > Telegram client > fallback to Russian
+  const userLanguage = ctx.profile?.language_code || ctx.from.language_code || "ru";
+
   // Get loading message for selected persona using strategy
-  const loadingText = strategy.getLoadingMessage(ctx.from.language_code || "ru");
+  const loadingText = strategy.getLoadingMessage(userLanguage);
 
   // Send loading message (quick response <100ms)
   const loadingMessage = await ctx.reply(loadingText);
@@ -147,7 +150,7 @@ export async function handlePhotoMessage(ctx: BotContext): Promise<void> {
     messageId: loadingMessage.message_id,
     fileId: photo.file_id,
     persona,
-    language: ctx.from.language_code || "ru",
+    language: userLanguage,
     userName: ctx.profile?.name || ctx.from.username || ctx.from.first_name || undefined,
   };
 
