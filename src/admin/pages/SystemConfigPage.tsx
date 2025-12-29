@@ -1,0 +1,326 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { AdminLayout } from '../layout/AdminLayout';
+import { useAdminAuth } from '../hooks/useAdminAuth';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
+
+// Types for system_config table
+interface SystemConfig {
+  key: string;
+  value: unknown;
+  description: string | null;
+  updated_at: string;
+}
+
+// Format relative time
+function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 60) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHour < 24) return `${diffHour}h ago`;
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return date.toLocaleDateString();
+}
+
+// Truncate JSON for preview
+function truncateJson(value: unknown, maxLength: number = 50): string {
+  const str = JSON.stringify(value);
+  if (str.length <= maxLength) return str;
+  return str.substring(0, maxLength) + '...';
+}
+
+// Format JSON for display in textarea
+function formatJsonForEdit(value: unknown): string {
+  return JSON.stringify(value, null, 2);
+}
+
+// Loading skeleton for table rows
+function TableSkeleton() {
+  return (
+    <>
+      {[...Array(5)].map((_, i) => (
+        <TableRow key={i}>
+          <TableCell>
+            <Skeleton className="h-5 w-32" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-48" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-40" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-20" />
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
+  );
+}
+
+export function SystemConfigPage() {
+  const { user, signOut } = useAdminAuth();
+  const [configs, setConfigs] = useState<SystemConfig[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Edit dialog state
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedConfig, setSelectedConfig] = useState<SystemConfig | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [jsonError, setJsonError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Fetch configs from Supabase
+  const fetchConfigs = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('system_config')
+        .select('*')
+        .order('key');
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      setConfigs(data || []);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load configurations';
+      setError(message);
+      toast.error('Failed to load configurations', { description: message });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Load configs on mount
+  useEffect(() => {
+    fetchConfigs();
+  }, [fetchConfigs]);
+
+  // Open edit dialog
+  const handleRowClick = (config: SystemConfig) => {
+    setSelectedConfig(config);
+    setEditValue(formatJsonForEdit(config.value));
+    setJsonError(null);
+    setIsDialogOpen(true);
+  };
+
+  // Validate JSON on change
+  const handleValueChange = (value: string) => {
+    setEditValue(value);
+    try {
+      JSON.parse(value);
+      setJsonError(null);
+    } catch {
+      setJsonError('Invalid JSON format');
+    }
+  };
+
+  // Save config changes
+  const handleSave = async () => {
+    if (!selectedConfig || jsonError) return;
+
+    setSaving(true);
+
+    try {
+      const parsedValue = JSON.parse(editValue);
+
+      const { error: updateError } = await supabase
+        .from('system_config')
+        .update({
+          value: parsedValue,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('key', selectedConfig.key);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      toast.success('Configuration saved', {
+        description: `Successfully updated "${selectedConfig.key}"`,
+      });
+
+      setIsDialogOpen(false);
+      await fetchConfigs();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save configuration';
+      toast.error('Failed to save', { description: message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <AdminLayout
+      title="System Configuration"
+      userName={user?.user_metadata?.full_name || user?.email || 'Admin'}
+      userEmail={user?.email}
+      userAvatar={user?.user_metadata?.avatar_url}
+      onLogout={signOut}
+    >
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Configuration Settings</span>
+            <Button variant="outline" size="sm" onClick={fetchConfigs} disabled={loading}>
+              Refresh
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {error && !loading && (
+            <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-md">
+              {error}
+            </div>
+          )}
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[200px]">Key</TableHead>
+                <TableHead className="w-[300px]">Value</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="w-[120px] text-right">Last Updated</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableSkeleton />
+              ) : configs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                    No configurations found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                configs.map((config) => (
+                  <TableRow
+                    key={config.key}
+                    onClick={() => handleRowClick(config)}
+                    className="cursor-pointer"
+                  >
+                    <TableCell>
+                      <code className="font-mono font-bold text-sm bg-muted px-1.5 py-0.5 rounded">
+                        {config.key}
+                      </code>
+                    </TableCell>
+                    <TableCell>
+                      <code className="font-mono text-xs text-muted-foreground">
+                        {truncateJson(config.value)}
+                      </code>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {config.description || '—'}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground text-sm">
+                      {formatRelativeTime(config.updated_at)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              Edit Config:{' '}
+              <code className="font-mono bg-muted px-2 py-0.5 rounded">
+                {selectedConfig?.key}
+              </code>
+            </DialogTitle>
+            <DialogDescription>
+              {selectedConfig?.description || 'No description available'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="config-key">Key</Label>
+              <Input
+                id="config-key"
+                value={selectedConfig?.key || ''}
+                readOnly
+                disabled
+                className="font-mono bg-muted"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="config-value">
+                Value (JSON)
+                {jsonError && (
+                  <span className="ml-2 text-destructive text-xs font-normal">
+                    {jsonError}
+                  </span>
+                )}
+              </Label>
+              <textarea
+                id="config-value"
+                value={editValue}
+                onChange={(e) => handleValueChange(e.target.value)}
+                className={`
+                  flex min-h-[200px] w-full rounded-md border bg-transparent px-3 py-2
+                  text-sm font-mono shadow-sm transition-colors
+                  placeholder:text-muted-foreground focus-visible:outline-none
+                  focus-visible:ring-1 focus-visible:ring-ring
+                  disabled:cursor-not-allowed disabled:opacity-50
+                  ${jsonError ? 'border-destructive focus-visible:ring-destructive' : 'border-input'}
+                `}
+                placeholder="Enter valid JSON..."
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={!!jsonError || saving}>
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </AdminLayout>
+  );
+}
+
+export default SystemConfigPage;

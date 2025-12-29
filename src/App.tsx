@@ -25,6 +25,7 @@ const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
 const PaymentResult = lazy(() => import('./pages/PaymentResult'));
 const Chat = lazy(() => import('./pages/Chat'));
 const Link = lazy(() => import('./pages/Link'));
+const AdminApp = lazy(() => import('./admin/AdminApp'));
 import { MysticalBackground } from './components/features/MysticalCoffeeCupIllustration';
 import { OfficialLogo } from './components/icons/OfficialLogo';
 import { useAuth } from './contexts/AuthContext';
@@ -436,6 +437,7 @@ const App: React.FC = () => {
             </ErrorBoundary>
           }
         />
+        <Route path="/admin/*" element={<AdminApp />} />
       </Routes>
     </Suspense>
   );
