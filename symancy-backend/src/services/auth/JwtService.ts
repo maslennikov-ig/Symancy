@@ -63,17 +63,21 @@ export interface TokenResult {
 
 /**
  * Get the signing key and algorithm based on configuration
- * Prefers RS256 with signing key, falls back to HS256 with secret
- * @throws Error if neither key is configured (should be caught by env validation)
+ * Priority: ES256 > RS256 > HS256
+ * @throws Error if no key is configured (should be caught by env validation)
  */
 function getSigningConfig(): { key: string; algorithm: jwt.Algorithm } {
   const env = getEnv();
 
-  // Prefer new RS256 signing key
+  // Prefer new ES256 signing key (Supabase default after migration)
   if (env.SUPABASE_JWT_SIGNING_KEY) {
+    // Detect algorithm from key format
+    // EC keys use ES256, RSA keys use RS256
+    const isEcKey = env.SUPABASE_JWT_SIGNING_KEY.includes('EC PRIVATE KEY') ||
+                    env.SUPABASE_JWT_SIGNING_KEY.includes('BEGIN PRIVATE KEY');
     return {
       key: env.SUPABASE_JWT_SIGNING_KEY,
-      algorithm: 'RS256',
+      algorithm: isEcKey ? 'ES256' : 'RS256',
     };
   }
 
