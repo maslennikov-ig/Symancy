@@ -59,21 +59,74 @@ function createTextContext(text: string, overrides = {}): BotContext {
 }
 
 /**
+ * Create a chainable Supabase mock that supports all query patterns:
+ * - from().select().eq().single() - for single record queries
+ * - from().select().eq().eq().order().limit() - for chained queries
+ * - from().insert().select().single() - for inserts with return
+ */
+function createChainableMock(finalData: unknown, error: unknown = null) {
+  const createChain = (): Record<string, unknown> => {
+    const chain: Record<string, unknown> = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: finalData, error }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: finalData, error }),
+    }
+    // Make each method return the chain for chaining
+    Object.keys(chain).forEach((key) => {
+      if (key !== 'single' && key !== 'maybeSingle') {
+        (chain[key] as ReturnType<typeof vi.fn>).mockReturnValue(chain)
+      }
+    })
+    return chain
+  }
+
+  return createChain()
+}
+
+/**
  * Mock daily limit check - not reached
  */
 function mockDailyLimitNotReached(count = 10) {
-  mockSupabase.from.mockReturnValue({
-    select: vi.fn().mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        single: vi.fn().mockResolvedValue({
-          data: {
-            daily_messages_count: count,
-            last_message_date: new Date().toISOString().split('T')[0],
-          },
-          error: null,
-        }),
-      }),
-    }),
+  mockSupabase.from.mockImplementation((table: string) => {
+    if (table === 'user_states') {
+      return createChainableMock({
+        daily_messages_count: count,
+        last_message_date: new Date().toISOString().split('T')[0],
+      })
+    }
+    if (table === 'conversations') {
+      return createChainableMock({
+        id: 'test-conversation-uuid',
+        unified_user_id: 'test-user-uuid',
+        persona: 'arina',
+        status: 'active',
+        context: {},
+        summary: null,
+        message_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        last_message_at: null,
+      })
+    }
+    if (table === 'messages') {
+      return createChainableMock({
+        id: 'test-message-uuid',
+        conversation_id: 'test-conversation-uuid',
+        channel: 'telegram',
+        interface: 'bot',
+        role: 'user',
+        content: 'test message',
+        content_type: 'text',
+        processing_status: 'pending',
+        created_at: new Date().toISOString(),
+      })
+    }
+    return createChainableMock(null)
   })
 }
 
@@ -81,18 +134,41 @@ function mockDailyLimitNotReached(count = 10) {
  * Mock daily limit check - reached
  */
 function mockDailyLimitReached() {
-  mockSupabase.from.mockReturnValue({
-    select: vi.fn().mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        single: vi.fn().mockResolvedValue({
-          data: {
-            daily_messages_count: 50,
-            last_message_date: new Date().toISOString().split('T')[0],
-          },
-          error: null,
-        }),
-      }),
-    }),
+  mockSupabase.from.mockImplementation((table: string) => {
+    if (table === 'user_states') {
+      return createChainableMock({
+        daily_messages_count: 50,
+        last_message_date: new Date().toISOString().split('T')[0],
+      })
+    }
+    if (table === 'conversations') {
+      return createChainableMock({
+        id: 'test-conversation-uuid',
+        unified_user_id: 'test-user-uuid',
+        persona: 'arina',
+        status: 'active',
+        context: {},
+        summary: null,
+        message_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        last_message_at: null,
+      })
+    }
+    if (table === 'messages') {
+      return createChainableMock({
+        id: 'test-message-uuid',
+        conversation_id: 'test-conversation-uuid',
+        channel: 'telegram',
+        interface: 'bot',
+        role: 'user',
+        content: 'test message',
+        content_type: 'text',
+        processing_status: 'pending',
+        created_at: new Date().toISOString(),
+      })
+    }
+    return createChainableMock(null)
   })
 }
 
@@ -103,18 +179,41 @@ function mockDailyLimitNewDay() {
   const yesterday = new Date()
   yesterday.setDate(yesterday.getDate() - 1)
 
-  mockSupabase.from.mockReturnValue({
-    select: vi.fn().mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        single: vi.fn().mockResolvedValue({
-          data: {
-            daily_messages_count: 50,
-            last_message_date: yesterday.toISOString().split('T')[0],
-          },
-          error: null,
-        }),
-      }),
-    }),
+  mockSupabase.from.mockImplementation((table: string) => {
+    if (table === 'user_states') {
+      return createChainableMock({
+        daily_messages_count: 50,
+        last_message_date: yesterday.toISOString().split('T')[0],
+      })
+    }
+    if (table === 'conversations') {
+      return createChainableMock({
+        id: 'test-conversation-uuid',
+        unified_user_id: 'test-user-uuid',
+        persona: 'arina',
+        status: 'active',
+        context: {},
+        summary: null,
+        message_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        last_message_at: null,
+      })
+    }
+    if (table === 'messages') {
+      return createChainableMock({
+        id: 'test-message-uuid',
+        conversation_id: 'test-conversation-uuid',
+        channel: 'telegram',
+        interface: 'bot',
+        role: 'user',
+        content: 'test message',
+        content_type: 'text',
+        processing_status: 'pending',
+        created_at: new Date().toISOString(),
+      })
+    }
+    return createChainableMock(null)
   })
 }
 
@@ -122,15 +221,38 @@ function mockDailyLimitNewDay() {
  * Mock daily limit check - no user state (new user)
  */
 function mockDailyLimitNewUser() {
-  mockSupabase.from.mockReturnValue({
-    select: vi.fn().mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        single: vi.fn().mockResolvedValue({
-          data: null,
-          error: null,
-        }),
-      }),
-    }),
+  mockSupabase.from.mockImplementation((table: string) => {
+    if (table === 'user_states') {
+      return createChainableMock(null)
+    }
+    if (table === 'conversations') {
+      return createChainableMock({
+        id: 'test-conversation-uuid',
+        unified_user_id: 'test-user-uuid',
+        persona: 'arina',
+        status: 'active',
+        context: {},
+        summary: null,
+        message_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        last_message_at: null,
+      })
+    }
+    if (table === 'messages') {
+      return createChainableMock({
+        id: 'test-message-uuid',
+        conversation_id: 'test-conversation-uuid',
+        channel: 'telegram',
+        interface: 'bot',
+        role: 'user',
+        content: 'test message',
+        content_type: 'text',
+        processing_status: 'pending',
+        created_at: new Date().toISOString(),
+      })
+    }
+    return createChainableMock(null)
   })
 }
 
@@ -138,15 +260,64 @@ function mockDailyLimitNewUser() {
  * Mock daily limit check - database error (fail open)
  */
 function mockDailyLimitDatabaseError() {
-  mockSupabase.from.mockReturnValue({
-    select: vi.fn().mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        single: vi.fn().mockResolvedValue({
-          data: null,
-          error: { message: 'Database error' },
-        }),
-      }),
-    }),
+  mockSupabase.from.mockImplementation((table: string) => {
+    if (table === 'user_states') {
+      return createChainableMock(null, { message: 'Database error' })
+    }
+    if (table === 'conversations') {
+      return createChainableMock({
+        id: 'test-conversation-uuid',
+        unified_user_id: 'test-user-uuid',
+        persona: 'arina',
+        status: 'active',
+        context: {},
+        summary: null,
+        message_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        last_message_at: null,
+      })
+    }
+    if (table === 'messages') {
+      return createChainableMock({
+        id: 'test-message-uuid',
+        conversation_id: 'test-conversation-uuid',
+        channel: 'telegram',
+        interface: 'bot',
+        role: 'user',
+        content: 'test message',
+        content_type: 'text',
+        processing_status: 'pending',
+        created_at: new Date().toISOString(),
+      })
+    }
+    return createChainableMock(null)
+  })
+}
+
+/**
+ * Mock unified user service RPC call
+ * This mocks the find_or_create_user_by_telegram database function
+ */
+function mockUnifiedUserRpc(telegramId = 123456789) {
+  mockSupabase.rpc.mockResolvedValue({
+    data: {
+      id: 'test-user-uuid',
+      telegram_id: telegramId,
+      auth_id: null,
+      display_name: 'Test User',
+      language_code: 'ru',
+      timezone: 'Europe/Moscow',
+      is_telegram_linked: false,
+      onboarding_completed: false,
+      is_banned: false,
+      primary_interface: 'bot',
+      notification_settings: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      last_active_at: new Date().toISOString(),
+    },
+    error: null,
   })
 }
 
@@ -157,6 +328,8 @@ function mockDailyLimitDatabaseError() {
 describe('handleTextMessage - Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Default mock for unified user service
+    mockUnifiedUserRpc()
   })
 
   // ===========================================================================
