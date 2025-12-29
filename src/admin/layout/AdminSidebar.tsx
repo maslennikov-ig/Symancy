@@ -9,20 +9,21 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAdminTranslations } from '../hooks/useAdminTranslations'
 
 interface NavItem {
   to: string
-  label: string
+  labelKey: string
   icon: React.ComponentType<{ className?: string }>
 }
 
 const navItems: NavItem[] = [
-  { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/admin/system-config', label: 'System Config', icon: Settings },
-  { to: '/admin/users', label: 'Users', icon: Users },
-  { to: '/admin/messages', label: 'Messages', icon: MessageSquare },
-  { to: '/admin/costs', label: 'Costs', icon: DollarSign },
-  { to: '/admin/user-states', label: 'User States', icon: Activity },
+  { to: '/admin/dashboard', labelKey: 'admin.sidebar.dashboard', icon: LayoutDashboard },
+  { to: '/admin/system-config', labelKey: 'admin.sidebar.systemConfig', icon: Settings },
+  { to: '/admin/users', labelKey: 'admin.sidebar.users', icon: Users },
+  { to: '/admin/messages', labelKey: 'admin.sidebar.messages', icon: MessageSquare },
+  { to: '/admin/costs', labelKey: 'admin.sidebar.costs', icon: DollarSign },
+  { to: '/admin/user-states', labelKey: 'admin.sidebar.userStates', icon: Activity },
 ]
 
 interface AdminSidebarProps {
@@ -34,6 +35,8 @@ export function AdminSidebar({
   isMobileOpen = false,
   onClose,
 }: AdminSidebarProps) {
+  const { t } = useAdminTranslations()
+
   return (
     <>
       {/* Backdrop overlay - only on mobile when menu is open */}
@@ -58,7 +61,7 @@ export function AdminSidebar({
         <button
           onClick={onClose}
           className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded text-slate-400 hover:text-white md:hidden"
-          aria-label="Close menu"
+          aria-label={t('admin.common.close')}
         >
           <X className="h-5 w-5" />
         </button>
@@ -88,7 +91,7 @@ export function AdminSidebar({
               }
             >
               <item.icon className="h-5 w-5 shrink-0" />
-              {item.label}
+              {t(item.labelKey)}
             </NavLink>
           ))}
         </nav>

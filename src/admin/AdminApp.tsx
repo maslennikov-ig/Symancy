@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router';
 import { useAdminAuth } from './hooks/useAdminAuth';
+import { useAdminTranslations } from './hooks/useAdminTranslations';
 import { LoaderIcon } from '../components/icons/LoaderIcon';
 
 // Lazy-loaded admin pages (placeholder components for now)
@@ -28,19 +29,20 @@ function AdminLoadingFallback() {
  * 403 Forbidden page for non-admin users
  */
 function ForbiddenPage() {
+  const { t } = useAdminTranslations();
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-8">
       <h1 className="text-6xl font-bold text-destructive mb-4">403</h1>
-      <h2 className="text-2xl font-semibold mb-2">Access Forbidden</h2>
+      <h2 className="text-2xl font-semibold mb-2">{t('admin.forbidden.title')}</h2>
       <p className="text-muted-foreground text-center max-w-md mb-8">
-        You do not have permission to access the admin panel.
-        Please contact an administrator if you believe this is an error.
+        {t('admin.forbidden.message')}
       </p>
       <Link
         to="/"
         className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
       >
-        Return to Home
+        {t('admin.forbidden.returnHome')}
       </Link>
     </div>
   );

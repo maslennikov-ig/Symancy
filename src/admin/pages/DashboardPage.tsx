@@ -5,6 +5,7 @@ import { Link } from 'react-router';
 import { toast } from 'sonner';
 import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
+import { useAdminTranslations } from '../hooks/useAdminTranslations';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { formatCurrencyRUB, formatNumber } from '../utils/formatters';
@@ -23,11 +24,12 @@ interface DashboardStats {
 interface QuickLinkProps {
   to: string;
   icon: React.ReactNode;
-  title: string;
-  description: string;
+  titleKey: string;
+  descriptionKey: string;
+  t: (key: string) => string;
 }
 
-function QuickLink({ to, icon, title, description }: QuickLinkProps) {
+function QuickLink({ to, icon, titleKey, descriptionKey, t }: QuickLinkProps) {
   return (
     <Link
       to={to}
@@ -37,8 +39,8 @@ function QuickLink({ to, icon, title, description }: QuickLinkProps) {
         {icon}
       </div>
       <div>
-        <h3 className="font-medium text-slate-900 dark:text-slate-100">{title}</h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p>
+        <h3 className="font-medium text-slate-900 dark:text-slate-100">{t(titleKey)}</h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t(descriptionKey)}</p>
       </div>
     </Link>
   );
@@ -50,6 +52,7 @@ function QuickLink({ to, icon, title, description }: QuickLinkProps) {
  */
 export function DashboardPage() {
   const { user, signOut } = useAdminAuth();
+  const { t } = useAdminTranslations();
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalAnalyses: 0,
@@ -129,7 +132,7 @@ export function DashboardPage() {
 
   return (
     <AdminLayout
-      title="Dashboard"
+      title={t('admin.dashboard.title')}
       userName={user?.user_metadata?.full_name ?? user?.email?.split('@')[0]}
       userEmail={user?.email}
       userAvatar={user?.user_metadata?.avatar_url}
@@ -137,7 +140,7 @@ export function DashboardPage() {
     >
       {/* Stats Grid */}
       <div className="mb-8">
-        <Title className="mb-4">Overview</Title>
+        <Title className="mb-4">{t('admin.dashboard.overview')}</Title>
 
         {stats.error && (
           <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between gap-4">
@@ -148,7 +151,7 @@ export function DashboardPage() {
               onClick={handleRetry}
               disabled={stats.isLoading}
             >
-              Retry
+              {t('admin.common.retry')}
             </Button>
           </div>
         )}
@@ -166,7 +169,7 @@ export function DashboardPage() {
               <Card decoration="top" decorationColor="blue">
                 <Flex justifyContent="between" alignItems="center">
                   <div>
-                    <Text>Total Users</Text>
+                    <Text>{t('admin.dashboard.totalUsers')}</Text>
                     <Metric>{formatNumber(stats.totalUsers)}</Metric>
                   </div>
                   <Users className="h-8 w-8 text-blue-500" />
@@ -176,7 +179,7 @@ export function DashboardPage() {
               <Card decoration="top" decorationColor="violet">
                 <Flex justifyContent="between" alignItems="center">
                   <div>
-                    <Text>Total Analyses</Text>
+                    <Text>{t('admin.dashboard.totalAnalyses')}</Text>
                     <Metric>{formatNumber(stats.totalAnalyses)}</Metric>
                   </div>
                   <BarChart3 className="h-8 w-8 text-violet-500" />
@@ -186,7 +189,7 @@ export function DashboardPage() {
               <Card decoration="top" decorationColor="emerald">
                 <Flex justifyContent="between" alignItems="center">
                   <div>
-                    <Text>Active Today</Text>
+                    <Text>{t('admin.dashboard.activeToday')}</Text>
                     <Metric>{formatNumber(stats.activeToday)}</Metric>
                   </div>
                   <Badge color="emerald" size="sm">
@@ -199,7 +202,7 @@ export function DashboardPage() {
               <Card decoration="top" decorationColor="amber">
                 <Flex justifyContent="between" alignItems="center">
                   <div>
-                    <Text>Total Revenue</Text>
+                    <Text>{t('admin.dashboard.totalRevenue')}</Text>
                     <Metric>{formatCurrencyRUB(stats.totalRevenue)}</Metric>
                   </div>
                   <TrendingUp className="h-8 w-8 text-amber-500" />
@@ -212,31 +215,35 @@ export function DashboardPage() {
 
       {/* Quick Links */}
       <div>
-        <Title className="mb-4">Quick Links</Title>
+        <Title className="mb-4">{t('admin.dashboard.quickLinks')}</Title>
         <Grid numItemsMd={2} numItemsLg={4} className="gap-4">
           <QuickLink
             to="/admin/system-config"
             icon={<Settings className="h-5 w-5" />}
-            title="System Config"
-            description="Manage system settings"
+            titleKey="admin.sidebar.systemConfig"
+            descriptionKey="admin.dashboard.manageSettings"
+            t={t}
           />
           <QuickLink
             to="/admin/users"
             icon={<Users className="h-5 w-5" />}
-            title="Users"
-            description="View and manage users"
+            titleKey="admin.sidebar.users"
+            descriptionKey="admin.dashboard.viewUsers"
+            t={t}
           />
           <QuickLink
             to="/admin/messages"
             icon={<MessageSquare className="h-5 w-5" />}
-            title="Messages"
-            description="View message history"
+            titleKey="admin.sidebar.messages"
+            descriptionKey="admin.dashboard.viewMessages"
+            t={t}
           />
           <QuickLink
             to="/admin/costs"
             icon={<DollarSign className="h-5 w-5" />}
-            title="Costs"
-            description="Monitor API costs"
+            titleKey="admin.sidebar.costs"
+            descriptionKey="admin.dashboard.monitorCosts"
+            t={t}
           />
         </Grid>
       </div>

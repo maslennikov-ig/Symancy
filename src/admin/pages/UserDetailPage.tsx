@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
+import { useAdminTranslations } from '../hooks/useAdminTranslations';
 import { formatRelativeTime, formatFullDate, truncateText } from '../utils/formatters';
 import { MAX_CREDIT_ADJUSTMENT, TIME_THRESHOLDS } from '../utils/constants';
 import { logger } from '../utils/logger';
@@ -110,6 +111,7 @@ export function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: adminUser, isAdmin, isLoading: authLoading, signOut } = useAdminAuth();
+  const { t } = useAdminTranslations();
 
   // User data state
   const [userData, setUserData] = useState<UnifiedUser | null>(null);
@@ -221,7 +223,7 @@ export function UserDetailPage() {
     };
   }, [authLoading, isAdmin, id, refreshTrigger]);
 
-  // Handle credit adjustment
+  // Handle credit adjustment with optimistic updates
   const handleAdjustCredits = async () => {
     if (!id) return;
     if (basicDelta === 0 && proDelta === 0 && cassandraDelta === 0) {
@@ -243,6 +245,18 @@ export function UserDetailPage() {
       return;
     }
 
+    // Store previous state for rollback
+    const previousCredits = credits;
+
+    // Calculate optimistic new values (ensure non-negative)
+    const optimisticCredits: UserCredits = {
+      credits_basic: Math.max(0, (credits?.credits_basic || 0) + basicDelta),
+      credits_pro: Math.max(0, (credits?.credits_pro || 0) + proDelta),
+      credits_cassandra: Math.max(0, (credits?.credits_cassandra || 0) + cassandraDelta),
+    };
+
+    // Optimistically update UI immediately
+    setCredits(optimisticCredits);
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
@@ -278,7 +292,7 @@ export function UserDetailPage() {
         throw new Error('Invalid RPC response: missing or invalid credits_cassandra');
       }
 
-      // Update local state with new credits
+      // Confirm with server response (replaces optimistic values with actual server values)
       setCredits({
         credits_basic: result.credits_basic,
         credits_pro: result.credits_pro,
@@ -298,6 +312,9 @@ export function UserDetailPage() {
       setTimeout(() => setSaveSuccess(false), TIME_THRESHOLDS.SUCCESS_MESSAGE_DURATION_MS);
 
     } catch (err) {
+      // Rollback to previous state on error
+      setCredits(previousCredits);
+
       logger.error('Error adjusting credits', err);
       const message = err instanceof Error ? err.message : 'Failed to adjust credits';
       setSaveError(message);
@@ -320,9 +337,9 @@ export function UserDetailPage() {
   // Auth loading state
   if (authLoading) {
     return (
-      <AdminLayout title="User Details" userName={adminUser?.email} onLogout={signOut}>
+      <AdminLayout title={t('admin.userDetail.title')} userName={adminUser?.email} onLogout={signOut}>
         <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">Loading...</div>
+          <div className="text-muted-foreground">{t('admin.common.loading')}</div>
         </div>
       </AdminLayout>
     );
@@ -331,9 +348,9 @@ export function UserDetailPage() {
   // Not admin
   if (!isAdmin) {
     return (
-      <AdminLayout title="User Details" onLogout={signOut}>
+      <AdminLayout title={t('admin.userDetail.title')} onLogout={signOut}>
         <div className="flex items-center justify-center h-64">
-          <div className="text-destructive">Access denied. Admin privileges required.</div>
+          <div className="text-destructive">{t('admin.forbidden.message')}</div>
         </div>
       </AdminLayout>
     );
@@ -341,7 +358,7 @@ export function UserDetailPage() {
 
   return (
     <AdminLayout
-      title="User Details"
+      title={t('admin.userDetail.title')}
       userName={adminUser?.user_metadata?.full_name || adminUser?.email}
       userEmail={adminUser?.email}
       onLogout={signOut}
@@ -355,11 +372,11 @@ export function UserDetailPage() {
             onClick={() => navigate('/admin/users')}
             className="gap-2"
           >
-            <span>&larr;</span> Back to Users
+            <span>&larr;</span> {t('admin.userDetail.backToUsers')}
           </Button>
           {userData && (
             <h1 className="text-2xl font-bold">
-              {userData.display_name || 'Unnamed User'}
+              {userData.display_name || t('admin.userDetail.unnamed')}
             </h1>
           )}
         </div>
@@ -374,7 +391,7 @@ export function UserDetailPage() {
               onClick={handleRetry}
               disabled={isLoading}
             >
-              Retry
+              {t('admin.common.retry')}
             </Button>
           </div>
         )}
@@ -382,7 +399,7 @@ export function UserDetailPage() {
         {/* Success message */}
         {saveSuccess && (
           <div className="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-4 py-3 rounded-md">
-            Credits adjusted successfully!
+            {t('admin.userDetail.creditsSuccess')}
           </div>
         )}
 
@@ -393,8 +410,8 @@ export function UserDetailPage() {
             {/* User Info Card */}
             <Card>
               <CardHeader>
-                <CardTitle>User Information</CardTitle>
-                <CardDescription>Basic profile details</CardDescription>
+                <CardTitle>{t('admin.userDetail.info')}</CardTitle>
+                <CardDescription>{t('admin.userDetail.profileDetails')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
@@ -408,36 +425,36 @@ export function UserDetailPage() {
                           {userData.telegram_id}
                         </code>
                       ) : (
-                        <Badge variant="outline">Web User</Badge>
+                        <Badge variant="outline">{t('admin.userDetail.webUser')}</Badge>
                       )}
                     </div>
 
                     <Separator />
 
                     <div className="flex items-center gap-2">
-                      <Label className="text-muted-foreground w-32">Display Name:</Label>
+                      <Label className="text-muted-foreground w-32">{t('admin.userDetail.displayName')}:</Label>
                       <span>{userData.display_name || '-'}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <Label className="text-muted-foreground w-32">Language:</Label>
+                      <Label className="text-muted-foreground w-32">{t('admin.userDetail.language')}:</Label>
                       <Badge variant="outline">{userData.language_code?.toUpperCase() || 'RU'}</Badge>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <Label className="text-muted-foreground w-32">Interface:</Label>
+                      <Label className="text-muted-foreground w-32">{t('admin.userDetail.interface')}:</Label>
                       <Badge variant="secondary">{userData.primary_interface}</Badge>
                     </div>
 
                     <Separator />
 
                     <div className="flex items-center gap-2">
-                      <Label className="text-muted-foreground w-32">Created:</Label>
+                      <Label className="text-muted-foreground w-32">{t('admin.userDetail.created')}:</Label>
                       <span className="text-sm">{formatFullDate(userData.created_at)}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <Label className="text-muted-foreground w-32">Last Active:</Label>
+                      <Label className="text-muted-foreground w-32">{t('admin.userDetail.lastActive')}:</Label>
                       <span className="text-sm">
                         {userData.last_active_at ? formatRelativeTime(userData.last_active_at) : '-'}
                       </span>
@@ -446,21 +463,21 @@ export function UserDetailPage() {
                     <Separator />
 
                     <div className="flex items-center gap-2">
-                      <Label className="text-muted-foreground w-32">Onboarding:</Label>
+                      <Label className="text-muted-foreground w-32">{t('admin.userDetail.onboarding')}:</Label>
                       <Badge variant={userData.onboarding_completed ? 'default' : 'outline'}>
-                        {userData.onboarding_completed ? 'Completed' : 'Incomplete'}
+                        {userData.onboarding_completed ? t('admin.userDetail.completed') : t('admin.userDetail.incomplete')}
                       </Badge>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <Label className="text-muted-foreground w-32">Status:</Label>
+                      <Label className="text-muted-foreground w-32">{t('admin.userDetail.status')}:</Label>
                       <Badge variant={userData.is_banned ? 'destructive' : 'default'}>
-                        {userData.is_banned ? 'Banned' : 'Active'}
+                        {userData.is_banned ? t('admin.userDetail.banned') : t('admin.userDetail.active')}
                       </Badge>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-muted-foreground">User not found</div>
+                  <div className="text-muted-foreground">{t('admin.userDetail.notFound')}</div>
                 )}
               </CardContent>
             </Card>
@@ -468,8 +485,8 @@ export function UserDetailPage() {
             {/* Credit Management Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Credit Management</CardTitle>
-                <CardDescription>View and adjust user credits</CardDescription>
+                <CardTitle>{t('admin.userDetail.credits')}</CardTitle>
+                <CardDescription>{t('admin.userDetail.viewAdjust')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
@@ -478,8 +495,8 @@ export function UserDetailPage() {
                   <div className="space-y-4">
                     {/* Current balances */}
                     <div>
-                      <Label className="text-muted-foreground text-sm mb-2 block">Current Balance:</Label>
-                      <CreditsBadges credits={credits} nullText="No credits data" />
+                      <Label className="text-muted-foreground text-sm mb-2 block">{t('admin.userDetail.currentBalance')}:</Label>
+                      <CreditsBadges credits={credits} nullText={t('admin.userDetail.noCredits')} />
                     </div>
 
                     <Separator />
@@ -490,11 +507,11 @@ export function UserDetailPage() {
                         variant="outline"
                         onClick={() => setIsEditingCredits(true)}
                       >
-                        Adjust Credits
+                        {t('admin.userDetail.adjustCredits')}
                       </Button>
                     ) : (
                       <div className="space-y-4">
-                        <Label className="text-sm font-medium">Credit Adjustments (+ or -):</Label>
+                        <Label className="text-sm font-medium">{t('admin.userDetail.creditAdjustments')}:</Label>
 
                         <div className="grid grid-cols-3 gap-3">
                           <div>
@@ -537,12 +554,12 @@ export function UserDetailPage() {
 
                         <div>
                           <Label htmlFor="reason" className="text-xs text-muted-foreground">
-                            Reason (for audit log)
+                            {t('admin.userDetail.reason')}
                           </Label>
                           <Input
                             id="reason"
                             type="text"
-                            placeholder="e.g., compensation, bonus, correction"
+                            placeholder={t('admin.userDetail.reasonPlaceholder')}
                             value={adjustReason}
                             onChange={(e) => setAdjustReason(e.target.value)}
                             className="mt-1"
@@ -558,14 +575,14 @@ export function UserDetailPage() {
                             onClick={handleAdjustCredits}
                             disabled={isSaving}
                           >
-                            {isSaving ? 'Saving...' : 'Save Changes'}
+                            {isSaving ? t('admin.common.saving') : t('admin.common.save')}
                           </Button>
                           <Button
                             variant="outline"
                             onClick={handleCancelEdit}
                             disabled={isSaving}
                           >
-                            Cancel
+                            {t('admin.common.cancel')}
                           </Button>
                         </div>
                       </div>
@@ -581,15 +598,15 @@ export function UserDetailPage() {
             {/* Recent Messages Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Recent Messages</CardTitle>
-                <CardDescription>Last 10 messages from this user</CardDescription>
+                <CardTitle>{t('admin.userDetail.recentMessages')}</CardTitle>
+                <CardDescription>{t('admin.userDetail.last10Messages')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
                   <ListSkeleton items={5} />
                 ) : messages.length === 0 ? (
                   <div className="text-muted-foreground text-center py-8">
-                    No messages found
+                    {t('admin.userDetail.noMessages')}
                   </div>
                 ) : (
                   <div className="rounded-md border">
@@ -631,15 +648,15 @@ export function UserDetailPage() {
             {/* Recent Analyses Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Recent Analyses</CardTitle>
-                <CardDescription>Last 5 coffee readings</CardDescription>
+                <CardTitle>{t('admin.userDetail.recentAnalyses')}</CardTitle>
+                <CardDescription>{t('admin.userDetail.last5Readings')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
                   <ListSkeleton items={3} />
                 ) : analyses.length === 0 ? (
                   <div className="text-muted-foreground text-center py-8">
-                    No analyses found
+                    {t('admin.userDetail.noAnalyses')}
                   </div>
                 ) : (
                   <div className="rounded-md border">

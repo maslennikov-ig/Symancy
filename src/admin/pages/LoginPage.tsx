@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { supabase } from '@/lib/supabaseClient';
+import { useAdminTranslations } from '../hooks/useAdminTranslations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +20,7 @@ import {
  */
 export function LoginPage() {
   const navigate = useNavigate();
+  const { t } = useAdminTranslations();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -57,10 +59,10 @@ export function LoginPage() {
       <Card className="w-full max-w-md mx-4 bg-white">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            Admin Login
+            {t('admin.login.title')}
           </CardTitle>
           <CardDescription className="text-center">
-            Enter your credentials to access the admin panel
+            {t('admin.login.error')}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -71,7 +73,7 @@ export function LoginPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('admin.login.email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -84,11 +86,11 @@ export function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('admin.login.password')}</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="********"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -103,11 +105,8 @@ export function LoginPage() {
               className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? t('admin.login.signingIn') : t('admin.login.signIn')}
             </Button>
-            <p className="text-xs text-center text-muted-foreground">
-              Access restricted to authorized admin accounts only
-            </p>
           </CardFooter>
         </form>
       </Card>

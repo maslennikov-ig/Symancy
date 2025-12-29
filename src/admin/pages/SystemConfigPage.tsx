@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
+import { useAdminTranslations } from '../hooks/useAdminTranslations';
 import {
   Table,
   TableBody,
@@ -88,6 +89,7 @@ function TableSkeleton() {
 
 export function SystemConfigPage() {
   const { user, signOut } = useAdminAuth();
+  const { t } = useAdminTranslations();
   const [configs, setConfigs] = useState<SystemConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -202,7 +204,7 @@ export function SystemConfigPage() {
 
   return (
     <AdminLayout
-      title="System Configuration"
+      title={t('admin.systemConfig.title')}
       userName={user?.user_metadata?.full_name || user?.email || 'Admin'}
       userEmail={user?.email}
       userAvatar={user?.user_metadata?.avatar_url}
@@ -211,9 +213,9 @@ export function SystemConfigPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Configuration Settings</span>
+            <span>{t('admin.systemConfig.settings')}</span>
             <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-              Refresh
+              {t('admin.common.refresh')}
             </Button>
           </CardTitle>
         </CardHeader>
@@ -226,7 +228,7 @@ export function SystemConfigPage() {
                 size="sm"
                 onClick={handleRefresh}
               >
-                Retry
+                {t('admin.common.retry')}
               </Button>
             </div>
           )}
@@ -234,10 +236,10 @@ export function SystemConfigPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[200px]">Key</TableHead>
-                <TableHead className="w-[300px]">Value</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="w-[120px] text-right">Last Updated</TableHead>
+                <TableHead className="w-[200px]">{t('admin.systemConfig.key')}</TableHead>
+                <TableHead className="w-[300px]">{t('admin.systemConfig.value')}</TableHead>
+                <TableHead>{t('admin.systemConfig.description')}</TableHead>
+                <TableHead className="w-[120px] text-right">{t('admin.systemConfig.lastUpdated')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -246,7 +248,7 @@ export function SystemConfigPage() {
               ) : configs.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                    No configurations found
+                    {t('admin.systemConfig.noConfigs')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -289,19 +291,19 @@ export function SystemConfigPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              Edit Config:{' '}
+              {t('admin.systemConfig.editConfig')}:{' '}
               <code className="font-mono bg-muted px-2 py-0.5 rounded">
                 {selectedConfig?.key}
               </code>
             </DialogTitle>
             <DialogDescription>
-              {selectedConfig?.description || 'No description available'}
+              {selectedConfig?.description || t('admin.systemConfig.noDescription')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="config-key">Key</Label>
+              <Label htmlFor="config-key">{t('admin.systemConfig.key')}</Label>
               <Input
                 id="config-key"
                 value={selectedConfig?.key || ''}
@@ -313,10 +315,10 @@ export function SystemConfigPage() {
 
             <div className="space-y-2">
               <Label htmlFor="config-value">
-                Value (JSON)
+                {t('admin.systemConfig.value')} (JSON)
                 {jsonError && (
                   <span className="ml-2 text-destructive text-xs font-normal">
-                    {jsonError}
+                    {t('admin.systemConfig.invalidJson')}
                   </span>
                 )}
               </Label>
@@ -332,17 +334,17 @@ export function SystemConfigPage() {
                   disabled:cursor-not-allowed disabled:opacity-50
                   ${jsonError ? 'border-destructive focus-visible:ring-destructive' : 'border-input'}
                 `}
-                placeholder="Enter valid JSON..."
+                placeholder={t('admin.systemConfig.enterJson')}
               />
             </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>
-              Cancel
+              {t('admin.common.cancel')}
             </Button>
             <Button onClick={handleSave} disabled={!!jsonError || saving}>
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? t('admin.common.saving') : t('admin.common.save')}
             </Button>
           </DialogFooter>
         </DialogContent>

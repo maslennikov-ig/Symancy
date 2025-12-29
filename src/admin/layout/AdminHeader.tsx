@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { useAdminTranslations } from '../hooks/useAdminTranslations'
 
 interface AdminHeaderProps {
   title: string
@@ -25,6 +26,7 @@ export function AdminHeader({
   userAvatar,
   onLogout,
 }: AdminHeaderProps) {
+  const { t } = useAdminTranslations()
   const initials = userName
     .split(' ')
     .map((n) => n[0])
@@ -70,7 +72,7 @@ export function AdminHeader({
             className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-600 dark:text-red-400 dark:focus:bg-red-950 dark:focus:text-red-400"
           >
             <LogOut className="mr-2 h-4 w-4" />
-            <span>Log out</span>
+            <span>{t('admin.common.logout')}</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

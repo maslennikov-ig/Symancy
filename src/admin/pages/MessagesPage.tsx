@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
+import { useAdminTranslations } from '../hooks/useAdminTranslations';
 import { formatRelativeTime, truncateText } from '../utils/formatters';
 import { PAGE_SIZES, TIME_THRESHOLDS } from '../utils/constants';
 import { logger } from '../utils/logger';
@@ -181,6 +182,7 @@ function MessageDetails({ message }: { message: Message }) {
 
 export function MessagesPage() {
   const { user, isAdmin, isLoading: authLoading, signOut } = useAdminAuth();
+  const { t } = useAdminTranslations();
 
   // State
   const [messages, setMessages] = useState<Message[]>([]);
@@ -338,9 +340,9 @@ export function MessagesPage() {
   // Auth loading state
   if (authLoading) {
     return (
-      <AdminLayout title="Messages" userName={user?.email} onLogout={signOut}>
+      <AdminLayout title={t('admin.messages.title')} userName={user?.email} onLogout={signOut}>
         <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">Loading...</div>
+          <div className="text-muted-foreground">{t('admin.common.loading')}</div>
         </div>
       </AdminLayout>
     );
@@ -349,9 +351,9 @@ export function MessagesPage() {
   // Not admin
   if (!isAdmin) {
     return (
-      <AdminLayout title="Messages" onLogout={signOut}>
+      <AdminLayout title={t('admin.messages.title')} onLogout={signOut}>
         <div className="flex items-center justify-center h-64">
-          <div className="text-destructive">Access denied. Admin privileges required.</div>
+          <div className="text-destructive">{t('admin.forbidden.message')}</div>
         </div>
       </AdminLayout>
     );
@@ -359,7 +361,7 @@ export function MessagesPage() {
 
   return (
     <AdminLayout
-      title="Messages"
+      title={t('admin.messages.title')}
       userName={user?.user_metadata?.full_name || user?.email}
       userEmail={user?.email}
       onLogout={signOut}
@@ -371,7 +373,7 @@ export function MessagesPage() {
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="flex-1 max-w-md">
               <Input
-                placeholder="Search by message content..."
+                placeholder={t('admin.messages.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
@@ -383,7 +385,7 @@ export function MessagesPage() {
               onClick={handleRefresh}
               disabled={isLoading}
             >
-              Refresh
+              {t('admin.common.refresh')}
             </Button>
           </div>
 
@@ -391,7 +393,7 @@ export function MessagesPage() {
           <div className="flex flex-wrap gap-4">
             {/* Role filter */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Role:</span>
+              <span className="text-sm text-muted-foreground">{t('admin.messages.role')}:</span>
               <Select
                 value={roleFilter}
                 onValueChange={(value: RoleFilter) => setRoleFilter(value)}
@@ -400,17 +402,17 @@ export function MessagesPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All roles</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="assistant">Assistant</SelectItem>
-                  <SelectItem value="system">System</SelectItem>
+                  <SelectItem value="all">{t('admin.messages.allRoles')}</SelectItem>
+                  <SelectItem value="user">{t('admin.messages.user')}</SelectItem>
+                  <SelectItem value="assistant">{t('admin.messages.assistant')}</SelectItem>
+                  <SelectItem value="system">{t('admin.messages.system')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Content type filter */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Type:</span>
+              <span className="text-sm text-muted-foreground">{t('admin.messages.type')}:</span>
               <Select
                 value={contentTypeFilter}
                 onValueChange={(value: ContentTypeFilter) => setContentTypeFilter(value)}
@@ -419,19 +421,19 @@ export function MessagesPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  <SelectItem value="text">Text</SelectItem>
-                  <SelectItem value="image">Image</SelectItem>
-                  <SelectItem value="analysis">Analysis</SelectItem>
-                  <SelectItem value="audio">Audio</SelectItem>
-                  <SelectItem value="document">Document</SelectItem>
+                  <SelectItem value="all">{t('admin.messages.allTypes')}</SelectItem>
+                  <SelectItem value="text">{t('admin.messages.text')}</SelectItem>
+                  <SelectItem value="image">{t('admin.messages.image')}</SelectItem>
+                  <SelectItem value="analysis">{t('admin.messages.analysis')}</SelectItem>
+                  <SelectItem value="audio">{t('admin.messages.audio')}</SelectItem>
+                  <SelectItem value="document">{t('admin.messages.document')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Channel filter */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Channel:</span>
+              <span className="text-sm text-muted-foreground">{t('admin.messages.channel')}:</span>
               <Select
                 value={channelFilter}
                 onValueChange={(value: ChannelFilter) => setChannelFilter(value)}
@@ -440,7 +442,7 @@ export function MessagesPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All channels</SelectItem>
+                  <SelectItem value="all">{t('admin.messages.allChannels')}</SelectItem>
                   <SelectItem value="telegram">Telegram</SelectItem>
                   <SelectItem value="web">Web</SelectItem>
                 </SelectContent>
@@ -459,7 +461,7 @@ export function MessagesPage() {
               onClick={handleRefresh}
               disabled={isLoading}
             >
-              Retry
+              {t('admin.common.retry')}
             </Button>
           </div>
         )}
@@ -470,9 +472,7 @@ export function MessagesPage() {
             <MessagesTableSkeleton />
           ) : messages.length === 0 ? (
             <div className="flex items-center justify-center h-64 text-muted-foreground">
-              {debouncedSearch || roleFilter !== 'all' || contentTypeFilter !== 'all' || channelFilter !== 'all'
-                ? 'No messages found matching your filters'
-                : 'No messages found'}
+              {t('admin.messages.noMessages')}
             </div>
           ) : (
             <Table>
@@ -549,7 +549,7 @@ export function MessagesPage() {
         {totalCount > 0 && (
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
-              Showing {((currentPage - 1) * PAGE_SIZE) + 1} - {Math.min(currentPage * PAGE_SIZE, totalCount)} of {totalCount} messages
+              {t('admin.messages.total')}: {totalCount}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -558,10 +558,10 @@ export function MessagesPage() {
                 onClick={() => setCurrentPage((p) => p - 1)}
                 disabled={!canGoPrev || isLoading}
               >
-                Previous
+                {t('admin.common.back')}
               </Button>
               <span className="text-sm text-muted-foreground px-2">
-                Page {currentPage} of {totalPages}
+                {t('admin.users.page')} {currentPage} {t('admin.users.of')} {totalPages}
               </span>
               <Button
                 variant="outline"

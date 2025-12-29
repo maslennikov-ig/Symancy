@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
+import { useAdminTranslations } from '../hooks/useAdminTranslations';
 import {
   Table,
   TableBody,
@@ -138,6 +139,7 @@ function UserStatesTableSkeleton() {
 
 export function UserStatesPage() {
   const { user, isAdmin, isLoading: authLoading, signOut } = useAdminAuth();
+  const { t } = useAdminTranslations();
 
   // State
   const [userStates, setUserStates] = useState<UserState[]>([]);
@@ -274,9 +276,9 @@ export function UserStatesPage() {
   // Auth loading state
   if (authLoading) {
     return (
-      <AdminLayout title="User States" userName={user?.email} onLogout={signOut}>
+      <AdminLayout title={t('admin.userStates.title')} userName={user?.email} onLogout={signOut}>
         <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">Loading...</div>
+          <div className="text-muted-foreground">{t('admin.common.loading')}</div>
         </div>
       </AdminLayout>
     );
@@ -285,9 +287,9 @@ export function UserStatesPage() {
   // Not admin
   if (!isAdmin) {
     return (
-      <AdminLayout title="User States" onLogout={signOut}>
+      <AdminLayout title={t('admin.userStates.title')} onLogout={signOut}>
         <div className="flex items-center justify-center h-64">
-          <div className="text-destructive">Access denied. Admin privileges required.</div>
+          <div className="text-destructive">{t('admin.forbidden.message')}</div>
         </div>
       </AdminLayout>
     );
@@ -295,7 +297,7 @@ export function UserStatesPage() {
 
   return (
     <AdminLayout
-      title="User States"
+      title={t('admin.userStates.title')}
       userName={user?.user_metadata?.full_name || user?.email}
       userEmail={user?.email}
       onLogout={signOut}
@@ -313,7 +315,7 @@ export function UserStatesPage() {
                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               />
               <Label htmlFor="showOnlyStuck" className="text-sm cursor-pointer">
-                Show only stuck users {stuckCount > 0 && (
+                {t('admin.userStates.showOnlyStuck')} {stuckCount > 0 && (
                   <span className="text-destructive font-medium">({stuckCount})</span>
                 )}
               </Label>
@@ -325,7 +327,7 @@ export function UserStatesPage() {
             onClick={handleRefresh}
             disabled={isLoading}
           >
-            Refresh
+            {t('admin.common.refresh')}
           </Button>
         </div>
 
@@ -333,15 +335,15 @@ export function UserStatesPage() {
         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <span className="text-green-500">&#9679;</span>
-            <span>Active (onboarding complete)</span>
+            <span>{t('admin.userStates.active')}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-yellow-500">&#9679;</span>
-            <span>In Onboarding (&lt;24h)</span>
+            <span>{t('admin.userStates.inOnboarding')}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-red-500">&#9679;</span>
-            <span>Stuck (&gt;24h in onboarding)</span>
+            <span>{t('admin.userStates.stuck')}</span>
           </div>
         </div>
 
@@ -355,7 +357,7 @@ export function UserStatesPage() {
               onClick={handleRefresh}
               disabled={isLoading}
             >
-              Retry
+              {t('admin.common.retry')}
             </Button>
           </div>
         )}
@@ -366,18 +368,18 @@ export function UserStatesPage() {
             <UserStatesTableSkeleton />
           ) : filteredUserStates.length === 0 ? (
             <div className="flex items-center justify-center h-64 text-muted-foreground">
-              {showOnlyStuck ? 'No stuck users found' : 'No user states found'}
+              {showOnlyStuck ? t('admin.userStates.noStuck') : t('admin.userStates.noStates')}
             </div>
           ) : (
             <Table>
               <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow>
                   <TableHead className="w-[140px]">Telegram ID</TableHead>
-                  <TableHead className="w-[160px]">User Name</TableHead>
-                  <TableHead className="w-[160px]">Onboarding Step</TableHead>
-                  <TableHead className="w-[120px]">Status</TableHead>
-                  <TableHead className="w-[120px]">Last Updated</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
+                  <TableHead className="w-[160px]">{t('admin.userStates.userName')}</TableHead>
+                  <TableHead className="w-[160px]">{t('admin.userStates.onboardingStep')}</TableHead>
+                  <TableHead className="w-[120px]">{t('admin.userStates.status')}</TableHead>
+                  <TableHead className="w-[120px]">{t('admin.userStates.lastUpdated')}</TableHead>
+                  <TableHead className="w-[100px]">{t('admin.userStates.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -424,7 +426,7 @@ export function UserStatesPage() {
                             onClick={() => handleResetClick(state)}
                             className="text-destructive hover:text-destructive"
                           >
-                            Reset
+                            {t('admin.userStates.reset')}
                           </Button>
                         )}
                       </TableCell>
@@ -439,10 +441,10 @@ export function UserStatesPage() {
         {/* Summary */}
         {!isLoading && userStates.length > 0 && (
           <div className="text-sm text-muted-foreground">
-            Showing {filteredUserStates.length} of {userStates.length} user states
+            {t('admin.userStates.showing')} {filteredUserStates.length} {t('admin.userStates.of')} {userStates.length} {t('admin.userStates.userStates')}
             {stuckCount > 0 && (
               <span className="text-destructive ml-2">
-                ({stuckCount} stuck)
+                ({stuckCount} {t('admin.userStates.stuck').toLowerCase()})
               </span>
             )}
           </div>
@@ -453,22 +455,22 @@ export function UserStatesPage() {
       <Dialog open={resetDialogOpen} onOpenChange={handleDialogClose}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reset User State</DialogTitle>
+            <DialogTitle>{t('admin.userStates.resetDialogTitle')}</DialogTitle>
             <DialogDescription>
-              This will reset the onboarding state for user{' '}
+              {t('admin.userStates.resetDialogDescription')}{' '}
               <code className="bg-muted px-1 py-0.5 rounded text-foreground">
                 {selectedUser?.telegram_user_id}
               </code>
               {selectedUser && getDisplayName(selectedUser) !== '-' && (
                 <> ({getDisplayName(selectedUser)})</>
               )}
-              . They will be able to start fresh.
+              . {t('admin.userStates.resetDialogFresh')}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             {selectedUser?.onboarding_step && (
               <div className="text-sm">
-                <span className="text-muted-foreground">Current step:</span>{' '}
+                <span className="text-muted-foreground">{t('admin.userStates.currentStep')}:</span>{' '}
                 <Badge variant="secondary" className="font-mono">
                   {selectedUser.onboarding_step}
                 </Badge>
@@ -476,7 +478,7 @@ export function UserStatesPage() {
             )}
             {selectedUser?.onboarding_data && Object.keys(selectedUser.onboarding_data).length > 0 && (
               <div className="mt-2 text-sm">
-                <span className="text-muted-foreground">Onboarding data will be cleared:</span>
+                <span className="text-muted-foreground">{t('admin.userStates.dataWillBeCleared')}:</span>
                 <pre className="mt-1 p-2 bg-muted rounded text-xs overflow-auto max-h-32">
                   {JSON.stringify(selectedUser.onboarding_data, null, 2)}
                 </pre>
@@ -489,14 +491,14 @@ export function UserStatesPage() {
               onClick={handleDialogClose}
               disabled={isResetting}
             >
-              Cancel
+              {t('admin.common.cancel')}
             </Button>
             <Button
               variant="destructive"
               onClick={handleResetConfirm}
               disabled={isResetting}
             >
-              {isResetting ? 'Resetting...' : 'Reset State'}
+              {isResetting ? t('admin.userStates.resetting') : t('admin.userStates.reset')}
             </Button>
           </DialogFooter>
         </DialogContent>

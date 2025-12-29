@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
+import { Download } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
+import { useAdminTranslations } from '../hooks/useAdminTranslations';
 import { formatRelativeTime, formatDateShort } from '../utils/formatters';
 import { PAGE_SIZES, TIME_THRESHOLDS } from '../utils/constants';
 import { logger } from '../utils/logger';
+import { exportToCsv } from '../utils/exportCsv';
 import { CreditsBadges, type UserCredits } from '../components/CreditBadge';
 import {
   Table,
@@ -63,6 +66,7 @@ function UsersTableSkeleton() {
 export function UsersPage() {
   const navigate = useNavigate();
   const { user, isAdmin, isLoading: authLoading, signOut } = useAdminAuth();
+  const { t } = useAdminTranslations();
 
   // State
   const [users, setUsers] = useState<UnifiedUser[]>([]);
@@ -168,6 +172,29 @@ export function UsersPage() {
   // Handle manual refresh
   const handleRefresh = () => setRefreshTrigger((prev) => prev + 1);
 
+  // Handle CSV export
+  const handleExport = () => {
+    exportToCsv(users, 'admin-users', [
+      { header: 'Telegram ID', accessor: 'telegram_id' },
+      { header: 'Display Name', accessor: 'display_name' },
+      {
+        header: 'Basic Credits',
+        accessor: (item) => item.unified_user_credits?.credits_basic ?? 0,
+      },
+      {
+        header: 'Pro Credits',
+        accessor: (item) => item.unified_user_credits?.credits_pro ?? 0,
+      },
+      {
+        header: 'Cassandra Credits',
+        accessor: (item) => item.unified_user_credits?.credits_cassandra ?? 0,
+      },
+      { header: 'Last Active', accessor: 'last_active_at' },
+      { header: 'Created At', accessor: 'created_at' },
+    ]);
+    toast.success(t('admin.common.exported'));
+  };
+
   // Handle row click
   const handleRowClick = (userId: string) => {
     navigate(`/admin/users/${userId}`);
@@ -189,9 +216,9 @@ export function UsersPage() {
   // Auth loading state
   if (authLoading) {
     return (
-      <AdminLayout title="Users" userName={user?.email} onLogout={signOut}>
+      <AdminLayout title={t('admin.users.title')} userName={user?.email} onLogout={signOut}>
         <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">Loading...</div>
+          <div className="text-muted-foreground">{t('admin.common.loading')}</div>
         </div>
       </AdminLayout>
     );
@@ -200,9 +227,9 @@ export function UsersPage() {
   // Not admin
   if (!isAdmin) {
     return (
-      <AdminLayout title="Users" onLogout={signOut}>
+      <AdminLayout title={t('admin.users.title')} onLogout={signOut}>
         <div className="flex items-center justify-center h-64">
-          <div className="text-destructive">Access denied. Admin privileges required.</div>
+          <div className="text-destructive">{t('admin.forbidden.message')}</div>
         </div>
       </AdminLayout>
     );
@@ -210,7 +237,7 @@ export function UsersPage() {
 
   return (
     <AdminLayout
-      title="Users"
+      title={t('admin.users.title')}
       userName={user?.user_metadata?.full_name || user?.email}
       userEmail={user?.email}
       onLogout={signOut}
@@ -220,7 +247,7 @@ export function UsersPage() {
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <div className="flex-1 max-w-sm">
             <Input
-              placeholder="Search by Telegram ID or name..."
+              placeholder={t('admin.users.search')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full"
@@ -228,7 +255,7 @@ export function UsersPage() {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Sort by:</span>
+              <span className="text-sm text-muted-foreground">{t('admin.users.sortBy')}:</span>
               <Select
                 value={`${sortField}-${sortOrder}`}
                 onValueChange={handleSortChange}
@@ -237,20 +264,29 @@ export function UsersPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="last_active_at-desc">Last Active (newest)</SelectItem>
-                  <SelectItem value="last_active_at-asc">Last Active (oldest)</SelectItem>
-                  <SelectItem value="created_at-desc">Created (newest)</SelectItem>
-                  <SelectItem value="created_at-asc">Created (oldest)</SelectItem>
+                  <SelectItem value="last_active_at-desc">{t('admin.users.lastActive')} (newest)</SelectItem>
+                  <SelectItem value="last_active_at-asc">{t('admin.users.lastActive')} (oldest)</SelectItem>
+                  <SelectItem value="created_at-desc">{t('admin.users.createdAt')} (newest)</SelectItem>
+                  <SelectItem value="created_at-asc">{t('admin.users.createdAt')} (oldest)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <Button
               variant="outline"
               size="sm"
+              onClick={handleExport}
+              disabled={users.length === 0 || isLoading}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {t('admin.common.export')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleRefresh}
               disabled={isLoading}
             >
-              Refresh
+              {t('admin.common.refresh')}
             </Button>
           </div>
         </div>
@@ -265,7 +301,7 @@ export function UsersPage() {
               onClick={handleRefresh}
               disabled={isLoading}
             >
-              Retry
+              {t('admin.common.retry')}
             </Button>
           </div>
         )}
@@ -276,17 +312,17 @@ export function UsersPage() {
             <UsersTableSkeleton />
           ) : users.length === 0 ? (
             <div className="flex items-center justify-center h-64 text-muted-foreground">
-              {debouncedSearch ? 'No users found matching your search' : 'No users found'}
+              {t('admin.users.noUsers')}
             </div>
           ) : (
             <Table>
               <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow>
-                  <TableHead className="w-[150px]">Telegram ID</TableHead>
-                  <TableHead>Display Name</TableHead>
-                  <TableHead className="w-[200px]">Credits</TableHead>
-                  <TableHead className="w-[120px]">Last Active</TableHead>
-                  <TableHead className="w-[120px]">Created</TableHead>
+                  <TableHead className="w-[150px]">{t('admin.users.columns.telegramId')}</TableHead>
+                  <TableHead>{t('admin.users.columns.displayName')}</TableHead>
+                  <TableHead className="w-[200px]">{t('admin.users.columns.credits')}</TableHead>
+                  <TableHead className="w-[120px]">{t('admin.users.columns.lastActive')}</TableHead>
+                  <TableHead className="w-[120px]">{t('admin.users.createdAt')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -334,7 +370,7 @@ export function UsersPage() {
         {totalCount > 0 && (
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
-              Showing {((currentPage - 1) * PAGE_SIZE) + 1} - {Math.min(currentPage * PAGE_SIZE, totalCount)} of {totalCount} users
+              {t('admin.users.total')}: {totalCount}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -343,10 +379,10 @@ export function UsersPage() {
                 onClick={() => setCurrentPage((p) => p - 1)}
                 disabled={!canGoPrev || isLoading}
               >
-                Previous
+                {t('admin.common.back')}
               </Button>
               <span className="text-sm text-muted-foreground px-2">
-                Page {currentPage} of {totalPages}
+                {t('admin.users.page')} {currentPage} {t('admin.users.of')} {totalPages}
               </span>
               <Button
                 variant="outline"

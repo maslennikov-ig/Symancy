@@ -19,13 +19,15 @@ import {
   TableBody,
   TableCell,
 } from '@tremor/react';
-import { DollarSign, Zap, Clock, Activity } from 'lucide-react';
+import { DollarSign, Zap, Clock, Activity, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
+import { useAdminTranslations } from '../hooks/useAdminTranslations';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { formatNumberEN, formatCurrencyUSD, formatMs } from '../utils/formatters';
+import { exportToCsv } from '../utils/exportCsv';
 
 // ============================================================================
 // Types
@@ -190,6 +192,7 @@ function TableSkeleton() {
 
 export function CostsPage() {
   const { user, isAdmin, isLoading: authLoading, signOut } = useAdminAuth();
+  const { t } = useAdminTranslations();
 
   // Date range state
   const [dateRange, setDateRange] = useState<DateRangePickerValue>(() => {
@@ -396,15 +399,27 @@ export function CostsPage() {
     setDateRange({ from, to });
   };
 
+  // Handle CSV export
+  const handleExport = () => {
+    exportToCsv(userStats, 'admin-llm-costs', [
+      { header: 'Display Name', accessor: 'displayName' },
+      { header: 'Telegram ID', accessor: 'telegramId' },
+      { header: 'Requests', accessor: 'requests' },
+      { header: 'Tokens', accessor: 'tokens' },
+      { header: 'Estimated Cost (USD)', accessor: (item) => item.cost.toFixed(4) },
+    ]);
+    toast.success(t('admin.common.exported'));
+  };
+
   // ============================================================================
   // Render
   // ============================================================================
 
   if (authLoading) {
     return (
-      <AdminLayout title="LLM Costs" userName={user?.email} onLogout={signOut}>
+      <AdminLayout title={t('admin.costs.title')} userName={user?.email} onLogout={signOut}>
         <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">Loading...</div>
+          <div className="text-muted-foreground">{t('admin.common.loading')}</div>
         </div>
       </AdminLayout>
     );
@@ -412,9 +427,9 @@ export function CostsPage() {
 
   if (!isAdmin) {
     return (
-      <AdminLayout title="LLM Costs" onLogout={signOut}>
+      <AdminLayout title={t('admin.costs.title')} onLogout={signOut}>
         <div className="flex items-center justify-center h-64">
-          <div className="text-destructive">Access denied. Admin privileges required.</div>
+          <div className="text-destructive">{t('admin.forbidden.message')}</div>
         </div>
       </AdminLayout>
     );
@@ -422,7 +437,7 @@ export function CostsPage() {
 
   return (
     <AdminLayout
-      title="LLM Costs"
+      title={t('admin.costs.title')}
       userName={user?.user_metadata?.full_name || user?.email}
       userEmail={user?.email}
       onLogout={signOut}
@@ -432,27 +447,27 @@ export function CostsPage() {
         <Card>
           <Flex justifyContent="between" alignItems="center" className="flex-wrap gap-4">
             <div>
-              <Title>Cost Analytics</Title>
-              <Text>Monitor LLM API usage and estimated costs</Text>
+              <Title>{t('admin.costs.analytics')}</Title>
+              <Text>{t('admin.costs.monitorUsage')}</Text>
             </div>
             <Flex className="gap-2 flex-wrap">
               <button
                 onClick={() => handlePreset('last7')}
                 className="px-3 py-1.5 text-sm rounded-md border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               >
-                Last 7 days
+                {t('admin.costs.last7')}
               </button>
               <button
                 onClick={() => handlePreset('last30')}
                 className="px-3 py-1.5 text-sm rounded-md border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               >
-                Last 30 days
+                {t('admin.costs.last30')}
               </button>
               <button
                 onClick={() => handlePreset('thisMonth')}
                 className="px-3 py-1.5 text-sm rounded-md border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               >
-                This month
+                {t('admin.costs.thisMonth')}
               </button>
               <DateRangePicker
                 value={dateRange}
@@ -460,6 +475,15 @@ export function CostsPage() {
                 enableSelect={false}
                 className="max-w-sm"
               />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                disabled={userStats.length === 0 || isLoading}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {t('admin.common.export')}
+              </Button>
             </Flex>
           </Flex>
         </Card>
@@ -474,7 +498,7 @@ export function CostsPage() {
               onClick={handleRetry}
               disabled={isLoading}
             >
-              Retry
+              {t('admin.common.retry')}
             </Button>
           </div>
         )}
@@ -492,7 +516,7 @@ export function CostsPage() {
             <Card decoration="top" decorationColor="blue">
               <Flex justifyContent="between" alignItems="center">
                 <div>
-                  <Text>Total Requests</Text>
+                  <Text>{t('admin.costs.totalRequests')}</Text>
                   <Metric>{formatNumberEN(summaryStats.totalRequests)}</Metric>
                 </div>
                 <Zap className="h-8 w-8 text-blue-500" />
@@ -502,7 +526,7 @@ export function CostsPage() {
             <Card decoration="top" decorationColor="violet">
               <Flex justifyContent="between" alignItems="center">
                 <div>
-                  <Text>Total Tokens</Text>
+                  <Text>{t('admin.costs.totalTokens')}</Text>
                   <Metric>{formatNumberEN(summaryStats.totalTokens)}</Metric>
                 </div>
                 <Activity className="h-8 w-8 text-violet-500" />
@@ -512,7 +536,7 @@ export function CostsPage() {
             <Card decoration="top" decorationColor="emerald">
               <Flex justifyContent="between" alignItems="center">
                 <div>
-                  <Text>Estimated Cost</Text>
+                  <Text>{t('admin.costs.estimatedCost')}</Text>
                   <Metric>{formatCurrencyUSD(summaryStats.estimatedCost)}</Metric>
                 </div>
                 <DollarSign className="h-8 w-8 text-emerald-500" />
@@ -522,7 +546,7 @@ export function CostsPage() {
             <Card decoration="top" decorationColor="amber">
               <Flex justifyContent="between" alignItems="center">
                 <div>
-                  <Text>Avg Processing Time</Text>
+                  <Text>{t('admin.costs.avgProcessingTime')}</Text>
                   <Metric>{formatMs(summaryStats.avgProcessingMs)}</Metric>
                 </div>
                 <Clock className="h-8 w-8 text-amber-500" />
@@ -538,11 +562,11 @@ export function CostsPage() {
             <ChartSkeleton />
           ) : (
             <Card>
-              <Title>Requests by Model</Title>
-              <Text>Number of API requests per model</Text>
+              <Title>{t('admin.costs.requestsByModel')}</Title>
+              <Text>{t('admin.costs.requestsPerModel')}</Text>
               {modelStats.length === 0 ? (
                 <div className="h-72 flex items-center justify-center text-slate-500">
-                  No data available
+                  {t('admin.costs.noData')}
                 </div>
               ) : (
                 <BarChart
@@ -563,11 +587,11 @@ export function CostsPage() {
             <ChartSkeleton />
           ) : (
             <Card>
-              <Title>Model Distribution</Title>
-              <Text>Percentage of requests by model</Text>
+              <Title>{t('admin.costs.modelDistribution')}</Title>
+              <Text>{t('admin.costs.percentageByModel')}</Text>
               {donutData.length === 0 ? (
                 <div className="h-72 flex items-center justify-center text-slate-500">
-                  No data available
+                  {t('admin.costs.noData')}
                 </div>
               ) : (
                 <DonutChart
@@ -590,11 +614,11 @@ export function CostsPage() {
           <ChartSkeleton height="h-80" />
         ) : (
           <Card>
-            <Title>Tokens Over Time</Title>
-            <Text>Daily token usage stacked by model</Text>
+            <Title>{t('admin.costs.tokensOverTime')}</Title>
+            <Text>{t('admin.costs.dailyTokenUsage')}</Text>
             {timeSeriesData.length === 0 ? (
               <div className="h-80 flex items-center justify-center text-slate-500">
-                No data available
+                {t('admin.costs.noData')}
               </div>
             ) : (
               <AreaChart
@@ -616,20 +640,20 @@ export function CostsPage() {
           <TableSkeleton />
         ) : (
           <Card>
-            <Title>Per-User Breakdown</Title>
-            <Text>Top 20 users by token usage</Text>
+            <Title>{t('admin.costs.perUserBreakdown')}</Title>
+            <Text>{t('admin.costs.top20Users')}</Text>
             {userStats.length === 0 ? (
               <div className="h-32 flex items-center justify-center text-slate-500">
-                No data available
+                {t('admin.costs.noData')}
               </div>
             ) : (
               <Table className="mt-4">
                 <TableHead>
                   <TableRow>
-                    <TableHeaderCell>User</TableHeaderCell>
-                    <TableHeaderCell className="text-right">Requests</TableHeaderCell>
-                    <TableHeaderCell className="text-right">Tokens</TableHeaderCell>
-                    <TableHeaderCell className="text-right">Est. Cost</TableHeaderCell>
+                    <TableHeaderCell>{t('admin.costs.user')}</TableHeaderCell>
+                    <TableHeaderCell className="text-right">{t('admin.costs.requests')}</TableHeaderCell>
+                    <TableHeaderCell className="text-right">{t('admin.costs.tokens')}</TableHeaderCell>
+                    <TableHeaderCell className="text-right">{t('admin.costs.estCost')}</TableHeaderCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
