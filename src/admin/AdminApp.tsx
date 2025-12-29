@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router';
+import { Routes, Route, Navigate, Link } from 'react-router';
 import { useAdminAuth } from './hooks/useAdminAuth';
 import { LoaderIcon } from '../components/icons/LoaderIcon';
 
@@ -36,12 +36,12 @@ function ForbiddenPage() {
         You do not have permission to access the admin panel.
         Please contact an administrator if you believe this is an error.
       </p>
-      <a
-        href="/"
+      <Link
+        to="/"
         className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
       >
         Return to Home
-      </a>
+      </Link>
     </div>
   );
 }

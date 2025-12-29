@@ -2,9 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, Metric, Text, Grid, Title, Badge, Flex } from '@tremor/react';
 import { Settings, Users, MessageSquare, DollarSign, Activity, BarChart3, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router';
+import { toast } from 'sonner';
 import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
 import { supabase } from '../../lib/supabaseClient';
+import { Button } from '@/components/ui/button';
+import { formatCurrencyRUB, formatNumber } from '../utils/formatters';
+import { logger } from '../utils/logger';
+import { StatCardSkeleton } from '../components/skeletons';
 
 interface DashboardStats {
   totalUsers: number;
@@ -39,15 +44,6 @@ function QuickLink({ to, icon, title, description }: QuickLinkProps) {
   );
 }
 
-function StatCardSkeleton() {
-  return (
-    <Card className="animate-pulse" decoration="top" decorationColor="slate">
-      <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24 mb-3" />
-      <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-16" />
-    </Card>
-  );
-}
-
 /**
  * Admin Dashboard Page
  * Shows key statistics and quick navigation links
@@ -62,9 +58,14 @@ export function DashboardPage() {
     isLoading: true,
     error: null,
   });
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchStats() {
+      setStats(prev => ({ ...prev, isLoading: true, error: null }));
+
       try {
         // Fetch all stats in parallel
         const [usersResult, analysesResult, activeTodayResult, revenueResult] = await Promise.all([
@@ -93,39 +94,38 @@ export function DashboardPage() {
           0
         ) ?? 0;
 
-        setStats({
-          totalUsers: usersResult.count ?? 0,
-          totalAnalyses: analysesResult.count ?? 0,
-          activeToday: activeTodayResult.count ?? 0,
-          totalRevenue,
-          isLoading: false,
-          error: null,
-        });
+        if (!cancelled) {
+          setStats({
+            totalUsers: usersResult.count ?? 0,
+            totalAnalyses: analysesResult.count ?? 0,
+            activeToday: activeTodayResult.count ?? 0,
+            totalRevenue,
+            isLoading: false,
+            error: null,
+          });
+        }
       } catch (error) {
-        console.error('Failed to fetch dashboard stats:', error);
-        setStats(prev => ({
-          ...prev,
-          isLoading: false,
-          error: error instanceof Error ? error.message : 'Failed to load statistics',
-        }));
+        logger.error('Failed to fetch dashboard stats', error);
+        const message = error instanceof Error ? error.message : 'Failed to load statistics';
+        if (!cancelled) {
+          setStats(prev => ({
+            ...prev,
+            isLoading: false,
+            error: message,
+          }));
+          toast.error('Failed to load statistics', { description: message });
+        }
       }
     }
 
     fetchStats();
-  }, []);
 
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('ru-RU', {
-      style: 'currency',
-      currency: 'RUB',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshTrigger]);
 
-  const formatNumber = (num: number): string => {
-    return new Intl.NumberFormat('ru-RU').format(num);
-  };
+  const handleRetry = () => setRefreshTrigger(prev => prev + 1);
 
   return (
     <AdminLayout
@@ -140,8 +140,16 @@ export function DashboardPage() {
         <Title className="mb-4">Overview</Title>
 
         {stats.error && (
-          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
-            {stats.error}
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between gap-4">
+            <p className="text-red-700 dark:text-red-400">{stats.error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              disabled={stats.isLoading}
+            >
+              Retry
+            </Button>
           </div>
         )}
 
@@ -192,7 +200,7 @@ export function DashboardPage() {
                 <Flex justifyContent="between" alignItems="center">
                   <div>
                     <Text>Total Revenue</Text>
-                    <Metric>{formatCurrency(stats.totalRevenue)}</Metric>
+                    <Metric>{formatCurrencyRUB(stats.totalRevenue)}</Metric>
                   </div>
                   <TrendingUp className="h-8 w-8 text-amber-500" />
                 </Flex>
@@ -207,7 +215,7 @@ export function DashboardPage() {
         <Title className="mb-4">Quick Links</Title>
         <Grid numItemsMd={2} numItemsLg={4} className="gap-4">
           <QuickLink
-            to="/admin/config"
+            to="/admin/system-config"
             icon={<Settings className="h-5 w-5" />}
             title="System Config"
             description="Manage system settings"

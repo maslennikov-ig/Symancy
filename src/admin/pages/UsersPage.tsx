@@ -1,9 +1,13 @@
-// @ts-nocheck - Bypass library type conflicts with React 19
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
+import { formatRelativeTime, formatDateShort } from '../utils/formatters';
+import { PAGE_SIZES, TIME_THRESHOLDS } from '../utils/constants';
+import { logger } from '../utils/logger';
+import { CreditsBadges, type UserCredits } from '../components/CreditBadge';
 import {
   Table,
   TableBody,
@@ -25,12 +29,6 @@ import {
 } from '@/components/ui/select';
 
 // Types
-interface UserCredits {
-  credits_basic: number;
-  credits_pro: number;
-  credits_cassandra: number;
-}
-
 interface UnifiedUser {
   id: string;
   telegram_id: string | null;
@@ -43,38 +41,7 @@ interface UnifiedUser {
 type SortField = 'last_active_at' | 'created_at';
 type SortOrder = 'asc' | 'desc';
 
-const PAGE_SIZE = 25;
-
-// Helper: Format relative time
-function formatRelativeTime(dateString: string | null): string {
-  if (!dateString) return '-';
-
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHour = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHour / 24);
-
-  if (diffSec < 60) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHour < 24) return `${diffHour}h ago`;
-  if (diffDay < 7) return `${diffDay}d ago`;
-  if (diffDay < 30) return `${Math.floor(diffDay / 7)}w ago`;
-  if (diffDay < 365) return `${Math.floor(diffDay / 30)}mo ago`;
-  return `${Math.floor(diffDay / 365)}y ago`;
-}
-
-// Helper: Format date
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
+const PAGE_SIZE = PAGE_SIZES.USERS;
 
 // Loading skeleton component
 function UsersTableSkeleton() {
@@ -89,40 +56,6 @@ function UsersTableSkeleton() {
           <Skeleton className="h-4 w-24" />
         </div>
       ))}
-    </div>
-  );
-}
-
-// Credits badges component
-function CreditsBadges({ credits }: { credits: UserCredits | null }) {
-  if (!credits) {
-    return <span className="text-muted-foreground text-sm">-</span>;
-  }
-
-  const { credits_basic, credits_pro, credits_cassandra } = credits;
-  const hasCredits = credits_basic > 0 || credits_pro > 0 || credits_cassandra > 0;
-
-  if (!hasCredits) {
-    return <span className="text-muted-foreground text-sm">0</span>;
-  }
-
-  return (
-    <div className="flex flex-wrap gap-1">
-      {credits_basic > 0 && (
-        <Badge variant="secondary" className="text-xs">
-          Basic: {credits_basic}
-        </Badge>
-      )}
-      {credits_pro > 0 && (
-        <Badge variant="default" className="text-xs bg-blue-600">
-          Pro: {credits_pro}
-        </Badge>
-      )}
-      {credits_cassandra > 0 && (
-        <Badge variant="default" className="text-xs bg-purple-600">
-          Cassandra: {credits_cassandra}
-        </Badge>
-      )}
     </div>
   );
 }
@@ -153,68 +86,87 @@ export function UsersPage() {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm);
       setCurrentPage(1); // Reset to first page on search
-    }, 300);
+    }, TIME_THRESHOLDS.SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Fetch users
-  const fetchUsers = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  // Refresh trigger for manual refresh button
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    try {
-      const offset = (currentPage - 1) * PAGE_SIZE;
+  // Fetch users on mount and when dependencies change
+  useEffect(() => {
+    if (authLoading || !isAdmin) return;
 
-      let query = supabase
-        .from('unified_users')
-        .select(`
-          id,
-          telegram_id,
-          display_name,
-          last_active_at,
-          created_at,
-          unified_user_credits (
-            credits_basic,
-            credits_pro,
-            credits_cassandra
-          )
-        `, { count: 'exact' })
-        .order(sortField, { ascending: sortOrder === 'asc' })
-        .range(offset, offset + PAGE_SIZE - 1);
+    let cancelled = false;
 
-      // Apply search filter
-      if (debouncedSearch.trim()) {
-        const term = debouncedSearch.trim();
-        // Check if search term is numeric (telegram_id search)
-        if (/^\d+$/.test(term)) {
-          query = query.eq('telegram_id', term);
-        } else {
-          query = query.ilike('display_name', `%${term}%`);
+    async function fetchUsers() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const offset = (currentPage - 1) * PAGE_SIZE;
+
+        let query = supabase
+          .from('unified_users')
+          .select(`
+            id,
+            telegram_id,
+            display_name,
+            last_active_at,
+            created_at,
+            unified_user_credits (
+              credits_basic,
+              credits_pro,
+              credits_cassandra
+            )
+          `, { count: 'exact' })
+          .order(sortField, { ascending: sortOrder === 'asc' })
+          .range(offset, offset + PAGE_SIZE - 1);
+
+        // Apply search filter
+        if (debouncedSearch.trim()) {
+          const term = debouncedSearch.trim();
+          // Check if search term is numeric (telegram_id search)
+          if (/^\d+$/.test(term)) {
+            query = query.eq('telegram_id', term);
+          } else {
+            query = query.ilike('display_name', `%${term}%`);
+          }
+        }
+
+        const { data, count, error: queryError } = await query;
+
+        if (queryError) {
+          throw queryError;
+        }
+
+        if (!cancelled) {
+          setUsers((data as unknown as UnifiedUser[]) || []);
+          setTotalCount(count || 0);
+        }
+      } catch (err) {
+        logger.error('Error fetching users', err);
+        const message = err instanceof Error ? err.message : 'Failed to fetch users';
+        if (!cancelled) {
+          setError(message);
+          toast.error('Failed to fetch users', { description: message });
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
         }
       }
-
-      const { data, count, error: queryError } = await query;
-
-      if (queryError) {
-        throw queryError;
-      }
-
-      setUsers(data || []);
-      setTotalCount(count || 0);
-    } catch (err) {
-      console.error('Error fetching users:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch users');
-    } finally {
-      setIsLoading(false);
     }
-  }, [currentPage, sortField, sortOrder, debouncedSearch]);
 
-  // Fetch on mount and when dependencies change
-  useEffect(() => {
-    if (!authLoading && isAdmin) {
-      fetchUsers();
-    }
-  }, [authLoading, isAdmin, fetchUsers]);
+    fetchUsers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, isAdmin, currentPage, sortField, sortOrder, debouncedSearch, refreshTrigger]);
+
+  // Handle manual refresh
+  const handleRefresh = () => setRefreshTrigger((prev) => prev + 1);
 
   // Handle row click
   const handleRowClick = (userId: string) => {
@@ -295,7 +247,7 @@ export function UsersPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={fetchUsers}
+              onClick={handleRefresh}
               disabled={isLoading}
             >
               Refresh
@@ -303,10 +255,18 @@ export function UsersPage() {
           </div>
         </div>
 
-        {/* Error state */}
+        {/* Error state with retry button */}
         {error && (
-          <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-md">
-            {error}
+          <div className="flex items-center justify-between gap-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+            <p className="text-red-700 dark:text-red-400">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isLoading}
+            >
+              Retry
+            </Button>
           </div>
         )}
 
@@ -330,34 +290,38 @@ export function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
+                {users.map((userItem) => (
                   <TableRow
-                    key={user.id}
-                    onClick={() => handleRowClick(user.id)}
-                    className="cursor-pointer"
+                    key={userItem.id}
+                    onClick={() => handleRowClick(userItem.id)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleRowClick(userItem.id)}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`View details for ${userItem.display_name || userItem.telegram_id || 'user'}`}
+                    className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
                   >
                     <TableCell>
-                      {user.telegram_id ? (
+                      {userItem.telegram_id ? (
                         <code className="text-sm bg-muted px-2 py-1 rounded">
-                          {user.telegram_id}
+                          {userItem.telegram_id}
                         </code>
                       ) : (
                         <Badge variant="outline">Web User</Badge>
                       )}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {user.display_name || (
+                      {userItem.display_name || (
                         <span className="text-muted-foreground italic">No name</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      <CreditsBadges credits={user.unified_user_credits} />
+                      <CreditsBadges credits={userItem.unified_user_credits} />
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatRelativeTime(user.last_active_at)}
+                      {formatRelativeTime(userItem.last_active_at)}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDate(user.created_at)}
+                      {formatDateShort(userItem.created_at)}
                     </TableCell>
                   </TableRow>
                 ))}

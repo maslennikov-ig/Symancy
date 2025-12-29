@@ -1,8 +1,11 @@
-// @ts-nocheck - Bypass library type conflicts with React 19
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
+import { formatRelativeTime, truncateText } from '../utils/formatters';
+import { PAGE_SIZES, TIME_THRESHOLDS } from '../utils/constants';
+import { logger } from '../utils/logger';
 import {
   Table,
   TableBody,
@@ -53,32 +56,7 @@ type RoleFilter = 'all' | 'user' | 'assistant' | 'system';
 type ContentTypeFilter = 'all' | 'text' | 'image' | 'analysis' | 'audio' | 'document';
 type ChannelFilter = 'all' | 'telegram' | 'web';
 
-const PAGE_SIZE = 50;
-
-// Helper: Format relative time
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHour = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHour / 24);
-
-  if (diffSec < 60) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHour < 24) return `${diffHour}h ago`;
-  if (diffDay < 7) return `${diffDay}d ago`;
-  if (diffDay < 30) return `${Math.floor(diffDay / 7)}w ago`;
-  if (diffDay < 365) return `${Math.floor(diffDay / 30)}mo ago`;
-  return `${Math.floor(diffDay / 365)}y ago`;
-}
-
-// Helper: Truncate text
-function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength) + '...';
-}
+const PAGE_SIZE = PAGE_SIZES.MESSAGES;
 
 // Helper: Get role badge color
 function getRoleBadgeClass(role: Message['role']): string {
@@ -228,7 +206,7 @@ export function MessagesPage() {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm);
       setCurrentPage(1);
-    }, 300);
+    }, TIME_THRESHOLDS.SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
@@ -250,80 +228,99 @@ export function MessagesPage() {
     });
   };
 
-  // Fetch messages
-  const fetchMessages = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  // Refresh trigger for manual refresh button
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    try {
-      const offset = (currentPage - 1) * PAGE_SIZE;
-
-      let query = supabase
-        .from('messages')
-        .select(`
-          id,
-          conversation_id,
-          channel,
-          interface,
-          role,
-          content,
-          content_type,
-          metadata,
-          processing_status,
-          created_at,
-          conversations!inner (
-            unified_user_id,
-            unified_users (
-              display_name,
-              telegram_id
-            )
-          )
-        `, { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(offset, offset + PAGE_SIZE - 1);
-
-      // Apply search filter
-      if (debouncedSearch.trim()) {
-        query = query.ilike('content', `%${debouncedSearch.trim()}%`);
-      }
-
-      // Apply role filter
-      if (roleFilter !== 'all') {
-        query = query.eq('role', roleFilter);
-      }
-
-      // Apply content type filter
-      if (contentTypeFilter !== 'all') {
-        query = query.eq('content_type', contentTypeFilter);
-      }
-
-      // Apply channel filter
-      if (channelFilter !== 'all') {
-        query = query.eq('channel', channelFilter);
-      }
-
-      const { data, count, error: queryError } = await query;
-
-      if (queryError) {
-        throw queryError;
-      }
-
-      setMessages((data as Message[]) || []);
-      setTotalCount(count || 0);
-    } catch (err) {
-      console.error('Error fetching messages:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch messages');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentPage, debouncedSearch, roleFilter, contentTypeFilter, channelFilter]);
-
-  // Fetch on mount and when dependencies change
+  // Fetch messages on mount and when dependencies change
   useEffect(() => {
-    if (!authLoading && isAdmin) {
-      fetchMessages();
+    if (authLoading || !isAdmin) return;
+
+    let cancelled = false;
+
+    async function fetchMessages() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const offset = (currentPage - 1) * PAGE_SIZE;
+
+        let query = supabase
+          .from('messages')
+          .select(`
+            id,
+            conversation_id,
+            channel,
+            interface,
+            role,
+            content,
+            content_type,
+            metadata,
+            processing_status,
+            created_at,
+            conversations!inner (
+              unified_user_id,
+              unified_users (
+                display_name,
+                telegram_id
+              )
+            )
+          `, { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range(offset, offset + PAGE_SIZE - 1);
+
+        // Apply search filter
+        if (debouncedSearch.trim()) {
+          query = query.ilike('content', `%${debouncedSearch.trim()}%`);
+        }
+
+        // Apply role filter
+        if (roleFilter !== 'all') {
+          query = query.eq('role', roleFilter);
+        }
+
+        // Apply content type filter
+        if (contentTypeFilter !== 'all') {
+          query = query.eq('content_type', contentTypeFilter);
+        }
+
+        // Apply channel filter
+        if (channelFilter !== 'all') {
+          query = query.eq('channel', channelFilter);
+        }
+
+        const { data, count, error: queryError } = await query;
+
+        if (queryError) {
+          throw queryError;
+        }
+
+        if (!cancelled) {
+          setMessages((data as unknown as Message[]) || []);
+          setTotalCount(count || 0);
+        }
+      } catch (err) {
+        logger.error('Error fetching messages', err);
+        const message = err instanceof Error ? err.message : 'Failed to fetch messages';
+        if (!cancelled) {
+          setError(message);
+          toast.error('Failed to fetch messages', { description: message });
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
     }
-  }, [authLoading, isAdmin, fetchMessages]);
+
+    fetchMessages();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, isAdmin, currentPage, debouncedSearch, roleFilter, contentTypeFilter, channelFilter, refreshTrigger]);
+
+  // Handle manual refresh
+  const handleRefresh = () => setRefreshTrigger((prev) => prev + 1);
 
   // Pagination helpers
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
@@ -383,7 +380,7 @@ export function MessagesPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={fetchMessages}
+              onClick={handleRefresh}
               disabled={isLoading}
             >
               Refresh
@@ -452,10 +449,18 @@ export function MessagesPage() {
           </div>
         </div>
 
-        {/* Error state */}
+        {/* Error state with retry button */}
         {error && (
-          <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-md">
-            {error}
+          <div className="flex items-center justify-between gap-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+            <p className="text-red-700 dark:text-red-400">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isLoading}
+            >
+              Retry
+            </Button>
           </div>
         )}
 
@@ -486,7 +491,12 @@ export function MessagesPage() {
                   <React.Fragment key={message.id}>
                     <TableRow
                       onClick={() => toggleRowExpansion(message.id)}
-                      className="cursor-pointer"
+                      onKeyDown={(e) => e.key === 'Enter' && toggleRowExpansion(message.id)}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`View details for message from ${getUserDisplayName(message)}`}
+                      aria-expanded={expandedRows.has(message.id)}
+                      className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
                     >
                       <TableCell className="text-muted-foreground text-sm">
                         {formatRelativeTime(message.created_at)}

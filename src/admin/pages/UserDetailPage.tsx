@@ -1,9 +1,14 @@
-// @ts-nocheck - Bypass library type conflicts with React 19
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
+import { formatRelativeTime, formatFullDate, truncateText } from '../utils/formatters';
+import { MAX_CREDIT_ADJUSTMENT, TIME_THRESHOLDS } from '../utils/constants';
+import { logger } from '../utils/logger';
+import { CreditsBadges, CreditBadge, type UserCredits } from '../components/CreditBadge';
+import { UserInfoSkeleton, ListSkeleton } from '../components/skeletons';
 import {
   Card,
   CardContent,
@@ -27,12 +32,6 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Types
-interface UserCredits {
-  credits_basic: number;
-  credits_pro: number;
-  credits_cassandra: number;
-}
-
 interface UnifiedUser {
   id: string;
   telegram_id: string | null;
@@ -60,78 +59,6 @@ interface Analysis {
   tokens_used: number | null;
   status: string;
   created_at: string;
-}
-
-// Helper: Format relative time
-function formatRelativeTime(dateString: string | null): string {
-  if (!dateString) return '-';
-
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHour = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHour / 24);
-
-  if (diffSec < 60) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHour < 24) return `${diffHour}h ago`;
-  if (diffDay < 7) return `${diffDay}d ago`;
-  if (diffDay < 30) return `${Math.floor(diffDay / 7)}w ago`;
-  if (diffDay < 365) return `${Math.floor(diffDay / 30)}mo ago`;
-  return `${Math.floor(diffDay / 365)}y ago`;
-}
-
-// Helper: Format full date
-function formatFullDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-// Helper: Truncate text
-function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength) + '...';
-}
-
-// Loading skeleton for user info
-function UserInfoSkeleton() {
-  return (
-    <div className="space-y-4">
-      <Skeleton className="h-6 w-32" />
-      <Skeleton className="h-4 w-48" />
-      <Skeleton className="h-4 w-40" />
-      <Skeleton className="h-4 w-44" />
-    </div>
-  );
-}
-
-// Credits display with badges
-function CreditsBadges({ credits }: { credits: UserCredits | null }) {
-  if (!credits) {
-    return <span className="text-muted-foreground text-sm">No credits data</span>;
-  }
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      <Badge variant="secondary" className="text-sm px-3 py-1">
-        Basic: {credits.credits_basic}
-      </Badge>
-      <Badge variant="default" className="text-sm px-3 py-1 bg-blue-600">
-        Pro: {credits.credits_pro}
-      </Badge>
-      <Badge variant="default" className="text-sm px-3 py-1 bg-purple-600">
-        Cassandra: {credits.credits_cassandra}
-      </Badge>
-    </div>
-  );
 }
 
 // Status badge for analysis
@@ -201,90 +128,118 @@ export function UserDetailPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Fetch all user data
-  const fetchUserData = useCallback(async () => {
-    if (!id) return;
+  const handleRetry = () => setRefreshTrigger(prev => prev + 1);
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Fetch user info
-      const { data: user, error: userError } = await supabase
-        .from('unified_users')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (userError) throw userError;
-      setUserData(user);
-
-      // Fetch credits
-      const { data: creditsData, error: creditsError } = await supabase
-        .from('unified_user_credits')
-        .select('credits_basic, credits_pro, credits_cassandra')
-        .eq('unified_user_id', id)
-        .single();
-
-      if (creditsError && creditsError.code !== 'PGRST116') {
-        console.error('Error fetching credits:', creditsError);
-      }
-      setCredits(creditsData || { credits_basic: 0, credits_pro: 0, credits_cassandra: 0 });
-
-      // Fetch recent messages (last 10)
-      const { data: messagesData, error: messagesError } = await supabase
-        .from('messages')
-        .select(`
-          id,
-          role,
-          content,
-          channel,
-          created_at,
-          conversations!inner(unified_user_id)
-        `)
-        .eq('conversations.unified_user_id', id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (messagesError) {
-        console.error('Error fetching messages:', messagesError);
-      }
-      setMessages(messagesData || []);
-
-      // Fetch recent analyses (last 5)
-      const { data: analysesData, error: analysesError } = await supabase
-        .from('analysis_history')
-        .select('id, analysis_type, model_used, tokens_used, status, created_at')
-        .eq('unified_user_id', id)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (analysesError) {
-        console.error('Error fetching analyses:', analysesError);
-      }
-      setAnalyses(analysesData || []);
-
-    } catch (err) {
-      console.error('Error fetching user data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch user data');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [id]);
-
-  // Fetch on mount
+  // Fetch all user data on mount
   useEffect(() => {
-    if (!authLoading && isAdmin && id) {
-      fetchUserData();
+    if (authLoading || !isAdmin || !id) return;
+
+    let cancelled = false;
+
+    async function fetchUserData() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Fetch user info
+        const { data: user, error: userError } = await supabase
+          .from('unified_users')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (userError) throw userError;
+        if (!cancelled) {
+          setUserData(user as UnifiedUser);
+        }
+
+        // Fetch credits
+        const { data: creditsData, error: creditsError } = await supabase
+          .from('unified_user_credits')
+          .select('credits_basic, credits_pro, credits_cassandra')
+          .eq('unified_user_id', id)
+          .single();
+
+        if (creditsError && creditsError.code !== 'PGRST116') {
+          logger.error('Error fetching credits', creditsError);
+        }
+        if (!cancelled) {
+          setCredits((creditsData as UserCredits | null) || { credits_basic: 0, credits_pro: 0, credits_cassandra: 0 });
+        }
+
+        // Fetch recent messages (last 10)
+        const messagesQuery = 'id, role, content, channel, created_at, conversations!inner(unified_user_id)';
+        const { data: messagesData, error: messagesError } = await supabase
+          .from('messages')
+          .select(messagesQuery)
+          .eq('conversations.unified_user_id', id)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (messagesError) {
+          logger.error('Error fetching messages', messagesError);
+        }
+        if (!cancelled) {
+          setMessages((messagesData as Message[] | null) || []);
+        }
+
+        // Fetch recent analyses (last 5)
+        const { data: analysesData, error: analysesError } = await supabase
+          .from('analysis_history')
+          .select('id, analysis_type, model_used, tokens_used, status, created_at')
+          .eq('unified_user_id', id)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (analysesError) {
+          logger.error('Error fetching analyses', analysesError);
+        }
+        if (!cancelled) {
+          setAnalyses((analysesData as Analysis[] | null) || []);
+        }
+
+      } catch (err) {
+        logger.error('Error fetching user data', err);
+        const message = err instanceof Error ? err.message : 'Failed to fetch user data';
+        if (!cancelled) {
+          setError(message);
+          toast.error('Failed to load user data', { description: message });
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
     }
-  }, [authLoading, isAdmin, id, fetchUserData]);
+
+    fetchUserData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, isAdmin, id, refreshTrigger]);
 
   // Handle credit adjustment
   const handleAdjustCredits = async () => {
     if (!id) return;
     if (basicDelta === 0 && proDelta === 0 && cassandraDelta === 0) {
       setSaveError('Please specify at least one credit adjustment');
+      return;
+    }
+
+    // Input validation: check adjustment limits
+    if (Math.abs(basicDelta) > MAX_CREDIT_ADJUSTMENT.basic) {
+      setSaveError('Basic credit adjustment must be between -' + MAX_CREDIT_ADJUSTMENT.basic + ' and +' + MAX_CREDIT_ADJUSTMENT.basic);
+      return;
+    }
+    if (Math.abs(proDelta) > MAX_CREDIT_ADJUSTMENT.pro) {
+      setSaveError('Pro credit adjustment must be between -' + MAX_CREDIT_ADJUSTMENT.pro + ' and +' + MAX_CREDIT_ADJUSTMENT.pro);
+      return;
+    }
+    if (Math.abs(cassandraDelta) > MAX_CREDIT_ADJUSTMENT.cassandra) {
+      setSaveError('Cassandra credit adjustment must be between -' + MAX_CREDIT_ADJUSTMENT.cassandra + ' and +' + MAX_CREDIT_ADJUSTMENT.cassandra);
       return;
     }
 
@@ -301,13 +256,33 @@ export function UserDetailPage() {
         p_reason: adjustReason || 'admin_adjustment',
       });
 
-      if (rpcError) throw rpcError;
+      // RPC error validation
+      if (rpcError) {
+        throw new Error(rpcError.message);
+      }
+
+      // RPC response validation: check for null/undefined data
+      if (!data) {
+        throw new Error('RPC admin_adjust_credits returned no data');
+      }
+
+      // Validate response structure
+      const result = data as { credits_basic: number; credits_pro: number; credits_cassandra: number };
+      if (typeof result.credits_basic !== 'number') {
+        throw new Error('Invalid RPC response: missing or invalid credits_basic');
+      }
+      if (typeof result.credits_pro !== 'number') {
+        throw new Error('Invalid RPC response: missing or invalid credits_pro');
+      }
+      if (typeof result.credits_cassandra !== 'number') {
+        throw new Error('Invalid RPC response: missing or invalid credits_cassandra');
+      }
 
       // Update local state with new credits
       setCredits({
-        credits_basic: data.credits_basic,
-        credits_pro: data.credits_pro,
-        credits_cassandra: data.credits_cassandra,
+        credits_basic: result.credits_basic,
+        credits_pro: result.credits_pro,
+        credits_cassandra: result.credits_cassandra,
       });
 
       // Reset form
@@ -317,13 +292,16 @@ export function UserDetailPage() {
       setAdjustReason('');
       setIsEditingCredits(false);
       setSaveSuccess(true);
+      toast.success('Credits adjusted', { description: 'User credits have been updated successfully.' });
 
-      // Clear success message after 3 seconds
-      setTimeout(() => setSaveSuccess(false), 3000);
+      // Clear success message after configured duration
+      setTimeout(() => setSaveSuccess(false), TIME_THRESHOLDS.SUCCESS_MESSAGE_DURATION_MS);
 
     } catch (err) {
-      console.error('Error adjusting credits:', err);
-      setSaveError(err instanceof Error ? err.message : 'Failed to adjust credits');
+      logger.error('Error adjusting credits', err);
+      const message = err instanceof Error ? err.message : 'Failed to adjust credits';
+      setSaveError(message);
+      toast.error('Failed to adjust credits', { description: message });
     } finally {
       setIsSaving(false);
     }
@@ -388,8 +366,16 @@ export function UserDetailPage() {
 
         {/* Error state */}
         {error && (
-          <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-md">
-            {error}
+          <div className="flex items-center justify-between gap-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+            <p className="text-red-700 dark:text-red-400">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              disabled={isLoading}
+            >
+              Retry
+            </Button>
           </div>
         )}
 
@@ -493,7 +479,7 @@ export function UserDetailPage() {
                     {/* Current balances */}
                     <div>
                       <Label className="text-muted-foreground text-sm mb-2 block">Current Balance:</Label>
-                      <CreditsBadges credits={credits} />
+                      <CreditsBadges credits={credits} nullText="No credits data" />
                     </div>
 
                     <Separator />
@@ -600,11 +586,7 @@ export function UserDetailPage() {
               </CardHeader>
               <CardContent>
                 {isLoading ? (
-                  <div className="space-y-2">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} className="h-12 w-full" />
-                    ))}
-                  </div>
+                  <ListSkeleton items={5} />
                 ) : messages.length === 0 ? (
                   <div className="text-muted-foreground text-center py-8">
                     No messages found
@@ -654,11 +636,7 @@ export function UserDetailPage() {
               </CardHeader>
               <CardContent>
                 {isLoading ? (
-                  <div className="space-y-2">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <Skeleton key={i} className="h-12 w-full" />
-                    ))}
-                  </div>
+                  <ListSkeleton items={3} />
                 ) : analyses.length === 0 ? (
                   <div className="text-muted-foreground text-center py-8">
                     No analyses found
@@ -682,24 +660,10 @@ export function UserDetailPage() {
                               {formatRelativeTime(analysis.created_at)}
                             </TableCell>
                             <TableCell>
-                              <Badge
-                                variant={
-                                  analysis.analysis_type === 'cassandra'
-                                    ? 'default'
-                                    : analysis.analysis_type === 'pro'
-                                    ? 'secondary'
-                                    : 'outline'
-                                }
-                                className={
-                                  analysis.analysis_type === 'cassandra'
-                                    ? 'bg-purple-600'
-                                    : analysis.analysis_type === 'pro'
-                                    ? 'bg-blue-600'
-                                    : ''
-                                }
-                              >
-                                {analysis.analysis_type}
-                              </Badge>
+                              <CreditBadge
+                                type={analysis.analysis_type as 'basic' | 'pro' | 'cassandra'}
+                                amount={1}
+                              />
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
                               {analysis.model_used || '-'}

@@ -1,5 +1,5 @@
-// @ts-nocheck - Bypass library type conflicts with React 19
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
@@ -43,6 +43,27 @@ interface UserState {
 type UserStatus = 'active' | 'in_onboarding' | 'stuck';
 
 const STUCK_THRESHOLD_HOURS = 24;
+
+// Helper: Format relative time
+function formatRelativeTime(dateString: string | null): string {
+  if (!dateString) return '-';
+
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 60) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHour < 24) return `${diffHour}h ago`;
+  if (diffDay < 7) return `${diffDay}d ago`;
+  if (diffDay < 30) return `${Math.floor(diffDay / 7)}w ago`;
+  if (diffDay < 365) return `${Math.floor(diffDay / 30)}mo ago`;
+  return `${Math.floor(diffDay / 365)}y ago`;
+}
 
 // Helper: Calculate user status
 function getUserStatus(state: UserState): UserStatus {
@@ -89,27 +110,6 @@ function StatusBadge({ status }: { status: UserStatus }) {
   }
 }
 
-// Helper: Format relative time
-function formatRelativeTime(dateString: string | null): string {
-  if (!dateString) return '-';
-
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHour = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHour / 24);
-
-  if (diffSec < 60) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHour < 24) return `${diffHour}h ago`;
-  if (diffDay < 7) return `${diffDay}d ago`;
-  if (diffDay < 30) return `${Math.floor(diffDay / 7)}w ago`;
-  if (diffDay < 365) return `${Math.floor(diffDay / 30)}mo ago`;
-  return `${Math.floor(diffDay / 365)}y ago`;
-}
-
 // Helper: Get display name from profile
 function getDisplayName(state: UserState): string {
   if (state.profiles?.name) return state.profiles.name;
@@ -152,49 +152,68 @@ export function UserStatesPage() {
   const [selectedUser, setSelectedUser] = useState<UserState | null>(null);
   const [isResetting, setIsResetting] = useState(false);
 
-  // Fetch user states
-  const fetchUserStates = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  // Refresh trigger for manual refresh and after reset
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    try {
-      const { data, error: queryError } = await supabase
-        .from('user_states')
-        .select(`
-          telegram_user_id,
-          onboarding_step,
-          onboarding_data,
-          last_analysis_id,
-          updated_at,
-          daily_messages_count,
-          daily_messages_reset_at,
-          profiles (
-            name,
-            first_name,
-            username
-          )
-        `)
-        .order('updated_at', { ascending: false, nullsFirst: false });
-
-      if (queryError) {
-        throw queryError;
-      }
-
-      setUserStates(data || []);
-    } catch (err) {
-      console.error('Error fetching user states:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch user states');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Fetch on mount and when dependencies change
+  // Fetch user states on mount and when dependencies change
   useEffect(() => {
-    if (!authLoading && isAdmin) {
-      fetchUserStates();
+    if (authLoading || !isAdmin) return;
+
+    let cancelled = false;
+
+    async function fetchUserStates() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const { data, error: queryError } = await supabase
+          .from('user_states')
+          .select(`
+            telegram_user_id,
+            onboarding_step,
+            onboarding_data,
+            last_analysis_id,
+            updated_at,
+            daily_messages_count,
+            daily_messages_reset_at,
+            profiles (
+              name,
+              first_name,
+              username
+            )
+          `)
+          .order('updated_at', { ascending: false, nullsFirst: false });
+
+        if (queryError) {
+          throw queryError;
+        }
+
+        if (!cancelled) {
+          setUserStates((data as unknown as UserState[]) || []);
+        }
+      } catch (err) {
+        console.error('Error fetching user states:', err);
+        const message = err instanceof Error ? err.message : 'Failed to fetch user states';
+        if (!cancelled) {
+          setError(message);
+          toast.error('Failed to fetch user states', { description: message });
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
     }
-  }, [authLoading, isAdmin, fetchUserStates]);
+
+    fetchUserStates();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, isAdmin, refreshTrigger]);
+
+  // Handle manual refresh
+  const handleRefresh = () => setRefreshTrigger((prev) => prev + 1);
 
   // Handle reset button click
   const handleResetClick = (state: UserState) => {
@@ -222,12 +241,15 @@ export function UserStatesPage() {
       }
 
       // Refresh data
-      await fetchUserStates();
+      handleRefresh();
       setResetDialogOpen(false);
       setSelectedUser(null);
+      toast.success('User state reset', { description: 'The user can now start fresh.' });
     } catch (err) {
       console.error('Error resetting user state:', err);
-      setError(err instanceof Error ? err.message : 'Failed to reset user state');
+      const message = err instanceof Error ? err.message : 'Failed to reset user state';
+      setError(message);
+      toast.error('Failed to reset user state', { description: message });
     } finally {
       setIsResetting(false);
     }
@@ -300,7 +322,7 @@ export function UserStatesPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={fetchUserStates}
+            onClick={handleRefresh}
             disabled={isLoading}
           >
             Refresh
@@ -323,10 +345,18 @@ export function UserStatesPage() {
           </div>
         </div>
 
-        {/* Error state */}
+        {/* Error state with retry button */}
         {error && (
-          <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-md">
-            {error}
+          <div className="flex items-center justify-between gap-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+            <p className="text-red-700 dark:text-red-400">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isLoading}
+            >
+              Retry
+            </Button>
           </div>
         )}
 

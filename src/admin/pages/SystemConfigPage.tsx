@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
@@ -99,35 +99,52 @@ export function SystemConfigPage() {
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Fetch configs from Supabase
-  const fetchConfigs = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // Refresh trigger for manual refresh and after save
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    try {
-      const { data, error: fetchError } = await supabase
-        .from('system_config')
-        .select('*')
-        .order('key');
-
-      if (fetchError) {
-        throw fetchError;
-      }
-
-      setConfigs(data || []);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load configurations';
-      setError(message);
-      toast.error('Failed to load configurations', { description: message });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Load configs on mount
+  // Fetch configs from Supabase on mount and when refreshTrigger changes
   useEffect(() => {
+    let cancelled = false;
+
+    async function fetchConfigs() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('system_config')
+          .select('*')
+          .order('key');
+
+        if (fetchError) {
+          throw fetchError;
+        }
+
+        if (!cancelled) {
+          setConfigs(data || []);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to load configurations';
+        if (!cancelled) {
+          setError(message);
+          toast.error('Failed to load configurations', { description: message });
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
     fetchConfigs();
-  }, [fetchConfigs]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshTrigger]);
+
+  // Handle manual refresh
+  const handleRefresh = () => setRefreshTrigger((prev) => prev + 1);
 
   // Open edit dialog
   const handleRowClick = (config: SystemConfig) => {
@@ -174,7 +191,7 @@ export function SystemConfigPage() {
       });
 
       setIsDialogOpen(false);
-      await fetchConfigs();
+      handleRefresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save configuration';
       toast.error('Failed to save', { description: message });
@@ -195,15 +212,22 @@ export function SystemConfigPage() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Configuration Settings</span>
-            <Button variant="outline" size="sm" onClick={fetchConfigs} disabled={loading}>
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
               Refresh
             </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {error && !loading && (
-            <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-md">
-              {error}
+            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center justify-between gap-4">
+              <p className="text-red-700 dark:text-red-400">{error}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+              >
+                Retry
+              </Button>
             </div>
           )}
 
@@ -230,7 +254,11 @@ export function SystemConfigPage() {
                   <TableRow
                     key={config.key}
                     onClick={() => handleRowClick(config)}
-                    className="cursor-pointer"
+                    onKeyDown={(e) => e.key === 'Enter' && handleRowClick(config)}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Edit configuration ${config.key}`}
+                    className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
                   >
                     <TableCell>
                       <code className="font-mono font-bold text-sm bg-muted px-1.5 py-0.5 rounded">

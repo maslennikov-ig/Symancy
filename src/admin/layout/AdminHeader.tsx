@@ -33,9 +33,9 @@ export function AdminHeader({
     .slice(0, 2)
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-6 dark:border-slate-800 dark:bg-slate-900">
-      {/* Page Title */}
-      <h1 className="text-xl font-semibold text-slate-900 dark:text-white">
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-6 dark:border-slate-800 dark:bg-slate-900">
+      {/* Page Title - add left padding on mobile to not overlap with menu button */}
+      <h1 className="pl-12 text-xl font-semibold text-slate-900 md:pl-0 dark:text-white">
         {title}
       </h1>
 

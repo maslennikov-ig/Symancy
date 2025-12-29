@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { Menu } from 'lucide-react'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminHeader } from './AdminHeader'
 
@@ -18,13 +20,27 @@ export function AdminLayout({
   userAvatar,
   onLogout,
 }: AdminLayoutProps) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      {/* Sidebar */}
-      <AdminSidebar />
+      {/* Mobile menu button - only visible on mobile */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="fixed left-4 top-4 z-50 flex h-11 w-11 items-center justify-center rounded-lg bg-slate-800 text-white md:hidden"
+        aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+      >
+        <Menu className="h-6 w-6" />
+      </button>
 
-      {/* Main Content */}
-      <div className="pl-64">
+      {/* Sidebar with mobile support */}
+      <AdminSidebar
+        isMobileOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+      />
+
+      {/* Main Content - responsive padding */}
+      <div className="md:pl-64">
         {/* Header */}
         <AdminHeader
           title={title}
@@ -34,8 +50,8 @@ export function AdminLayout({
           onLogout={onLogout}
         />
 
-        {/* Page Content */}
-        <main className="p-6">{children}</main>
+        {/* Page Content - extra top padding on mobile for menu button */}
+        <main className="p-4 pt-16 md:p-6 md:pt-6">{children}</main>
       </div>
     </div>
   )

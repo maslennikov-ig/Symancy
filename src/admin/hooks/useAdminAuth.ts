@@ -49,8 +49,8 @@ export function useAdminAuth(): UseAdminAuthReturn {
     });
 
     return () => {
+      subscription.unsubscribe(); // Stop events first
       cancelled = true;
-      subscription.unsubscribe();
     };
   }, []);
 

@@ -1,5 +1,4 @@
-// @ts-nocheck - Bypass library type conflicts with React 19
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   Title,
@@ -21,9 +20,12 @@ import {
   TableCell,
 } from '@tremor/react';
 import { DollarSign, Zap, Clock, Activity } from 'lucide-react';
+import { toast } from 'sonner';
 import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
 import { supabase } from '@/lib/supabaseClient';
+import { Button } from '@/components/ui/button';
+import { formatNumberEN, formatCurrencyUSD, formatMs } from '../utils/formatters';
 
 // ============================================================================
 // Types
@@ -102,24 +104,6 @@ const DEFAULT_COLOR = 'slate';
 function estimateCost(tokens: number, model: string): number {
   const price = MODEL_PRICES[model] ?? 0.1; // default $0.10/1M
   return (tokens / 1_000_000) * price;
-}
-
-function formatNumber(num: number): string {
-  return new Intl.NumberFormat('en-US').format(num);
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 4,
-  }).format(amount);
-}
-
-function formatMs(ms: number): string {
-  if (ms < 1000) return `${Math.round(ms)}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
 }
 
 function getDateRange(preset: 'last7' | 'last30' | 'thisMonth'): { from: Date; to: Date } {
@@ -217,41 +201,57 @@ export function CostsPage() {
   const [rawData, setRawData] = useState<LLMCostRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const handleRetry = () => setRefreshTrigger(prev => prev + 1);
 
   // Fetch data from Supabase
-  const fetchData = useCallback(async () => {
+  useEffect(() => {
+    if (authLoading || !isAdmin) return;
     if (!dateRange.from || !dateRange.to) return;
 
-    setIsLoading(true);
-    setError(null);
+    let cancelled = false;
 
-    try {
-      const fromDate = formatDateForQuery(dateRange.from);
-      const toDate = formatDateForQuery(dateRange.to);
+    async function fetchData() {
+      setIsLoading(true);
+      setError(null);
 
-      const { data, error: queryError } = await supabase
-        .from('admin_llm_costs')
-        .select('*')
-        .gte('date', fromDate)
-        .lte('date', toDate)
-        .order('date', { ascending: true });
+      try {
+        const fromDate = formatDateForQuery(dateRange.from!);
+        const toDate = formatDateForQuery(dateRange.to!);
 
-      if (queryError) throw queryError;
+        const { data, error: queryError } = await supabase
+          .from('admin_llm_costs')
+          .select('*')
+          .gte('date', fromDate)
+          .lte('date', toDate)
+          .order('date', { ascending: true });
 
-      setRawData(data || []);
-    } catch (err) {
-      console.error('Error fetching LLM costs:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch data');
-    } finally {
-      setIsLoading(false);
+        if (queryError) throw queryError;
+
+        if (!cancelled) {
+          setRawData(data || []);
+        }
+      } catch (err) {
+        console.error('Error fetching LLM costs:', err);
+        const message = err instanceof Error ? err.message : 'Failed to fetch data';
+        if (!cancelled) {
+          setError(message);
+          toast.error('Failed to fetch LLM costs', { description: message });
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
     }
-  }, [dateRange.from, dateRange.to]);
 
-  useEffect(() => {
-    if (!authLoading && isAdmin) {
-      fetchData();
-    }
-  }, [authLoading, isAdmin, fetchData]);
+    fetchData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, isAdmin, dateRange.from, dateRange.to, refreshTrigger]);
 
   // ============================================================================
   // Computed Data
@@ -466,8 +466,16 @@ export function CostsPage() {
 
         {/* Error State */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400">
-            {error}
+          <div className="flex items-center justify-between gap-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <p className="text-red-700 dark:text-red-400">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              disabled={isLoading}
+            >
+              Retry
+            </Button>
           </div>
         )}
 
@@ -485,7 +493,7 @@ export function CostsPage() {
               <Flex justifyContent="between" alignItems="center">
                 <div>
                   <Text>Total Requests</Text>
-                  <Metric>{formatNumber(summaryStats.totalRequests)}</Metric>
+                  <Metric>{formatNumberEN(summaryStats.totalRequests)}</Metric>
                 </div>
                 <Zap className="h-8 w-8 text-blue-500" />
               </Flex>
@@ -495,7 +503,7 @@ export function CostsPage() {
               <Flex justifyContent="between" alignItems="center">
                 <div>
                   <Text>Total Tokens</Text>
-                  <Metric>{formatNumber(summaryStats.totalTokens)}</Metric>
+                  <Metric>{formatNumberEN(summaryStats.totalTokens)}</Metric>
                 </div>
                 <Activity className="h-8 w-8 text-violet-500" />
               </Flex>
@@ -505,7 +513,7 @@ export function CostsPage() {
               <Flex justifyContent="between" alignItems="center">
                 <div>
                   <Text>Estimated Cost</Text>
-                  <Metric>{formatCurrency(summaryStats.estimatedCost)}</Metric>
+                  <Metric>{formatCurrencyUSD(summaryStats.estimatedCost)}</Metric>
                 </div>
                 <DollarSign className="h-8 w-8 text-emerald-500" />
               </Flex>
@@ -543,7 +551,7 @@ export function CostsPage() {
                   index="model"
                   categories={['requests']}
                   colors={['blue']}
-                  valueFormatter={(v) => formatNumber(v)}
+                  valueFormatter={(v) => formatNumberEN(v)}
                   showLegend={false}
                 />
               )}
@@ -567,7 +575,7 @@ export function CostsPage() {
                   data={donutData}
                   category="value"
                   index="name"
-                  valueFormatter={(v) => `${formatNumber(v)} requests`}
+                  valueFormatter={(v) => `${formatNumberEN(v)} requests`}
                   colors={chartColors}
                   showLabel
                   showAnimation
@@ -595,7 +603,7 @@ export function CostsPage() {
                 index="date"
                 categories={modelNames}
                 colors={chartColors}
-                valueFormatter={(v) => formatNumber(v)}
+                valueFormatter={(v) => formatNumberEN(v)}
                 showLegend
                 stack
               />
@@ -637,9 +645,9 @@ export function CostsPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">{formatNumber(user.requests)}</TableCell>
-                      <TableCell className="text-right">{formatNumber(user.tokens)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(user.cost)}</TableCell>
+                      <TableCell className="text-right">{formatNumberEN(user.requests)}</TableCell>
+                      <TableCell className="text-right">{formatNumberEN(user.tokens)}</TableCell>
+                      <TableCell className="text-right">{formatCurrencyUSD(user.cost)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
