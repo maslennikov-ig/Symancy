@@ -488,7 +488,7 @@ export async function sendMessageHandler(
 export function registerSendMessageRoute(fastify: FastifyInstance) {
   // HIGH-3 FIX: Add stricter rate limiting for message sending
   // More restrictive than global limit since this triggers LLM calls
-  fastify.post('/api/messages', {
+  fastify.post('/messages', {
     config: {
       rateLimit: {
         max: 20,  // 20 messages per minute per user

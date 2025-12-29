@@ -346,5 +346,5 @@ export async function linkHandler(
  * @param fastify - Fastify instance
  */
 export function registerLinkRoute(fastify: FastifyInstance) {
-  fastify.post('/api/auth/link', linkHandler);
+  fastify.post('/auth/link', linkHandler);
 }

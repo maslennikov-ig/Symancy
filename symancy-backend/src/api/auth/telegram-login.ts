@@ -200,5 +200,5 @@ export async function telegramLoginHandler(
  * @param fastify - Fastify instance
  */
 export function registerTelegramLoginRoute(fastify: FastifyInstance) {
-  fastify.post('/api/auth/telegram', telegramLoginHandler);
+  fastify.post('/auth/telegram', telegramLoginHandler);
 }

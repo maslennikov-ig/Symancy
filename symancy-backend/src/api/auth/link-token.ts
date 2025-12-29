@@ -132,5 +132,5 @@ export async function linkTokenHandler(
  * @param fastify - Fastify instance
  */
 export function registerLinkTokenRoute(fastify: FastifyInstance) {
-  fastify.post('/api/auth/link-token', linkTokenHandler);
+  fastify.post('/auth/link-token', linkTokenHandler);
 }

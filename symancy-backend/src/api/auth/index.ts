@@ -16,12 +16,12 @@ import { registerLinkRoute } from './link.js';
 /**
  * Register all authentication routes
  *
- * Registers the following endpoints:
- * - POST /api/auth/telegram - Telegram Login Widget authentication
- * - POST /api/auth/webapp - Telegram WebApp authentication
- * - GET /api/auth/me - Get current authenticated user
- * - POST /api/auth/link-token - Generate link token for account linking
- * - POST /api/auth/link - Link Telegram account to web account
+ * Registers the following endpoints (nginx adds /api prefix):
+ * - POST /auth/telegram - Telegram Login Widget authentication
+ * - POST /auth/webapp - Telegram WebApp authentication
+ * - GET /auth/me - Get current authenticated user
+ * - POST /auth/link-token - Generate link token for account linking
+ * - POST /auth/link - Link Telegram account to web account
  *
  * @param fastify - Fastify instance
  *

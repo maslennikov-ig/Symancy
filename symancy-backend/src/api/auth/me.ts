@@ -110,5 +110,5 @@ export async function meHandler(request: FastifyRequest, reply: FastifyReply) {
  * @param fastify - Fastify instance
  */
 export function registerMeRoute(fastify: FastifyInstance) {
-  fastify.get('/api/auth/me', meHandler);
+  fastify.get('/auth/me', meHandler);
 }

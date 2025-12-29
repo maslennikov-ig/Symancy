@@ -214,5 +214,5 @@ export async function webappAuthHandler(
  * @param fastify - Fastify instance
  */
 export function registerWebappAuthRoute(fastify: FastifyInstance) {
-  fastify.post('/api/auth/webapp', webappAuthHandler);
+  fastify.post('/auth/webapp', webappAuthHandler);
 }
