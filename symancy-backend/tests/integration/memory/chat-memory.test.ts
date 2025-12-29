@@ -47,6 +47,7 @@ vi.mock("../../../src/core/langchain/models.js", () => ({
 
 /**
  * Mock file system for prompt loading
+ * Handles all Arina prompt files
  */
 vi.mock("fs/promises", () => ({
   readFile: vi.fn((path: string) => {
@@ -65,7 +66,14 @@ vi.mock("fs/promises", () => ({
 
 Respond warmly and concisely.`);
     }
-    return Promise.reject(new Error("Unknown prompt file"));
+    if (path.includes("interpretation.txt")) {
+      return Promise.resolve("Interpret the coffee grounds for {{USER_NAME}}.");
+    }
+    if (path.includes("invalid-image.txt")) {
+      return Promise.resolve("The image provided is not valid for reading.");
+    }
+    // Default fallback for any other prompt file
+    return Promise.resolve("Mock prompt content for testing.");
   }),
 }));
 
