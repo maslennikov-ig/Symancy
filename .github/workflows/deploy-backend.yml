@@ -188,8 +188,8 @@ jobs:
           # Update package.json to use local file reference instead of workspace:*
           ssh ${SSH_USER}@${SSH_HOST} "cd ${RELEASE_DIR} && sed -i 's|\"workspace:\\*\"|\"file:./packages/shared-types\"|g' package.json"
 
-          # Install production dependencies on server
-          ssh ${SSH_USER}@${SSH_HOST} "cd ${RELEASE_DIR} && pnpm install --frozen-lockfile --prod"
+          # Install production dependencies on server (no frozen-lockfile since we modified package.json)
+          ssh ${SSH_USER}@${SSH_HOST} "cd ${RELEASE_DIR} && pnpm install --prod"
 
           # Link shared .env file
           ssh ${SSH_USER}@${SSH_HOST} "ln -sf ${TARGET_ROOT}/shared/.env ${RELEASE_DIR}/.env"
