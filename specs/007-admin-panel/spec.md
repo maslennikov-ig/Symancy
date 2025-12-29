@@ -20,34 +20,34 @@
 
 ---
 
-## Technology Decision: Refine + Ant Design + Supabase
+## Technology Decision: shadcn/ui + Tremor + Supabase
 
 ### Исследованные варианты
 
-| Критерий | Refine | React-Admin | AdminJS |
-|----------|--------|-------------|---------|
-| **Supabase интеграция** | Нативная `@refinedev/supabase` | Через `ra-supabase` adapter | Требует кастомный adapter |
-| **Архитектура** | Headless (hooks) | Component-based | Auto-generated |
-| **State Management** | React Query | Redux/Redux-Saga | Собственная |
-| **UI библиотеки** | Ant Design, MUI, Chakra | Material UI | Собственная |
-| **Tailwind конфликт** | Нет (scoped CSS) | Возможен | Возможен |
-| **Real-time** | liveProvider из коробки | Отдельный пакет | Нет |
-| **Документация** | 15970 примеров | 4345 примеров | 86 примеров |
-| **Maturity** | С 2021, быстро растёт | С 2016, стабильная | С 2019 |
+| Критерий | shadcn/ui + Tremor | Refine + Ant Design | React-Admin |
+|----------|-------------------|---------------------|-------------|
+| **Дизайн** | Современный, стильный | Корпоративный | Материальный |
+| **Tailwind** | Нативная поддержка ✅ | Конфликт (scoping) | Конфликт |
+| **React 19** | Полная поддержка ✅ | Проблемы | Проблемы |
+| **Графики** | Tremor встроено ✅ | Отдельно | Отдельно |
+| **Кастомизация** | Полный контроль ✅ | Ограничена темой | Ограничена |
+| **Бандл** | Лёгкий (copy-paste) | Тяжёлый (Ant) | Тяжёлый (MUI) |
+| **В проекте** | Уже есть ✅ | Нет | Нет |
 
-### Выбор: Refine
+### Выбор: shadcn/ui + Tremor
 
 **Причины:**
-1. **Нативная Supabase интеграция** — `@refinedev/supabase` работает из коробки с auth, data, real-time
-2. **Headless архитектура** — не конфликтует с существующим Tailwind CSS на `/admin` route
-3. **React Query** — современный подход, не требует изучения Redux
-4. **Real-time** — liveProvider для мгновенных обновлений при изменении данных
-5. **Ant Design** — отличный UI Kit для админок, scoped styles
+1. **Уже установлен** — есть `button`, `card`, `scroll-area`, `toggle-group` в `src/components/ui/`
+2. **Нативный Tailwind** — используем существующую конфигурацию, без конфликтов
+3. **Tremor для дашбордов** — красивые графики из коробки (acquired by Vercel)
+4. **React 19 совместимость** — работает без хаков с `// @ts-nocheck`
+5. **Современный дизайн** — не выглядит как "корпоративная админка из 2018"
+6. **Полный контроль** — компоненты копируются в проект, можно кастомизировать
 
 **Источники исследования:**
-- [Refine vs React-Admin comparison](https://marmelab.com/blog/2023/07/04/react-admin-vs-refine.html)
-- [Supabase + Refine tutorial](https://supabase.com/docs/guides/getting-started/tutorials/with-refine)
-- [Refine official comparison](https://refine.dev/docs/comparison/)
+- [React-admin With Shadcn UI](https://marmelab.com/blog/2025/04/23/react-admin-with-shadcn.html)
+- [Shadcn Admin Template](https://www.shadcn.io/template/satnaing-shadcn-admin)
+- [Tremor Dashboard Components](https://tremor.so/)
 
 ---
 
@@ -209,42 +209,57 @@
 ### Dependencies
 
 ```bash
-# Core Refine
-pnpm add @refinedev/core @refinedev/cli
+# shadcn/ui components (уже частично установлены)
+pnpm dlx shadcn@latest add table data-table dialog dropdown-menu input label select tabs toast sidebar
 
-# Supabase Data Provider
-pnpm add @refinedev/supabase
+# Tremor для графиков и дашбордов
+pnpm add @tremor/react
 
-# Ant Design UI
-pnpm add @refinedev/antd antd @ant-design/icons
+# TanStack для таблиц (используется data-table)
+pnpm add @tanstack/react-table
 
-# Router
-pnpm add @refinedev/react-router react-router-dom
+# Иконки (lucide уже есть, добавим heroicons для Tremor)
+pnpm add @heroicons/react
 ```
+
+**Примечание**: shadcn/ui компоненты (`button`, `card`) уже установлены в `src/components/ui/`
 
 ### File Structure
 
 ```
 src/
 ├── admin/
-│   ├── App.tsx              # Refine app wrapper
-│   ├── authProvider.ts      # Supabase auth + admin check
-│   ├── dataProvider.ts      # Supabase data provider config
+│   ├── AdminApp.tsx            # Admin app entry with auth check
+│   ├── hooks/
+│   │   ├── useAdminAuth.ts     # Admin authentication hook
+│   │   └── useAdminData.ts     # Supabase data fetching hooks
 │   ├── layout/
-│   │   └── AdminLayout.tsx  # Sidebar + Header
+│   │   ├── AdminLayout.tsx     # Sidebar + Header layout
+│   │   ├── AdminSidebar.tsx    # Navigation sidebar (shadcn sidebar)
+│   │   └── AdminHeader.tsx     # Top header with user info
 │   ├── pages/
-│   │   ├── login/
-│   │   ├── dashboard/
-│   │   ├── system-config/
-│   │   ├── users/
-│   │   ├── credits/
-│   │   ├── messages/
-│   │   ├── costs/
-│   │   └── user-states/
+│   │   ├── LoginPage.tsx       # Supabase Auth login
+│   │   ├── DashboardPage.tsx   # Overview stats (Tremor cards)
+│   │   ├── SystemConfigPage.tsx # Config table + edit
+│   │   ├── UsersPage.tsx       # Users data-table
+│   │   ├── UserDetailPage.tsx  # User details + credits edit
+│   │   ├── MessagesPage.tsx    # Message history viewer
+│   │   ├── CostsPage.tsx       # LLM costs dashboard (Tremor charts)
+│   │   └── UserStatesPage.tsx  # Bot states management
 │   └── components/
-│       ├── JsonEditor.tsx    # JSONB value editor
-│       └── CostChart.tsx     # Charts for costs dashboard
-└── App.tsx                   # Main app (add /admin route)
+│       ├── JsonEditor.tsx      # JSONB value editor (Monaco-like)
+│       ├── DataTable.tsx       # Reusable data table wrapper
+│       ├── StatsCard.tsx       # Dashboard stat card (Tremor)
+│       └── CostChart.tsx       # Cost visualization (Tremor)
+├── components/ui/              # shadcn/ui components (existing)
+│   ├── button.tsx
+│   ├── card.tsx
+│   ├── table.tsx              # NEW
+│   ├── data-table.tsx         # NEW
+│   ├── dialog.tsx             # NEW
+│   ├── sidebar.tsx            # NEW
+│   └── ...
+└── App.tsx                     # Add /admin/* routes
 ```
 
 ### Database Changes
@@ -436,5 +451,6 @@ GRANT SELECT ON admin_llm_costs TO authenticated;
 
 | Date | Version | Changes |
 |------|---------|---------|
+| 2025-12-29 | 2.0 | **Technology change**: shadcn/ui + Tremor (from Refine + Ant Design). Updated file structure, dependencies |
 | 2025-12-29 | 1.1 | Resolved clarifications, created tasks.md (15 tasks), status → Ready |
 | 2025-12-29 | 1.0 | Initial spec based on research (Refine vs React-Admin vs AdminJS) |
