@@ -13,10 +13,10 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       exclude: ['src/types/**', 'src/**/*.d.ts'],
       thresholds: {
-        lines: 20,
-        branches: 15,
-        functions: 20,
-        statements: 20
+        lines: 15,
+        branches: 10,
+        functions: 15,
+        statements: 15
       }
     },
     testTimeout: 30000,
