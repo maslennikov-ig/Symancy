@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.8] - 2025-12-29
+
+### Added
+- **auth**: add ES256 algorithm support for JWT signing (227671a)
+- **auth**: add RS256 JWT signing key support (348106d)
+
+### Fixed
+- **tests**: add missing prompt file mocks in chat-memory tests (206d51a)
+- **routes**: remove /api prefix from backend routes (d47e958)
+- **ci**: remove frozen-lockfile from server install (19aa1e2)
+- **tests**: update chat handler integration tests for omnichannel (a3befcb)
+- **ci**: update backend workflow for pnpm workspace dependencies (61f21ad)
+- **e2e**: improve test reliability for CI environment (df8836a)
+
+### Other
+- add comprehensive testing guide for customer (779a658)
+- **tests**: lower coverage thresholds temporarily (d23f7d0)
+
 ## [0.5.7] - 2025-12-28
 
 ### Added

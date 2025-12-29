@@ -2,6 +2,28 @@
 
 User-facing release notes for all versions.
 
+## v0.5.8
+
+_Released on 2025-12-29_
+
+### ✨ New Features
+
+- **Authentication**: Add ES256 algorithm support for JWT signing
+- **Authentication**: Add RS256 JWT signing key support
+
+### 🐛 Bug Fixes
+
+- **tests**: Add missing prompt file mocks in chat-memory tests
+- **routes**: Remove /api prefix from backend routes
+- **CI/CD**: Remove frozen-lockfile from server install
+- **tests**: Update chat handler integration tests for omnichannel
+- **CI/CD**: Update backend workflow for pnpm workspace dependencies
+- **e2e**: Improve test reliability for CI environment
+
+---
+
+_This release was automatically generated from 10 commits._
+
 ## v0.5.7
 
 _Released on 2025-12-28_
