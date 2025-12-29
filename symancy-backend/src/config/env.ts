@@ -38,7 +38,11 @@ const EnvSchema = z.object({
   OPENROUTER_API_KEY: z.string().startsWith("sk-or-"),
 
   // Supabase JWT (for custom Telegram user tokens)
-  SUPABASE_JWT_SECRET: z.string().min(32, "JWT secret must be at least 32 characters"),
+  // At least one of these must be set:
+  // - SUPABASE_JWT_SIGNING_KEY (RS256 private key, recommended - new format)
+  // - SUPABASE_JWT_SECRET (HS256 shared secret, legacy fallback)
+  SUPABASE_JWT_SIGNING_KEY: z.string().optional(),
+  SUPABASE_JWT_SECRET: z.string().min(32, "JWT secret must be at least 32 characters").optional(),
 
   // Optional Settings
   LOG_LEVEL: LogLevelSchema.default("info"),
@@ -59,7 +63,13 @@ const EnvSchema = z.object({
   DB_POOL_MAX: z.coerce.number().min(1).max(100).default(20),
   DB_POOL_IDLE_TIMEOUT_MS: z.coerce.number().min(1000).default(30000),
   DB_POOL_CONNECTION_TIMEOUT_MS: z.coerce.number().min(100).default(2000),
-});
+}).refine(
+  (data) => data.SUPABASE_JWT_SIGNING_KEY || data.SUPABASE_JWT_SECRET,
+  {
+    message: "Either SUPABASE_JWT_SIGNING_KEY (RS256) or SUPABASE_JWT_SECRET (HS256) must be set",
+    path: ["SUPABASE_JWT_SIGNING_KEY"],
+  }
+);
 
 export type Env = z.infer<typeof EnvSchema>;
 

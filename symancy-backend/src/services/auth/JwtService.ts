@@ -2,7 +2,9 @@
  * JWT Service for Telegram-authenticated users
  *
  * Creates custom JWTs that Supabase RLS will accept.
- * Uses HS256 algorithm with SUPABASE_JWT_SECRET for signing.
+ * Supports both:
+ * - RS256 (asymmetric) with SUPABASE_JWT_SIGNING_KEY (recommended, new)
+ * - HS256 (symmetric) with SUPABASE_JWT_SECRET (legacy fallback)
  *
  * @module services/auth/JwtService
  */
@@ -60,9 +62,41 @@ export interface TokenResult {
 }
 
 /**
+ * Get the signing key and algorithm based on configuration
+ * Prefers RS256 with signing key, falls back to HS256 with secret
+ * @throws Error if neither key is configured (should be caught by env validation)
+ */
+function getSigningConfig(): { key: string; algorithm: jwt.Algorithm } {
+  const env = getEnv();
+
+  // Prefer new RS256 signing key
+  if (env.SUPABASE_JWT_SIGNING_KEY) {
+    return {
+      key: env.SUPABASE_JWT_SIGNING_KEY,
+      algorithm: 'RS256',
+    };
+  }
+
+  // Fallback to legacy HS256 secret
+  if (env.SUPABASE_JWT_SECRET) {
+    return {
+      key: env.SUPABASE_JWT_SECRET,
+      algorithm: 'HS256',
+    };
+  }
+
+  // This should never happen due to env validation, but just in case
+  throw new Error('No JWT signing key configured. Set SUPABASE_JWT_SIGNING_KEY or SUPABASE_JWT_SECRET');
+}
+
+/**
  * Create a JWT token for a Telegram-authenticated user
  *
- * The token is signed with SUPABASE_JWT_SECRET and includes:
+ * The token is signed with either:
+ * - SUPABASE_JWT_SIGNING_KEY (RS256, recommended) or
+ * - SUPABASE_JWT_SECRET (HS256, legacy fallback)
+ *
+ * Includes:
  * - sub: unified_users.id (Supabase will use this for RLS)
  * - role: 'authenticated' (grants access to authenticated-only tables)
  * - telegram_id: Original Telegram ID (for logging/debugging)
@@ -86,8 +120,8 @@ export function createTelegramUserToken(
   telegramId: number,
   expiresInHours: number = 24 * 7 // 7 days default
 ): TokenResult {
-  const env = getEnv();
   const logger = getLogger().child({ module: 'jwt' });
+  const { key, algorithm } = getSigningConfig();
 
   const now = Math.floor(Date.now() / 1000);
   const exp = now + expiresInHours * 3600;
@@ -100,11 +134,9 @@ export function createTelegramUserToken(
     exp: exp,
   };
 
-  const token = jwt.sign(payload, env.SUPABASE_JWT_SECRET, {
-    algorithm: 'HS256',
-  });
+  const token = jwt.sign(payload, key, { algorithm });
 
-  logger.debug({ telegramId, unifiedUserId, exp }, 'Created JWT for Telegram user');
+  logger.debug({ telegramId, unifiedUserId, exp, algorithm }, 'Created JWT for Telegram user');
 
   return {
     token,
@@ -115,7 +147,10 @@ export function createTelegramUserToken(
 /**
  * Verify and decode a JWT token
  *
- * Validates the token signature using SUPABASE_JWT_SECRET.
+ * Validates the token signature using either:
+ * - SUPABASE_JWT_SIGNING_KEY (RS256, checks first if configured)
+ * - SUPABASE_JWT_SECRET (HS256, legacy fallback)
+ *
  * Works for both Telegram custom tokens and Supabase Auth session tokens.
  * Returns null if verification fails (invalid signature, expired, malformed).
  *
@@ -138,17 +173,17 @@ export function createTelegramUserToken(
  * ```
  */
 export function verifyToken(token: string): GenericJwtPayload | null {
-  const env = getEnv();
   const logger = getLogger().child({ module: 'jwt' });
+  const { key, algorithm } = getSigningConfig();
 
   try {
-    // SECURITY: Explicitly restrict to HS256 algorithm only
+    // SECURITY: Explicitly restrict to configured algorithm only
     // This prevents algorithm confusion attacks (CVE-worthy vulnerability)
-    return jwt.verify(token, env.SUPABASE_JWT_SECRET, {
-      algorithms: ['HS256'],
+    return jwt.verify(token, key, {
+      algorithms: [algorithm],
     }) as GenericJwtPayload;
   } catch (error) {
-    logger.warn({ error }, 'JWT verification failed');
+    logger.warn({ error, algorithm }, 'JWT verification failed');
     return null;
   }
 }
