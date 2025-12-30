@@ -23,8 +23,10 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { X, UserPlus, Shield } from 'lucide-react';
 
 // Types for system_config table
 interface SystemConfig {
@@ -87,12 +89,139 @@ function TableSkeleton() {
   );
 }
 
+// Admin Users Card Component
+interface AdminUsersCardProps {
+  adminEmails: string[];
+  currentUserEmail: string | undefined;
+  onAddAdmin: (email: string) => Promise<void>;
+  onRemoveAdmin: (email: string) => Promise<void>;
+  loading: boolean;
+  t: (key: string) => string;
+}
+
+function AdminUsersCard({ adminEmails, currentUserEmail, onAddAdmin, onRemoveAdmin, loading, t }: AdminUsersCardProps) {
+  const [newEmail, setNewEmail] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+  const [removingEmail, setRemovingEmail] = useState<string | null>(null);
+
+  const handleAdd = async () => {
+    if (!newEmail.trim() || !newEmail.includes('@')) {
+      toast.error(t('admin.adminUsers.invalidEmail'));
+      return;
+    }
+    if (adminEmails.includes(newEmail.trim().toLowerCase())) {
+      toast.error(t('admin.adminUsers.alreadyAdmin'));
+      return;
+    }
+    setIsAdding(true);
+    try {
+      await onAddAdmin(newEmail.trim().toLowerCase());
+      setNewEmail('');
+      toast.success(t('admin.adminUsers.added'));
+    } catch {
+      toast.error(t('admin.adminUsers.addFailed'));
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  const handleRemove = async (email: string) => {
+    if (email === currentUserEmail) {
+      toast.error(t('admin.adminUsers.cannotRemoveSelf'));
+      return;
+    }
+    if (adminEmails.length === 1) {
+      toast.error(t('admin.adminUsers.cannotRemoveLast'));
+      return;
+    }
+    setRemovingEmail(email);
+    try {
+      await onRemoveAdmin(email);
+      toast.success(t('admin.adminUsers.removed'));
+    } catch {
+      toast.error(t('admin.adminUsers.removeFailed'));
+    } finally {
+      setRemovingEmail(null);
+    }
+  };
+
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Shield className="h-5 w-5" />
+          {t('admin.adminUsers.title')}
+        </CardTitle>
+        <CardDescription>{t('admin.adminUsers.description')}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <Skeleton className="h-20 w-full" />
+        ) : (
+          <div className="space-y-4">
+            {/* Current admins list */}
+            <div className="flex flex-wrap gap-2">
+              {adminEmails.map((email) => (
+                <Badge
+                  key={email}
+                  variant={email === currentUserEmail ? 'default' : 'secondary'}
+                  className="flex items-center gap-1 px-3 py-1.5"
+                >
+                  {email}
+                  {email === currentUserEmail && (
+                    <span className="text-xs opacity-70 ml-1">({t('admin.adminUsers.you')})</span>
+                  )}
+                  {email !== currentUserEmail && adminEmails.length > 1 && (
+                    <button
+                      onClick={() => handleRemove(email)}
+                      disabled={removingEmail === email}
+                      className="ml-1 hover:bg-destructive/20 rounded p-0.5 transition-colors"
+                      aria-label={`Remove ${email}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </Badge>
+              ))}
+            </div>
+
+            {/* Add new admin form */}
+            <div className="flex gap-2 pt-2">
+              <Input
+                type="email"
+                placeholder={t('admin.adminUsers.emailPlaceholder')}
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+                className="max-w-xs"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAdd}
+                disabled={isAdding || !newEmail.trim()}
+                className="gap-1"
+              >
+                <UserPlus className="h-4 w-4" />
+                {t('admin.adminUsers.add')}
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function SystemConfigPage() {
   const { user, signOut } = useAdminAuth();
   const { t } = useAdminTranslations();
   const [configs, setConfigs] = useState<SystemConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Admin emails state (extracted from configs)
+  const [adminEmails, setAdminEmails] = useState<string[]>([]);
 
   // Edit dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -124,6 +253,11 @@ export function SystemConfigPage() {
 
         if (!cancelled) {
           setConfigs(data || []);
+          // Extract admin_emails from configs
+          const adminConfig = data?.find((c: SystemConfig) => c.key === 'admin_emails');
+          if (adminConfig && Array.isArray(adminConfig.value)) {
+            setAdminEmails(adminConfig.value as string[]);
+          }
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load configurations';
@@ -147,6 +281,44 @@ export function SystemConfigPage() {
 
   // Handle manual refresh
   const handleRefresh = () => setRefreshTrigger((prev) => prev + 1);
+
+  // Add admin email
+  const handleAddAdmin = async (email: string) => {
+    const newEmails = [...adminEmails, email];
+    const { error: updateError } = await supabase
+      .from('system_config')
+      .update({
+        value: newEmails,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('key', 'admin_emails');
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    setAdminEmails(newEmails);
+    handleRefresh();
+  };
+
+  // Remove admin email
+  const handleRemoveAdmin = async (email: string) => {
+    const newEmails = adminEmails.filter((e) => e !== email);
+    const { error: updateError } = await supabase
+      .from('system_config')
+      .update({
+        value: newEmails,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('key', 'admin_emails');
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    setAdminEmails(newEmails);
+    handleRefresh();
+  };
 
   // Open edit dialog
   const handleRowClick = (config: SystemConfig) => {
@@ -210,6 +382,17 @@ export function SystemConfigPage() {
       userAvatar={user?.user_metadata?.avatar_url}
       onLogout={signOut}
     >
+      {/* Admin Users Management Card */}
+      <AdminUsersCard
+        adminEmails={adminEmails}
+        currentUserEmail={user?.email}
+        onAddAdmin={handleAddAdmin}
+        onRemoveAdmin={handleRemoveAdmin}
+        loading={loading}
+        t={t}
+      />
+
+      {/* System Config Table Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
