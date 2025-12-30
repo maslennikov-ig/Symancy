@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.11
+
+_Released on 2025-12-30_
+
+### ✨ New Features
+
+- **admin**: Add theme toggle and language selector to admin header
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.10
 
 _Released on 2025-12-30_
