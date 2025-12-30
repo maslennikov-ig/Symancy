@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.10] - 2025-12-30
+
+### Added
+- **components**: add 3 source file(s), update 6 source file(s) (460c623)
+- **admin**: add admin users management to system config page (9df462a)
+
+### Fixed
+- **admin**: add missing i18n translations for Costs, UserDetail, Messages pages (4fe4dd8)
+- **admin**: show proper subtitle on login page instead of error message (1571771)
+- **admin**: use Tailwind v4 Vite plugin for proper CSS detection (07203d2)
+- **deploy**: add VITE env variables to build step (c60ff1f)
+- **tailwind**: include src/admin in content paths (7f05319)
+
+### Other
+- **admin**: переписать инструкцию тестирования на русском (6ccb44b)
+
 ## [0.5.9] - 2025-12-30
 
 ### Added

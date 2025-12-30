@@ -2,6 +2,27 @@
 
 User-facing release notes for all versions.
 
+## v0.5.10
+
+_Released on 2025-12-30_
+
+### ✨ New Features
+
+- **components**: Add 3 source file(s), update 6 source file(s)
+- **admin**: Add admin users management to system config page
+
+### 🐛 Bug Fixes
+
+- **admin**: Add missing i18n translations for Costs, UserDetail, Messages pages
+- **admin**: Show proper subtitle on login page instead of error message
+- **admin**: Use Tailwind v4 Vite plugin for proper CSS detection
+- **deploy**: Add VITE env variables to build step
+- **tailwind**: Include src/admin in content paths
+
+---
+
+_This release was automatically generated from 8 commits._
+
 ## v0.5.9
 
 _Released on 2025-12-30_
