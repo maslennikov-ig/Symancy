@@ -1,4 +1,4 @@
-import { LogOut, ChevronDown } from 'lucide-react'
+import { LogOut, ChevronDown, Globe, Sun, Moon, Check } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -6,10 +6,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { useAdminTranslations } from '../hooks/useAdminTranslations'
+import { useTheme } from '@/hooks/useTheme'
+import type { Lang } from '@/lib/i18n'
 
 interface AdminHeaderProps {
   title: string
@@ -19,6 +24,12 @@ interface AdminHeaderProps {
   onLogout?: () => void
 }
 
+const languages: { code: Lang; name: string; nativeName: string }[] = [
+  { code: 'en', name: 'English', nativeName: 'English' },
+  { code: 'ru', name: 'Russian', nativeName: 'Русский' },
+  { code: 'zh', name: 'Chinese', nativeName: '中文' },
+]
+
 export function AdminHeader({
   title,
   userName = 'Admin',
@@ -26,13 +37,17 @@ export function AdminHeader({
   userAvatar,
   onLogout,
 }: AdminHeaderProps) {
-  const { t } = useAdminTranslations()
+  const { t, language, setLanguage } = useAdminTranslations()
+  const { theme, toggleTheme } = useTheme()
+
   const initials = userName
     .split(' ')
     .map((n) => n[0])
     .join('')
     .toUpperCase()
     .slice(0, 2)
+
+  const currentLanguage = languages.find((lang) => lang.code === language) || languages[0]
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-6 dark:border-slate-800 dark:bg-slate-900">
@@ -66,6 +81,47 @@ export function AdminHeader({
               </p>
             </div>
           </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+
+          {/* Language Submenu */}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Globe className="mr-2 h-4 w-4" />
+              <span>{t('menu.language')}</span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              {languages.map((lang) => (
+                <DropdownMenuItem
+                  key={lang.code}
+                  onClick={() => setLanguage(lang.code)}
+                  className="cursor-pointer"
+                >
+                  <Check
+                    className={`mr-2 h-4 w-4 ${
+                      language === lang.code ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  />
+                  <span>{lang.nativeName}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+
+          {/* Theme Toggle */}
+          <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer">
+            {theme === 'light' ? (
+              <>
+                <Moon className="mr-2 h-4 w-4" />
+                <span>{t('menu.dark')}</span>
+              </>
+            ) : (
+              <>
+                <Sun className="mr-2 h-4 w-4" />
+                <span>{t('menu.light')}</span>
+              </>
+            )}
+          </DropdownMenuItem>
+
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={onLogout}

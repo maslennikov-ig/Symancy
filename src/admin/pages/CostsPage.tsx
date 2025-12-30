@@ -111,11 +111,11 @@ const MODEL_PRICES: Record<string, number> = {
 
 // Chart colors for different models (using CSS variables)
 const CHART_COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
 ];
 
 // ============================================================================
@@ -575,11 +575,7 @@ export function CostsPage() {
                       />
                     }
                   />
-                  <Bar
-                    dataKey="requests"
-                    fill="hsl(var(--chart-1))"
-                    radius={[0, 4, 4, 0]}
-                  />
+                  <Bar dataKey="requests" fill="var(--chart-1)" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ChartContainer>
             </ChartCard>
@@ -613,7 +609,7 @@ export function CostsPage() {
                     label={({ name, percent }) =>
                       percent > 0.05 ? `${name} (${(percent * 100).toFixed(0)}%)` : ''
                     }
-                    labelLine={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
+                    labelLine={{ stroke: 'var(--muted-foreground)', strokeWidth: 1 }}
                   >
                     {modelStats.map((_, index) => (
                       <Cell
