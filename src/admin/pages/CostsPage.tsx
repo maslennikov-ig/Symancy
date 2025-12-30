@@ -1,33 +1,51 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Card,
-  Title,
-  Text,
-  Metric,
-  Flex,
-  Grid,
-  BarChart,
-  AreaChart,
-  DonutChart,
-  DateRangePicker,
-  DateRangePickerValue,
-  Badge,
-  Table,
-  TableHead,
-  TableRow,
-  TableHeaderCell,
-  TableBody,
-  TableCell,
-} from '@tremor/react';
-import { DollarSign, Zap, Clock, Activity, Download } from 'lucide-react';
+import { DollarSign, Zap, Clock, Activity, Download, Calendar, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
 import { useAdminTranslations } from '../hooks/useAdminTranslations';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { StatsCard, StatsCardSkeleton } from '../components/StatsCard';
+import { ChartCard } from '../components/ChartCard';
 import { formatNumberEN, formatCurrencyUSD, formatMs } from '../utils/formatters';
 import { exportToCsv } from '../utils/exportCsv';
+import { cn } from '@/lib/utils';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import type { Lang } from '@/lib/i18n';
+
+// HIGH-2: Locale mapping for i18n date formatting
+const LOCALE_MAP: Record<Lang, string> = {
+  en: 'en-US',
+  ru: 'ru-RU',
+  zh: 'zh-CN',
+};
 
 // ============================================================================
 // Types
@@ -53,9 +71,11 @@ interface SummaryStats {
 
 interface ModelStats {
   model: string;
+  fullModel: string;
   requests: number;
   tokens: number;
   cost: number;
+  [key: string]: string | number; // Index signature for Recharts compatibility
 }
 
 interface TimeSeriesData {
@@ -72,6 +92,8 @@ interface UserStats {
   cost: number;
 }
 
+type DatePreset = 'last7' | 'last30' | 'thisMonth';
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -79,7 +101,7 @@ interface UserStats {
 // Model pricing per 1M tokens (approximate)
 const MODEL_PRICES: Record<string, number> = {
   'google/gemini-1.5-flash': 0.075,
-  'google/gemini-2.0-flash': 0.10,
+  'google/gemini-2.0-flash': 0.1,
   'google/gemini-2.0-flash-exp:free': 0,
   'openai/gpt-4o-mini': 0.15,
   'anthropic/claude-3.5-sonnet': 3.0,
@@ -87,17 +109,14 @@ const MODEL_PRICES: Record<string, number> = {
   'xiaomi/mimo-v2-flash:free': 0,
 };
 
-const MODEL_COLORS: Record<string, string> = {
-  'google/gemini-1.5-flash': 'blue',
-  'google/gemini-2.0-flash': 'cyan',
-  'google/gemini-2.0-flash-exp:free': 'sky',
-  'openai/gpt-4o-mini': 'emerald',
-  'anthropic/claude-3.5-sonnet': 'violet',
-  'anthropic/claude-3-haiku': 'purple',
-  'xiaomi/mimo-v2-flash:free': 'orange',
-};
-
-const DEFAULT_COLOR = 'slate';
+// Chart colors for different models (using CSS variables)
+const CHART_COLORS = [
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
+];
 
 // ============================================================================
 // Helpers
@@ -108,7 +127,7 @@ function estimateCost(tokens: number, model: string): number {
   return (tokens / 1_000_000) * price;
 }
 
-function getDateRange(preset: 'last7' | 'last30' | 'thisMonth'): { from: Date; to: Date } {
+function getDateRange(preset: DatePreset): { from: Date; to: Date } {
   const now = new Date();
   const to = new Date(now);
   to.setHours(23, 59, 59, 999);
@@ -138,7 +157,6 @@ function formatDateForQuery(date: Date): string {
 }
 
 function formatShortModel(model: string): string {
-  // Shorten model names for display
   const parts = model.split('/');
   if (parts.length > 1) {
     return parts[1].replace(':free', ' (free)');
@@ -146,44 +164,10 @@ function formatShortModel(model: string): string {
   return model;
 }
 
-// ============================================================================
-// Loading Skeletons
-// ============================================================================
-
-function StatCardSkeleton() {
-  return (
-    <Card className="animate-pulse" decoration="top" decorationColor="slate">
-      <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24 mb-3" />
-      <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-20" />
-    </Card>
-  );
-}
-
-function ChartSkeleton({ height = 'h-72' }: { height?: string }) {
-  return (
-    <Card className="animate-pulse">
-      <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-32 mb-4" />
-      <div className={`${height} bg-slate-100 dark:bg-slate-800 rounded`} />
-    </Card>
-  );
-}
-
-function TableSkeleton() {
-  return (
-    <Card className="animate-pulse">
-      <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-40 mb-4" />
-      <div className="space-y-3">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex gap-4">
-            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-32" />
-            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-20" />
-            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24" />
-            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-16" />
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
+// HIGH-2: Accept locale parameter for i18n support
+function formatChartDate(dateStr: string, locale: string = 'en-US'): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
 // ============================================================================
@@ -192,13 +176,14 @@ function TableSkeleton() {
 
 export function CostsPage() {
   const { user, isAdmin, isLoading: authLoading, signOut } = useAdminAuth();
-  const { t } = useAdminTranslations();
+  const { t, language } = useAdminTranslations();
+
+  // HIGH-2: Get locale for date formatting
+  const dateLocale = LOCALE_MAP[language];
 
   // Date range state
-  const [dateRange, setDateRange] = useState<DateRangePickerValue>(() => {
-    const { from, to } = getDateRange('last30');
-    return { from, to };
-  });
+  const [datePreset, setDatePreset] = useState<DatePreset>('last30');
+  const [dateRange, setDateRange] = useState(() => getDateRange('last30'));
 
   // Data state
   const [rawData, setRawData] = useState<LLMCostRow[]>([]);
@@ -206,7 +191,12 @@ export function CostsPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const handleRetry = () => setRefreshTrigger(prev => prev + 1);
+  const handleRetry = () => setRefreshTrigger((prev) => prev + 1);
+
+  const handlePreset = (preset: DatePreset) => {
+    setDatePreset(preset);
+    setDateRange(getDateRange(preset));
+  };
 
   // Fetch data from Supabase
   useEffect(() => {
@@ -220,8 +210,8 @@ export function CostsPage() {
       setError(null);
 
       try {
-        const fromDate = formatDateForQuery(dateRange.from!);
-        const toDate = formatDateForQuery(dateRange.to!);
+        const fromDate = formatDateForQuery(dateRange.from);
+        const toDate = formatDateForQuery(dateRange.to);
 
         const { data, error: queryError } = await supabase
           .from('admin_llm_costs')
@@ -283,7 +273,7 @@ export function CostsPage() {
     return { totalRequests, totalTokens, estimatedCost: totalCost, avgProcessingMs };
   }, [rawData]);
 
-  // Model stats for bar chart and donut chart
+  // Model stats for bar chart and pie chart
   const modelStats = useMemo<ModelStats[]>(() => {
     const modelMap = new Map<string, { requests: number; tokens: number; cost: number }>();
 
@@ -298,12 +288,14 @@ export function CostsPage() {
     return Array.from(modelMap.entries())
       .map(([model, stats]) => ({
         model: formatShortModel(model),
+        fullModel: model,
         ...stats,
       }))
       .sort((a, b) => b.requests - a.requests);
   }, [rawData]);
 
   // Time series data for area chart
+  // HIGH-2: Use dateLocale for i18n date formatting
   const timeSeriesData = useMemo<TimeSeriesData[]>(() => {
     const dateModelMap = new Map<string, Map<string, number>>();
     const allModels = new Set<string>();
@@ -320,32 +312,20 @@ export function CostsPage() {
       modelMap.set(shortModel, (modelMap.get(shortModel) || 0) + row.total_tokens);
     }
 
-    // Convert to array sorted by date
     return Array.from(dateModelMap.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, modelMap]) => {
-        const entry: TimeSeriesData = { date };
+        const entry: TimeSeriesData = { date: formatChartDate(date, dateLocale) };
         for (const model of allModels) {
           entry[model] = modelMap.get(model) || 0;
         }
         return entry;
       });
-  }, [rawData]);
+  }, [rawData, dateLocale]);
 
   // Unique model names for chart categories
   const modelNames = useMemo<string[]>(() => {
     return modelStats.map((m) => m.model);
-  }, [modelStats]);
-
-  // Model colors for charts
-  const chartColors = useMemo<string[]>(() => {
-    return modelStats.map((m) => {
-      // Find original model key
-      const originalKey = Object.keys(MODEL_COLORS).find(
-        (k) => formatShortModel(k) === m.model
-      );
-      return originalKey ? MODEL_COLORS[originalKey] : DEFAULT_COLOR;
-    });
   }, [modelStats]);
 
   // User breakdown stats
@@ -378,26 +358,17 @@ export function CostsPage() {
       .slice(0, 20);
   }, [rawData]);
 
-  // Donut chart data
-  const donutData = useMemo(() => {
-    return modelStats.map((m) => ({
-      name: m.model,
-      value: m.requests,
-    }));
-  }, [modelStats]);
-
-  // ============================================================================
-  // Handlers
-  // ============================================================================
-
-  const handleDateRangeChange = (value: DateRangePickerValue) => {
-    setDateRange(value);
-  };
-
-  const handlePreset = (preset: 'last7' | 'last30' | 'thisMonth') => {
-    const { from, to } = getDateRange(preset);
-    setDateRange({ from, to });
-  };
+  // Chart config for ChartContainer
+  const chartConfig = useMemo(() => {
+    const config: Record<string, { label: string; color: string }> = {};
+    modelNames.forEach((name, index) => {
+      config[name] = {
+        label: name,
+        color: CHART_COLORS[index % CHART_COLORS.length],
+      };
+    });
+    return config;
+  }, [modelNames]);
 
   // Handle CSV export
   const handleExport = () => {
@@ -443,242 +414,368 @@ export function CostsPage() {
       onLogout={signOut}
     >
       <div className="space-y-6">
-        {/* Date Range Filter */}
-        <Card>
-          <Flex justifyContent="between" alignItems="center" className="flex-wrap gap-4">
-            <div>
-              <Title>{t('admin.costs.analytics')}</Title>
-              <Text>{t('admin.costs.monitorUsage')}</Text>
+        {/* Header with Date Filter */}
+        <Card className="border-none bg-gradient-to-r from-card via-card to-muted/30">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                  <TrendingUp className="h-6 w-6 text-primary" />
+                  {t('admin.costs.analytics')}
+                </CardTitle>
+                <CardDescription>{t('admin.costs.monitorUsage')}</CardDescription>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Date Preset Buttons */}
+                {/* MEDIUM-4: ARIA labels for date preset buttons */}
+                <div className="inline-flex items-center rounded-lg border bg-card p-1" role="group" aria-label={t('admin.costs.dateRange')}>
+                  <button
+                    onClick={() => handlePreset('last7')}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all',
+                      datePreset === 'last7'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    )}
+                    aria-pressed={datePreset === 'last7'}
+                    aria-label={t('admin.costs.last7')}
+                  >
+                    <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t('admin.costs.last7')}
+                  </button>
+                  <button
+                    onClick={() => handlePreset('last30')}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all',
+                      datePreset === 'last30'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    )}
+                    aria-pressed={datePreset === 'last30'}
+                    aria-label={t('admin.costs.last30')}
+                  >
+                    {t('admin.costs.last30')}
+                  </button>
+                  <button
+                    onClick={() => handlePreset('thisMonth')}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all',
+                      datePreset === 'thisMonth'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    )}
+                    aria-pressed={datePreset === 'thisMonth'}
+                    aria-label={t('admin.costs.thisMonth')}
+                  >
+                    {t('admin.costs.thisMonth')}
+                  </button>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExport}
+                  disabled={userStats.length === 0 || isLoading}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  {t('admin.common.export')}
+                </Button>
+              </div>
             </div>
-            <Flex className="gap-2 flex-wrap">
-              <button
-                onClick={() => handlePreset('last7')}
-                className="px-3 py-1.5 text-sm rounded-md border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-              >
-                {t('admin.costs.last7')}
-              </button>
-              <button
-                onClick={() => handlePreset('last30')}
-                className="px-3 py-1.5 text-sm rounded-md border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-              >
-                {t('admin.costs.last30')}
-              </button>
-              <button
-                onClick={() => handlePreset('thisMonth')}
-                className="px-3 py-1.5 text-sm rounded-md border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-              >
-                {t('admin.costs.thisMonth')}
-              </button>
-              <DateRangePicker
-                value={dateRange}
-                onValueChange={handleDateRangeChange}
-                enableSelect={false}
-                className="max-w-sm"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExport}
-                disabled={userStats.length === 0 || isLoading}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {t('admin.common.export')}
-              </Button>
-            </Flex>
-          </Flex>
+          </CardHeader>
         </Card>
 
         {/* Error State */}
         {error && (
-          <div className="flex items-center justify-between gap-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-red-700 dark:text-red-400">{error}</p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRetry}
-              disabled={isLoading}
-            >
-              {t('admin.common.retry')}
-            </Button>
-          </div>
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="flex items-center justify-between gap-4 py-4">
+              <p className="text-destructive">{error}</p>
+              <Button variant="outline" size="sm" onClick={handleRetry} disabled={isLoading}>
+                {t('admin.common.retry')}
+              </Button>
+            </CardContent>
+          </Card>
         )}
 
         {/* Summary Stats */}
-        {isLoading ? (
-          <Grid numItemsMd={2} numItemsLg={4} className="gap-4">
-            <StatCardSkeleton />
-            <StatCardSkeleton />
-            <StatCardSkeleton />
-            <StatCardSkeleton />
-          </Grid>
-        ) : (
-          <Grid numItemsMd={2} numItemsLg={4} className="gap-4">
-            <Card decoration="top" decorationColor="blue">
-              <Flex justifyContent="between" alignItems="center">
-                <div>
-                  <Text>{t('admin.costs.totalRequests')}</Text>
-                  <Metric>{formatNumberEN(summaryStats.totalRequests)}</Metric>
-                </div>
-                <Zap className="h-8 w-8 text-blue-500" />
-              </Flex>
-            </Card>
-
-            <Card decoration="top" decorationColor="violet">
-              <Flex justifyContent="between" alignItems="center">
-                <div>
-                  <Text>{t('admin.costs.totalTokens')}</Text>
-                  <Metric>{formatNumberEN(summaryStats.totalTokens)}</Metric>
-                </div>
-                <Activity className="h-8 w-8 text-violet-500" />
-              </Flex>
-            </Card>
-
-            <Card decoration="top" decorationColor="emerald">
-              <Flex justifyContent="between" alignItems="center">
-                <div>
-                  <Text>{t('admin.costs.estimatedCost')}</Text>
-                  <Metric>{formatCurrencyUSD(summaryStats.estimatedCost)}</Metric>
-                </div>
-                <DollarSign className="h-8 w-8 text-emerald-500" />
-              </Flex>
-            </Card>
-
-            <Card decoration="top" decorationColor="amber">
-              <Flex justifyContent="between" alignItems="center">
-                <div>
-                  <Text>{t('admin.costs.avgProcessingTime')}</Text>
-                  <Metric>{formatMs(summaryStats.avgProcessingMs)}</Metric>
-                </div>
-                <Clock className="h-8 w-8 text-amber-500" />
-              </Flex>
-            </Card>
-          </Grid>
-        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {isLoading ? (
+            <>
+              <StatsCardSkeleton />
+              <StatsCardSkeleton />
+              <StatsCardSkeleton />
+              <StatsCardSkeleton />
+            </>
+          ) : (
+            <>
+              <StatsCard
+                title={t('admin.costs.totalRequests')}
+                value={formatNumberEN(summaryStats.totalRequests)}
+                icon={Zap}
+                variant="blue"
+              />
+              <StatsCard
+                title={t('admin.costs.totalTokens')}
+                value={formatNumberEN(summaryStats.totalTokens)}
+                icon={Activity}
+                variant="violet"
+              />
+              <StatsCard
+                title={t('admin.costs.estimatedCost')}
+                value={formatCurrencyUSD(summaryStats.estimatedCost)}
+                icon={DollarSign}
+                variant="emerald"
+              />
+              <StatsCard
+                title={t('admin.costs.avgProcessingTime')}
+                value={formatMs(summaryStats.avgProcessingMs)}
+                icon={Clock}
+                variant="amber"
+              />
+            </>
+          )}
+        </div>
 
         {/* Charts Row */}
-        <Grid numItemsMd={2} className="gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Requests by Model - Bar Chart */}
-          {isLoading ? (
-            <ChartSkeleton />
-          ) : (
-            <Card>
-              <Title>{t('admin.costs.requestsByModel')}</Title>
-              <Text>{t('admin.costs.requestsPerModel')}</Text>
-              {modelStats.length === 0 ? (
-                <div className="h-72 flex items-center justify-center text-slate-500">
-                  {t('admin.costs.noData')}
-                </div>
-              ) : (
+          {/* HIGH-4: ErrorBoundary for chart rendering */}
+          <ErrorBoundary
+            fallback={<ChartCard title={t('admin.costs.requestsByModel')} isEmpty emptyMessage={t('admin.common.error')} />}
+            language={language}
+          >
+            <ChartCard
+              title={t('admin.costs.requestsByModel')}
+              description={t('admin.costs.requestsPerModel')}
+              isLoading={isLoading}
+              isEmpty={modelStats.length === 0}
+              emptyMessage={t('admin.costs.noData')}
+            >
+              <ChartContainer config={chartConfig} className="h-full w-full">
+                {/* HIGH-1: accessibilityLayer for keyboard navigation */}
                 <BarChart
-                  className="mt-4 h-72"
                   data={modelStats}
-                  index="model"
-                  categories={['requests']}
-                  colors={['blue']}
-                  valueFormatter={(v) => formatNumberEN(v)}
-                  showLegend={false}
-                />
-              )}
-            </Card>
-          )}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  accessibilityLayer
+                >
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis type="number" className="text-xs fill-muted-foreground" />
+                  <YAxis
+                    type="category"
+                    dataKey="model"
+                    width={120}
+                    className="text-xs fill-muted-foreground"
+                    tick={{ fontSize: 11 }}
+                  />
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        formatter={(value) => formatNumberEN(value as number)}
+                      />
+                    }
+                  />
+                  <Bar
+                    dataKey="requests"
+                    fill="hsl(var(--chart-1))"
+                    radius={[0, 4, 4, 0]}
+                  />
+                </BarChart>
+              </ChartContainer>
+            </ChartCard>
+          </ErrorBoundary>
 
-          {/* Model Distribution - Donut Chart */}
-          {isLoading ? (
-            <ChartSkeleton />
-          ) : (
-            <Card>
-              <Title>{t('admin.costs.modelDistribution')}</Title>
-              <Text>{t('admin.costs.percentageByModel')}</Text>
-              {donutData.length === 0 ? (
-                <div className="h-72 flex items-center justify-center text-slate-500">
-                  {t('admin.costs.noData')}
-                </div>
-              ) : (
-                <DonutChart
-                  className="mt-4 h-72"
-                  data={donutData}
-                  category="value"
-                  index="name"
-                  valueFormatter={(v) => `${formatNumberEN(v)} requests`}
-                  colors={chartColors}
-                  showLabel
-                  showAnimation
-                />
-              )}
-            </Card>
-          )}
-        </Grid>
+          {/* Model Distribution - Pie Chart */}
+          <ErrorBoundary
+            fallback={<ChartCard title={t('admin.costs.modelDistribution')} isEmpty emptyMessage={t('admin.common.error')} />}
+            language={language}
+          >
+            <ChartCard
+              title={t('admin.costs.modelDistribution')}
+              description={t('admin.costs.percentageByModel')}
+              isLoading={isLoading}
+              isEmpty={modelStats.length === 0}
+              emptyMessage={t('admin.costs.noData')}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                {/* HIGH-1: accessibilityLayer for keyboard navigation */}
+                <PieChart accessibilityLayer>
+                  <Pie
+                    data={modelStats}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    dataKey="requests"
+                    nameKey="model"
+                    // HIGH-5: Only show label for slices > 5% to prevent overlap
+                    label={({ name, percent }) =>
+                      percent > 0.05 ? `${name} (${(percent * 100).toFixed(0)}%)` : ''
+                    }
+                    labelLine={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
+                  >
+                    {modelStats.map((_, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={CHART_COLORS[index % CHART_COLORS.length]}
+                        className="stroke-background"
+                        strokeWidth={2}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const data = payload[0].payload as ModelStats;
+                      return (
+                        <div className="rounded-lg border bg-background p-2 shadow-md">
+                          <p className="font-medium">{data.model}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatNumberEN(data.requests)} requests
+                          </p>
+                        </div>
+                      );
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          </ErrorBoundary>
+        </div>
 
         {/* Tokens Over Time - Area Chart */}
-        {isLoading ? (
-          <ChartSkeleton height="h-80" />
-        ) : (
-          <Card>
-            <Title>{t('admin.costs.tokensOverTime')}</Title>
-            <Text>{t('admin.costs.dailyTokenUsage')}</Text>
-            {timeSeriesData.length === 0 ? (
-              <div className="h-80 flex items-center justify-center text-slate-500">
-                {t('admin.costs.noData')}
-              </div>
-            ) : (
+        <ErrorBoundary
+          fallback={<ChartCard title={t('admin.costs.tokensOverTime')} isEmpty emptyMessage={t('admin.common.error')} height="h-80" />}
+          language={language}
+        >
+          <ChartCard
+            title={t('admin.costs.tokensOverTime')}
+            description={t('admin.costs.dailyTokenUsage')}
+            isLoading={isLoading}
+            isEmpty={timeSeriesData.length === 0}
+            emptyMessage={t('admin.costs.noData')}
+            height="h-80"
+          >
+            <ChartContainer config={chartConfig} className="h-full w-full">
+              {/* HIGH-1: accessibilityLayer for keyboard navigation */}
               <AreaChart
-                className="mt-4 h-80"
                 data={timeSeriesData}
-                index="date"
-                categories={modelNames}
-                colors={chartColors}
-                valueFormatter={(v) => formatNumberEN(v)}
-                showLegend
-                stack
-              />
-            )}
-          </Card>
-        )}
+                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                accessibilityLayer
+              >
+                <defs>
+                  {modelNames.map((name, index) => (
+                    <linearGradient key={name} id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop
+                        offset="5%"
+                        stopColor={CHART_COLORS[index % CHART_COLORS.length]}
+                        stopOpacity={0.3}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor={CHART_COLORS[index % CHART_COLORS.length]}
+                        stopOpacity={0}
+                      />
+                    </linearGradient>
+                  ))}
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="date" className="text-xs fill-muted-foreground" />
+                <YAxis className="text-xs fill-muted-foreground" />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent formatter={(value) => formatNumberEN(value as number)} />
+                  }
+                />
+                <Legend />
+                {modelNames.map((name, index) => (
+                  <Area
+                    key={name}
+                    type="monotone"
+                    dataKey={name}
+                    stackId="1"
+                    stroke={CHART_COLORS[index % CHART_COLORS.length]}
+                    fill={`url(#gradient-${index})`}
+                    strokeWidth={2}
+                  />
+                ))}
+              </AreaChart>
+            </ChartContainer>
+          </ChartCard>
+        </ErrorBoundary>
 
         {/* Per-User Breakdown Table */}
-        {isLoading ? (
-          <TableSkeleton />
-        ) : (
-          <Card>
-            <Title>{t('admin.costs.perUserBreakdown')}</Title>
-            <Text>{t('admin.costs.top20Users')}</Text>
-            {userStats.length === 0 ? (
-              <div className="h-32 flex items-center justify-center text-slate-500">
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('admin.costs.perUserBreakdown')}</CardTitle>
+            <CardDescription>{t('admin.costs.top20Users')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex gap-4 animate-pulse">
+                    <div className="h-4 bg-muted rounded w-32" />
+                    <div className="h-4 bg-muted rounded w-20" />
+                    <div className="h-4 bg-muted rounded w-24" />
+                    <div className="h-4 bg-muted rounded w-16" />
+                  </div>
+                ))}
+              </div>
+            ) : userStats.length === 0 ? (
+              <div className="h-32 flex items-center justify-center text-muted-foreground rounded-lg bg-muted/30 border border-dashed border-border">
                 {t('admin.costs.noData')}
               </div>
             ) : (
-              <Table className="mt-4">
-                <TableHead>
-                  <TableRow>
-                    <TableHeaderCell>{t('admin.costs.user')}</TableHeaderCell>
-                    <TableHeaderCell className="text-right">{t('admin.costs.requests')}</TableHeaderCell>
-                    <TableHeaderCell className="text-right">{t('admin.costs.tokens')}</TableHeaderCell>
-                    <TableHeaderCell className="text-right">{t('admin.costs.estCost')}</TableHeaderCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {userStats.map((user) => (
-                    <TableRow key={user.userId}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{user.displayName}</span>
-                          {user.telegramId && (
-                            <Badge color="slate" size="xs">
-                              TG: {user.telegramId}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">{formatNumberEN(user.requests)}</TableCell>
-                      <TableCell className="text-right">{formatNumberEN(user.tokens)}</TableCell>
-                      <TableCell className="text-right">{formatCurrencyUSD(user.cost)}</TableCell>
+              <div className="rounded-lg border overflow-hidden">
+                {/* MEDIUM-7: Improved table accessibility with keyboard navigation */}
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>{t('admin.costs.user')}</TableHead>
+                      <TableHead className="text-right">{t('admin.costs.requests')}</TableHead>
+                      <TableHead className="text-right">{t('admin.costs.tokens')}</TableHead>
+                      <TableHead className="text-right">{t('admin.costs.estCost')}</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {userStats.map((user, index) => (
+                      <TableRow
+                        key={user.userId}
+                        tabIndex={0}
+                        className={cn(
+                          'transition-colors hover:bg-muted/50 focus:outline-none focus:bg-muted/70 focus:ring-2 focus:ring-primary focus:ring-inset',
+                          index === 0 && 'bg-primary/5'
+                        )}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{user.displayName}</span>
+                            {user.telegramId && (
+                              <Badge variant="secondary" className="text-xs">
+                                TG: {user.telegramId}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {formatNumberEN(user.requests)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {formatNumberEN(user.tokens)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-emerald-600 dark:text-emerald-400">
+                          {formatCurrencyUSD(user.cost)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
-          </Card>
-        )}
+          </CardContent>
+        </Card>
       </div>
     </AdminLayout>
   );

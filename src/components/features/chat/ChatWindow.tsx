@@ -11,6 +11,8 @@ interface ChatWindowProps {
   isLoading?: boolean;
   language: Lang;
   t: (key: keyof typeof translations.en) => string;
+  /** Whether running in Telegram Mini App context */
+  isTelegramMiniApp?: boolean;
 }
 
 export function ChatWindow({
@@ -20,6 +22,7 @@ export function ChatWindow({
   isLoading = false,
   language,
   t,
+  isTelegramMiniApp = false,
 }: ChatWindowProps) {
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -33,24 +36,15 @@ export function ChatWindow({
 
     if (!container || !endElement) return;
 
-    // Only auto-scroll if user is near bottom (within 100px)
+    // MED-3 FIX: Use percentage of viewport instead of hardcoded 100px
+    const scrollThreshold = Math.max(100, container.clientHeight * 0.2);
     const isNearBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+      container.scrollHeight - container.scrollTop - container.clientHeight < scrollThreshold;
 
     if (isNearBottom) {
       endElement.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
-
-  // Inject spinner keyframes for button animation
-  useEffect(() => {
-    if (!document.getElementById('spinner-keyframes')) {
-      const style = document.createElement('style');
-      style.id = 'spinner-keyframes';
-      style.textContent = `@keyframes spin { to { transform: rotate(360deg); } }`;
-      document.head.appendChild(style);
-    }
-  }, []);
 
   const handleSend = async () => {
     if (!inputValue.trim() || isSending || !isConnected) {
@@ -85,7 +79,8 @@ export function ChatWindow({
         flexDirection: 'column',
         height: '100%',
         width: '100%',
-        backgroundColor: 'var(--color-bg-primary)',
+        // Use Telegram theme color with fallback
+        backgroundColor: 'var(--tg-bg-color, hsl(var(--background)))',
         position: 'relative',
       }}
     >
@@ -94,10 +89,15 @@ export function ChatWindow({
         <div
           className="chat-connection-warning"
           style={{
-            padding: '12px 16px',
+            // Compact padding in Telegram
+            padding: isTelegramMiniApp ? '8px 12px' : '12px 16px',
             textAlign: 'center',
             fontSize: '0.875rem',
             fontWeight: 500,
+            // Use Telegram theme colors with fallback
+            backgroundColor: 'var(--tg-section-bg-color, #fef3c7)',
+            color: 'var(--tg-section-header-text-color, #92400e)',
+            borderBottom: '1px solid var(--tg-subtitle-text-color, #fde68a)',
           }}
         >
           {t('chat.connectionLost')}
@@ -110,18 +110,24 @@ export function ChatWindow({
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '16px 0',
+          // Compact padding in Telegram
+          padding: isTelegramMiniApp ? '8px 0' : '16px 0',
           display: 'flex',
           flexDirection: 'column',
+          // Add safe area padding at bottom for iOS
+          paddingBottom: `calc(${isTelegramMiniApp ? '8px' : '16px'} + var(--tg-safe-area-bottom, 0px))`,
         }}
       >
         {messages.map((message) => (
           <MessageBubble key={message.id} message={message} t={t} />
         ))}
 
-        {/* Typing indicator */}
+        {/* Typing indicator - LOW-4 FIX: Added accessibility attributes */}
         {isLoading && (
           <div
+            role="status"
+            aria-live="polite"
+            aria-label={t('chat.assistantTyping')}
             style={{
               display: 'flex',
               justifyContent: 'flex-start',
@@ -134,8 +140,9 @@ export function ChatWindow({
                 maxWidth: '70%',
                 padding: '12px 16px',
                 borderRadius: '16px',
-                backgroundColor: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-secondary)',
+                // Use Telegram theme colors with fallback
+                backgroundColor: 'var(--tg-secondary-bg-color, hsl(var(--secondary)))',
+                color: 'var(--tg-subtitle-text-color, hsl(var(--muted-foreground)))',
                 fontSize: '0.875rem',
               }}
             >
@@ -167,9 +174,13 @@ export function ChatWindow({
       {/* Input area */}
       <div
         style={{
-          padding: '16px',
-          borderTop: '1px solid var(--color-border)',
-          backgroundColor: 'var(--color-bg-primary)',
+          // Compact padding in Telegram
+          padding: isTelegramMiniApp ? '8px 12px' : '16px',
+          // Add safe area padding at bottom for iOS home indicator
+          paddingBottom: `calc(${isTelegramMiniApp ? '8px' : '16px'} + var(--tg-safe-area-bottom, 0px))`,
+          borderTop: '1px solid var(--tg-hint-color, hsl(var(--border)))',
+          // Use Telegram theme color with fallback
+          backgroundColor: 'var(--tg-bg-color, hsl(var(--background)))',
         }}
       >
         <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
@@ -185,9 +196,10 @@ export function ChatWindow({
               flex: 1,
               padding: '12px 16px',
               borderRadius: '20px',
-              border: '1px solid var(--color-border)',
-              backgroundColor: 'var(--color-bg-secondary)',
-              color: 'var(--color-text-primary)',
+              border: '1px solid var(--tg-hint-color, hsl(var(--border)))',
+              // Use Telegram theme colors with fallback
+              backgroundColor: 'var(--tg-secondary-bg-color, hsl(var(--secondary)))',
+              color: 'var(--tg-text-color, hsl(var(--foreground)))',
               fontSize: '1rem',
               resize: 'none',
               outline: 'none',
@@ -205,11 +217,12 @@ export function ChatWindow({
               padding: '12px 24px',
               borderRadius: '20px',
               border: 'none',
+              // Use Telegram theme colors with fallback
               backgroundColor:
                 !inputValue.trim() || isSending || !isConnected
-                  ? 'var(--color-bg-tertiary)'
-                  : 'var(--color-accent)',
-              color: '#fff',
+                  ? 'var(--tg-hint-color, hsl(var(--muted)))'
+                  : 'var(--tg-button-color, hsl(var(--primary)))',
+              color: 'var(--tg-button-text-color, #fff)',
               fontSize: '1rem',
               fontWeight: 600,
               cursor:
@@ -232,7 +245,7 @@ export function ChatWindow({
                     width: '14px',
                     height: '14px',
                     border: '2px solid transparent',
-                    borderTopColor: 'white',
+                    borderTopColor: 'var(--tg-button-text-color, white)',
                     borderRadius: '50%',
                     animation: 'spin 1s linear infinite',
                   }}
@@ -258,6 +271,11 @@ export function ChatWindow({
               opacity: 1;
               transform: scale(1.2);
             }
+          }
+
+          /* MED-2 FIX: Moved from useEffect injection */
+          @keyframes spin {
+            to { transform: rotate(360deg); }
           }
 
           /* LOW-6 FIX: Connection warning with dark mode support */

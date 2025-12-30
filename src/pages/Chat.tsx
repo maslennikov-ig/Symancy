@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { LoaderIcon } from '../components/icons/LoaderIcon';
 import { getStoredToken } from '../services/authService';
 import { TelegramLinkPrompt } from '../components/features/auth/TelegramLinkPrompt';
+import { useTelegramWebApp } from '../hooks/useTelegramWebApp';
 
 interface ChatProps {
   language?: Lang;
@@ -28,6 +29,9 @@ const Chat: React.FC<ChatProps> = ({ language: propLanguage, t: propT }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, unifiedUser, isTelegramUser, session } = useAuth();
+
+  // Detect if running in Telegram Mini App and get viewport height
+  const { isWebApp: isTelegramMiniApp, viewportHeight } = useTelegramWebApp();
 
   const language = propLanguage || 'ru';
   const t = propT || ((key: keyof typeof translations.en) => i18n_t(key, language));
@@ -170,21 +174,31 @@ const Chat: React.FC<ChatProps> = ({ language: propLanguage, t: propT }) => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      {/* Header */}
-      <header className="flex items-center gap-4 px-4 py-3 border-b border-border bg-card shadow-sm">
-        <button
-          onClick={() => navigate(-1)}
-          className="text-2xl text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-accent"
-          aria-label="Back"
-        >
-          ←
-        </button>
-        <h1 className="text-xl font-semibold text-foreground">{t('chat.title')}</h1>
-      </header>
+    <div
+      className="flex flex-col bg-background"
+      style={{
+        // Use full viewport in Telegram, h-screen otherwise
+        height: isTelegramMiniApp
+          ? `${viewportHeight || window.innerHeight}px`
+          : '100vh',
+      }}
+    >
+      {/* Header - hide in Telegram Mini App (Telegram shows its own) */}
+      {!isTelegramMiniApp && (
+        <header className="flex items-center gap-4 px-4 py-3 border-b border-border bg-card shadow-sm">
+          <button
+            onClick={() => navigate(-1)}
+            className="text-2xl text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-accent"
+            aria-label="Back"
+          >
+            ←
+          </button>
+          <h1 className="text-xl font-semibold text-foreground">{t('chat.title')}</h1>
+        </header>
+      )}
 
-      {/* Telegram Link Prompt for web-only users */}
-      {isWebOnlyUser && showTelegramPrompt && (
+      {/* Telegram Link Prompt for web-only users - never show in Telegram Mini App */}
+      {!isTelegramMiniApp && isWebOnlyUser && showTelegramPrompt && (
         <div className="px-4 py-2 bg-accent/30">
           <TelegramLinkPrompt
             language={language}
@@ -200,7 +214,7 @@ const Chat: React.FC<ChatProps> = ({ language: propLanguage, t: propT }) => {
       )}
 
       {/* Chat window - takes remaining space */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0">
         <ChatWindow
           messages={messages}
           onSendMessage={handleSendMessage}
@@ -208,6 +222,7 @@ const Chat: React.FC<ChatProps> = ({ language: propLanguage, t: propT }) => {
           isLoading={false}
           language={language}
           t={t}
+          isTelegramMiniApp={isTelegramMiniApp}
         />
       </div>
     </div>

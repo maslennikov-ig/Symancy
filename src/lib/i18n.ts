@@ -200,6 +200,9 @@ export const translations = {
     'chat.channel.web': 'via Web',
     'chat.inputLabel': 'Message input',
     'chat.send': 'Send',
+    'chat.assistantTyping': 'Assistant is typing',
+    'chat.analysisResult': 'Analysis Result',
+    'chat.userUploadedImage': 'User uploaded image',
     'error.title': 'Error',
     'error.reload': 'Reload Page',
     // Account Linking
@@ -417,6 +420,13 @@ export const translations = {
     'admin.systemConfig.noConfigs': 'No configurations found',
     'admin.systemConfig.noDescription': 'No description available',
     'admin.systemConfig.enterJson': 'Enter JSON value...',
+    // Time formatting (HIGH-2, HIGH-3 fix)
+    'time.justNow': 'Just now',
+    'time.minutesAgo': '{n}m ago',
+    'time.hoursAgo': '{n}h ago',
+    'time.daysAgo': '{n}d ago',
+    'time.invalidDate': 'Invalid',
+    'time.future': 'Future',
   },
   ru: {
     'header.title': 'Кофейный Психолог',
@@ -619,6 +629,9 @@ export const translations = {
     'chat.channel.web': 'через Веб',
     'chat.inputLabel': 'Поле ввода сообщения',
     'chat.send': 'Отправить',
+    'chat.assistantTyping': 'Ассистент печатает',
+    'chat.analysisResult': 'Результат анализа',
+    'chat.userUploadedImage': 'Загруженное изображение',
     'error.title': 'Ошибка',
     'error.reload': 'Перезагрузить страницу',
     // Account Linking
@@ -836,6 +849,13 @@ export const translations = {
     'admin.systemConfig.noConfigs': 'Настройки не найдены',
     'admin.systemConfig.noDescription': 'Нет описания',
     'admin.systemConfig.enterJson': 'Введите JSON значение...',
+    // Time formatting (HIGH-2, HIGH-3 fix)
+    'time.justNow': 'Только что',
+    'time.minutesAgo': '{n} мин',
+    'time.hoursAgo': '{n} ч',
+    'time.daysAgo': '{n} дн',
+    'time.invalidDate': 'Ошибка',
+    'time.future': 'Будущее',
   },
   zh: {
     'header.title': '咖啡心理学家',
@@ -1038,6 +1058,9 @@ export const translations = {
     'chat.channel.web': '通过网页',
     'chat.inputLabel': '消息输入',
     'chat.send': '发送',
+    'chat.assistantTyping': '助手正在输入',
+    'chat.analysisResult': '分析结果',
+    'chat.userUploadedImage': '用户上传的图片',
     'error.title': '错误',
     'error.reload': '重新加载页面',
     // Account Linking
@@ -1255,6 +1278,13 @@ export const translations = {
     'admin.systemConfig.noConfigs': '未找到配置',
     'admin.systemConfig.noDescription': '无描述',
     'admin.systemConfig.enterJson': '输入 JSON 值...',
+    // Time formatting (HIGH-2, HIGH-3 fix)
+    'time.justNow': '刚刚',
+    'time.minutesAgo': '{n}分钟前',
+    'time.hoursAgo': '{n}小时前',
+    'time.daysAgo': '{n}天前',
+    'time.invalidDate': '无效',
+    'time.future': '未来',
   },
 };
 

@@ -6,7 +6,7 @@
  *
  * @module hooks/useTelegramWebApp
  */
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 /**
  * Telegram WebApp user data structure
@@ -38,6 +38,19 @@ export interface ThemeParams {
   section_header_text_color?: string;
   subtitle_text_color?: string;
   destructive_text_color?: string;
+  // Bot API 8.0 additions
+  bottom_bar_bg_color?: string;
+  section_separator_color?: string;
+}
+
+/**
+ * Safe area inset type (Bot API 8.0+)
+ */
+export interface SafeAreaInset {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
 }
 
 /**
@@ -62,6 +75,10 @@ export interface TelegramWebApp {
   viewportHeight: number;
   viewportStableHeight: number;
   isClosingConfirmationEnabled: boolean;
+  // Safe area support (Bot API 8.0+)
+  safeAreaInset?: SafeAreaInset;
+  contentSafeAreaInset?: SafeAreaInset;
+  isFullscreen?: boolean;
   ready: () => void;
   expand: () => void;
   close: () => void;
@@ -69,6 +86,9 @@ export interface TelegramWebApp {
   disableClosingConfirmation: () => void;
   setHeaderColor: (color: string) => void;
   setBackgroundColor: (color: string) => void;
+  // Fullscreen methods (Bot API 8.0+)
+  requestFullscreen?: () => void;
+  exitFullscreen?: () => void;
   showPopup: (params: {
     title?: string;
     message: string;
@@ -80,6 +100,9 @@ export interface TelegramWebApp {
   }, callback?: (buttonId: string) => void) => void;
   showAlert: (message: string, callback?: () => void) => void;
   showConfirm: (message: string, callback?: (confirmed: boolean) => void) => void;
+  // Event system
+  onEvent?: (eventType: string, callback: () => void) => void;
+  offEvent?: (eventType: string, callback: () => void) => void;
   HapticFeedback: {
     impactOccurred: (style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft') => void;
     notificationOccurred: (type: 'error' | 'success' | 'warning') => void;
@@ -144,6 +167,8 @@ export interface UseTelegramWebAppReturn {
   platform: string | null;
   /** Start parameter from WebApp link */
   startParam: string | null;
+  /** Stable viewport height (updates on viewportChanged event) */
+  viewportHeight: number;
   /** Expand the WebApp to full height */
   expand: () => void;
   /** Close the WebApp */
@@ -197,73 +222,168 @@ export interface UseTelegramWebAppReturn {
  * }
  * ```
  */
+/**
+ * Bind Telegram ThemeParams to CSS variables
+ * Creates --tg-* CSS variables from Telegram's theme
+ * Optimized: Only updates changed values to minimize DOM reflows
+ *
+ * @param themeParams - Theme parameters from Telegram WebApp
+ * @param previousTheme - Previous theme params for comparison (optional)
+ * @returns The current theme params for future comparison
+ * @internal
+ */
+function bindThemeToCss(
+  themeParams: ThemeParams,
+  previousTheme?: ThemeParams
+): ThemeParams {
+  const root = document.documentElement;
+  const prev = previousTheme || {};
+
+  // Map of theme param keys to CSS variable names
+  const themeMapping: Record<keyof ThemeParams, string> = {
+    bg_color: '--tg-bg-color',
+    text_color: '--tg-text-color',
+    hint_color: '--tg-hint-color',
+    link_color: '--tg-link-color',
+    button_color: '--tg-button-color',
+    button_text_color: '--tg-button-text-color',
+    secondary_bg_color: '--tg-secondary-bg-color',
+    header_bg_color: '--tg-header-bg-color',
+    accent_text_color: '--tg-accent-text-color',
+    section_bg_color: '--tg-section-bg-color',
+    section_header_text_color: '--tg-section-header-text-color',
+    subtitle_text_color: '--tg-subtitle-text-color',
+    destructive_text_color: '--tg-destructive-text-color',
+    bottom_bar_bg_color: '--tg-bottom-bar-bg-color',
+    section_separator_color: '--tg-section-separator-color',
+  };
+
+  // Only update changed values to minimize DOM reflows
+  (Object.keys(themeMapping) as Array<keyof ThemeParams>).forEach((key) => {
+    const value = themeParams[key];
+    const prevValue = prev[key];
+    if (value && value !== prevValue) {
+      root.style.setProperty(themeMapping[key], value);
+    }
+  });
+
+  return { ...themeParams };
+}
+
+/**
+ * Bind safe area insets to CSS variables
+ * Creates --tg-safe-area-* CSS variables for iOS safe area handling
+ *
+ * @param safeAreaInset - Safe area inset from Telegram WebApp (Bot API 8.0+)
+ * @internal
+ */
+function bindSafeAreaToCss(safeAreaInset: SafeAreaInset | undefined) {
+  const root = document.documentElement;
+  root.style.setProperty('--tg-safe-area-top', `${safeAreaInset?.top || 0}px`);
+  root.style.setProperty('--tg-safe-area-bottom', `${safeAreaInset?.bottom || 0}px`);
+  root.style.setProperty('--tg-safe-area-left', `${safeAreaInset?.left || 0}px`);
+  root.style.setProperty('--tg-safe-area-right', `${safeAreaInset?.right || 0}px`);
+}
+
 export function useTelegramWebApp(): UseTelegramWebAppReturn {
   const [isReady, setIsReady] = useState(false);
   const [webApp, setWebApp] = useState<TelegramWebApp | null>(null);
+  // CRITICAL-3 FIX: Add state for viewport height
+  const [viewportHeight, setViewportHeight] = useState(0);
+
+  // HIGH-1 FIX: Track previous theme for efficient CSS updates
+  const previousThemeRef = useRef<ThemeParams>({});
 
   // Initialize WebApp on mount
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
+    if (!tg) return;
 
-    if (tg) {
-      // Signal to Telegram that the WebApp is ready
-      tg.ready();
+    // CRITICAL-1 FIX: Capture snapshot for stable closure references
+    const webAppSnapshot = tg;
 
-      // Expand to full height for better UX
-      if (!tg.isExpanded) {
-        tg.expand();
-      }
+    // Signal to Telegram that the WebApp is ready
+    tg.ready();
 
-      setWebApp(tg);
-      setIsReady(true);
+    // Expand to full height for better UX
+    if (!tg.isExpanded) {
+      tg.expand();
     }
 
-    // L4 FIX: Cleanup function for future-proofing
-    // Currently no-op, but prepares for future event listener cleanup
-    return () => {
-      // Future: Remove event listeners if added
-      // tg?.MainButton.offClick(someHandler);
-      // tg?.BackButton.offClick(someHandler);
+    // HIGH-1 FIX: Bind ThemeParams with previous value comparison
+    previousThemeRef.current = bindThemeToCss(
+      tg.themeParams,
+      previousThemeRef.current
+    );
+
+    // Bind safe area insets to CSS variables
+    bindSafeAreaToCss(tg.safeAreaInset);
+
+    // CRITICAL-1 & CRITICAL-2 FIX: Stable function references created ONCE
+    const handleThemeChanged = () => {
+      // HIGH-1 FIX: Only update changed CSS variables
+      previousThemeRef.current = bindThemeToCss(
+        webAppSnapshot.themeParams,
+        previousThemeRef.current
+      );
+
+      // CRITICAL-2 FIX: Use functional update with JSON comparison
+      // to avoid unnecessary re-renders
+      setWebApp((prev) => {
+        if (!prev) return webAppSnapshot;
+        // Only update if theme actually changed
+        if (
+          JSON.stringify(prev.themeParams) ===
+          JSON.stringify(webAppSnapshot.themeParams)
+        ) {
+          return prev; // Preserve reference equality
+        }
+        return { ...webAppSnapshot };
+      });
     };
-  }, []);
 
-  // Check if running in WebApp context
-  const isWebApp = useMemo(() => {
-    return !!webApp && !!webApp.initData;
-  }, [webApp]);
+    // Listen for safe area changes
+    const handleSafeAreaChanged = () => {
+      bindSafeAreaToCss(webAppSnapshot.safeAreaInset);
+    };
 
-  // Extract initData for server verification
-  const initData = useMemo(() => {
-    return webApp?.initData || null;
-  }, [webApp]);
+    // CRITICAL-3 FIX: Listen for viewport changes
+    const handleViewportChanged = () => {
+      setViewportHeight(webAppSnapshot.viewportStableHeight);
+    };
 
-  // Extract user data (unverified, for display only)
-  const user = useMemo(() => {
-    return webApp?.initDataUnsafe?.user || null;
-  }, [webApp]);
+    if (typeof tg.onEvent === 'function') {
+      tg.onEvent('themeChanged', handleThemeChanged);
+      tg.onEvent('safeAreaChanged', handleSafeAreaChanged);
+      // CRITICAL-3 FIX: Add viewportChanged listener
+      tg.onEvent('viewportChanged', handleViewportChanged);
+    }
 
-  // Extract start parameter
-  const startParam = useMemo(() => {
-    return webApp?.initDataUnsafe?.start_param || null;
-  }, [webApp]);
+    // CRITICAL-3 FIX: Set initial viewport height
+    setViewportHeight(tg.viewportStableHeight);
+    setWebApp(webAppSnapshot);
+    setIsReady(true);
 
-  // Theme
-  const colorScheme = useMemo(() => {
-    return webApp?.colorScheme || 'light';
-  }, [webApp]);
+    // CRITICAL-1 FIX: Cleanup with SAME stable function references
+    return () => {
+      if (typeof tg.offEvent === 'function') {
+        tg.offEvent('themeChanged', handleThemeChanged);
+        tg.offEvent('safeAreaChanged', handleSafeAreaChanged);
+        tg.offEvent('viewportChanged', handleViewportChanged);
+      }
+    };
+  }, []); // Empty deps - run once only
 
-  const themeParams = useMemo(() => {
-    return webApp?.themeParams || {};
-  }, [webApp]);
-
-  // Version and platform
-  const version = useMemo(() => {
-    return webApp?.version || null;
-  }, [webApp]);
-
-  const platform = useMemo(() => {
-    return webApp?.platform || null;
-  }, [webApp]);
+  // MED-1 FIX: Remove useMemo for simple property access
+  // Simple property access - no need for useMemo overhead
+  const isWebApp = !!webApp?.initData;
+  const initData = webApp?.initData || null;
+  const user = webApp?.initDataUnsafe?.user || null;
+  const startParam = webApp?.initDataUnsafe?.start_param || null;
+  const colorScheme = webApp?.colorScheme || 'light';
+  const themeParams = webApp?.themeParams || {};
+  const version = webApp?.version || null;
+  const platform = webApp?.platform || null;
 
   // WebApp controls
   const expand = useCallback(() => {
@@ -374,6 +494,7 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
     version,
     platform,
     startParam,
+    viewportHeight, // CRITICAL-3 FIX: Export viewport height
     expand,
     close,
     showPopup,

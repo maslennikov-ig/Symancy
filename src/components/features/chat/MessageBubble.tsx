@@ -21,16 +21,29 @@ interface MessageBubbleProps {
 export function MessageBubble({ message, showChannelIndicator = false, t }: MessageBubbleProps) {
   const formatTimestamp = (timestamp: string): string => {
     const date = new Date(timestamp);
+
+    // HIGH-2 FIX: Guard against invalid dates
+    if (isNaN(date.getTime())) {
+      return t('time.invalidDate');
+    }
+
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
+
+    // HIGH-2 FIX: Guard against negative time (future dates)
+    if (diffMs < 0) {
+      return t('time.future');
+    }
+
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
+    // HIGH-3 FIX: Use i18n translations instead of hardcoded English
+    if (diffMins < 1) return t('time.justNow');
+    if (diffMins < 60) return t('time.minutesAgo').replace('{n}', String(diffMins));
+    if (diffHours < 24) return t('time.hoursAgo').replace('{n}', String(diffHours));
+    if (diffDays < 7) return t('time.daysAgo').replace('{n}', String(diffDays));
 
     // Fallback to HH:MM
     const hours = date.getHours().toString().padStart(2, '0');
@@ -114,7 +127,7 @@ export function MessageBubble({ message, showChannelIndicator = false, t }: Mess
             {imageUrl && (
               <img
                 src={imageUrl}
-                alt="User uploaded"
+                alt={t('chat.userUploadedImage')}
                 style={{
                   maxWidth: '100%',
                   maxHeight: '300px',
@@ -151,7 +164,7 @@ export function MessageBubble({ message, showChannelIndicator = false, t }: Mess
                 color: 'hsl(var(--muted-foreground))',
               }}
             >
-              Analysis Result
+              {t('chat.analysisResult')}
             </div>
             <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {renderTextContent(message.content)}
@@ -183,8 +196,9 @@ export function MessageBubble({ message, showChannelIndicator = false, t }: Mess
       case 'user':
         return {
           ...baseStyles,
-          backgroundColor: 'hsl(var(--primary))',
-          color: 'hsl(var(--primary-foreground))',
+          // Use Telegram theme colors with fallback to our CSS variables
+          backgroundColor: 'var(--tg-button-color, hsl(var(--primary)))',
+          color: 'var(--tg-button-text-color, hsl(var(--primary-foreground)))',
           alignSelf: 'flex-end',
           borderBottomRightRadius: '4px',
         };
@@ -192,8 +206,9 @@ export function MessageBubble({ message, showChannelIndicator = false, t }: Mess
       case 'assistant':
         return {
           ...baseStyles,
-          backgroundColor: 'hsl(var(--secondary))',
-          color: 'hsl(var(--foreground))',
+          // Use Telegram theme colors with fallback to our CSS variables
+          backgroundColor: 'var(--tg-secondary-bg-color, hsl(var(--secondary)))',
+          color: 'var(--tg-text-color, hsl(var(--foreground)))',
           alignSelf: 'flex-start',
           borderBottomLeftRadius: '4px',
         };
@@ -201,8 +216,9 @@ export function MessageBubble({ message, showChannelIndicator = false, t }: Mess
       case 'system':
         return {
           ...baseStyles,
-          backgroundColor: 'hsl(var(--muted))',
-          color: 'hsl(var(--muted-foreground))',
+          // Use Telegram theme colors with fallback to our CSS variables
+          backgroundColor: 'var(--tg-section-bg-color, hsl(var(--muted)))',
+          color: 'var(--tg-subtitle-text-color, hsl(var(--muted-foreground)))',
           alignSelf: 'center',
           fontSize: '13px',
           fontStyle: 'italic',
@@ -262,7 +278,8 @@ export function MessageBubble({ message, showChannelIndicator = false, t }: Mess
           gap: '8px',
           marginTop: '4px',
           fontSize: '11px',
-          color: 'hsl(var(--muted-foreground))',
+          // Use Telegram theme colors with fallback
+          color: 'var(--tg-subtitle-text-color, hsl(var(--muted-foreground)))',
         }}
       >
         <span>{formatTimestamp(message.created_at)}</span>
