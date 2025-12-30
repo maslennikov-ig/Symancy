@@ -62,7 +62,7 @@ export function LoginPage() {
             {t('admin.login.title')}
           </CardTitle>
           <CardDescription className="text-center">
-            {t('admin.login.error')}
+            {t('admin.login.subtitle')}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
