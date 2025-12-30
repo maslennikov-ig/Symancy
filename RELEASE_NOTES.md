@@ -2,6 +2,25 @@
 
 User-facing release notes for all versions.
 
+## v0.5.9
+
+_Released on 2025-12-30_
+
+### ✨ New Features
+
+- **admin**: Complete remaining code review improvements
+- **admin**: Implement admin panel with shadcn/ui + Tremor (spec 007)
+- **specs**: Update Admin Panel to shadcn/ui + Tremor stack
+- **specs**: Add Admin Panel specification (007)
+
+### 🐛 Bug Fixes
+
+- **admin**: Address code review issues from 007-admin-panel
+
+---
+
+_This release was automatically generated from 6 commits._
+
 ## v0.5.8
 
 _Released on 2025-12-29_

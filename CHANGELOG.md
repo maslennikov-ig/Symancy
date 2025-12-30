@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.9] - 2025-12-30
+
+### Added
+- **admin**: complete remaining code review improvements (886ae3a)
+- **admin**: implement admin panel with shadcn/ui + Tremor (spec 007) (dc3a391)
+- **specs**: update Admin Panel to shadcn/ui + Tremor stack (b4a6a9c)
+- **specs**: add Admin Panel specification (007) (6aafc13)
+
+### Fixed
+- **admin**: address code review issues from 007-admin-panel (2e34413)
+
+### Other
+- expand testing guide with full spec 003 coverage (8a2457e)
+
 ## [0.5.8] - 2025-12-29
 
 ### Added
