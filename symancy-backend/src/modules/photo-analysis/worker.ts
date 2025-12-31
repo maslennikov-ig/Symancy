@@ -30,6 +30,7 @@ import {
   TELEGRAM_PHOTO_SIZE_LIMIT,
   REJECTION_CONFIDENCE_THRESHOLD,
   MAX_DAILY_INVALID_RESPONSES,
+  MODEL_VISION,
   getInvalidImageFallback,
 } from "../../config/constants.js";
 import { generateInvalidImageResponse } from "../../chains/chat.chain.js";
@@ -318,6 +319,7 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
         symbolsCount: visionResult.symbols.length,
         colorsCount: visionResult.colors.length,
         patternsCount: visionResult.patterns.length,
+        tokensUsed: visionResult.tokensUsed,
       },
       "Vision analysis completed"
     );
@@ -357,8 +359,17 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
         baseDelayMs: 2000,
       }
     );
+
+    // Calculate total tokens (vision + interpretation)
+    const totalTokensUsed = visionResult.tokensUsed + interpretation.tokensUsed;
+
     jobLogger.info(
-      { tokensUsed: interpretation.tokensUsed, textLength: interpretation.text.length },
+      {
+        visionTokens: visionResult.tokensUsed,
+        interpretationTokens: interpretation.tokensUsed,
+        totalTokens: totalTokensUsed,
+        textLength: interpretation.text.length,
+      },
       "Interpretation generated"
     );
 
@@ -369,8 +380,10 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
       .from("analysis_history")
       .update({
         interpretation: interpretation.text,
-        tokens_used: interpretation.tokensUsed,
+        tokens_used: interpretation.tokensUsed, // Interpretation model tokens only
         model_used: modelName,
+        vision_model_used: MODEL_VISION, // Vision model name
+        vision_tokens_used: visionResult.tokensUsed, // Vision model tokens
         processing_time_ms: processingTime,
         status: "completed",
         completed_at: new Date().toISOString(),
@@ -444,7 +457,7 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
     }
 
     jobLogger.info(
-      { processingTime, tokensUsed: interpretation.tokensUsed },
+      { processingTime, tokensUsed: totalTokensUsed },
       "Photo analysis completed successfully"
     );
   } catch (error) {

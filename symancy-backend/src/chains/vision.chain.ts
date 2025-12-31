@@ -61,7 +61,7 @@ async function loadVisionPrompt(): Promise<string> {
  * OVERALL COMPOSITION: [description]
  * SYMBOLIC ELEMENTS: [description]
  */
-function parseLegacyVisionResponse(rawText: string): VisionAnalysisResult {
+function parseLegacyVisionResponse(rawText: string): Omit<VisionAnalysisResult, 'tokensUsed'> {
   const symbols: string[] = [];
   const colors: string[] = [];
   const patterns: string[] = [];
@@ -310,6 +310,9 @@ export async function analyzeVision(
   // Invoke vision model
   const response = await model.invoke(messages);
 
+  // Extract token usage from response metadata
+  const tokensUsed = response.usage_metadata?.total_tokens ?? 0;
+
   // Extract text content from response
   const rawText =
     typeof response.content === "string"
@@ -331,7 +334,10 @@ export async function analyzeVision(
   // Fall back to legacy parser if structured parsing failed
   if (!hasStructuredData) {
     const result = parseLegacyVisionResponse(rawText);
-    return result;
+    return {
+      ...result,
+      tokensUsed,
+    };
   }
 
   // Convert structured result to legacy format for backward compatibility
@@ -344,6 +350,7 @@ export async function analyzeVision(
       structuredResult.zones.bottom,
     ].filter(z => z !== ""),
     rawDescription: structuredResult.rawDescription,
+    tokensUsed,
   };
 
   return result;
@@ -386,6 +393,9 @@ export async function createVisionChain() {
 
       const response = await model.invoke(messages);
 
+      // Extract token usage from response metadata
+      const tokensUsed = response.usage_metadata?.total_tokens ?? 0;
+
       const rawText =
         typeof response.content === "string"
           ? response.content
@@ -405,7 +415,11 @@ export async function createVisionChain() {
 
       // Fall back to legacy parser if structured parsing failed
       if (!hasStructuredData) {
-        return parseLegacyVisionResponse(rawText);
+        const result = parseLegacyVisionResponse(rawText);
+        return {
+          ...result,
+          tokensUsed,
+        };
       }
 
       // Convert structured result to legacy format for backward compatibility
@@ -418,6 +432,7 @@ export async function createVisionChain() {
           structuredResult.zones.bottom,
         ].filter(z => z !== ""),
         rawDescription: structuredResult.rawDescription,
+        tokensUsed,
       };
 
       return result;

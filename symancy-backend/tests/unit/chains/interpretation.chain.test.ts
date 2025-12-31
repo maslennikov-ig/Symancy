@@ -31,6 +31,7 @@ describe("interpretation.chain", () => {
     colors: ["brown", "white"],
     patterns: ["spiral", "wave"],
     rawDescription: "A coffee cup with interesting patterns",
+    tokensUsed: 100,
   };
 
   beforeEach(() => {

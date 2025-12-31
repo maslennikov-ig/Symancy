@@ -14,6 +14,7 @@ export interface VisionAnalysisResult {
   colors: string[];
   patterns: string[];
   rawDescription: string;
+  tokensUsed: number;
 }
 
 /**
