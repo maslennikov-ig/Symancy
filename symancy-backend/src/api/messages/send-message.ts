@@ -160,9 +160,9 @@ async function checkCredits(
 ): Promise<boolean> {
   const supabase = getSupabase();
 
-  // Get user credits
+  // Get user credits from unified_user_credits table
   const { data: credits, error } = await supabase
-    .from('user_credits')
+    .from('unified_user_credits')
     .select('credits_basic, credits_cassandra')
     .eq('unified_user_id', unifiedUserId)
     .single();
