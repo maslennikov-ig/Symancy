@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.17] - 2025-12-31
+
+### Fixed
+- **src/main.tsx**: update 3 source file(s) (e5ec4c8)
+
 ## [0.5.16] - 2025-12-31
 
 ### Fixed
