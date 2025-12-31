@@ -186,8 +186,8 @@ export async function generateChatResponse(
     new HumanMessage(message),
   ];
 
-  // Create Arina model and invoke
-  const model = createArinaModel();
+  // Create Arina model and invoke (async - loads from dynamic config)
+  const model = await createArinaModel();
   const response = await model.invoke(messages);
 
   // Extract token usage from response metadata
@@ -261,8 +261,8 @@ export async function generateChatResponseDirect(
     new HumanMessage(message),
   ];
 
-  // Create Arina model and invoke
-  const model = createArinaModel();
+  // Create Arina model and invoke (async - loads from dynamic config)
+  const model = await createArinaModel();
   const response = await model.invoke(messages);
 
   // Extract token usage from response metadata
@@ -309,8 +309,8 @@ export async function generateInvalidImageResponse(
     new HumanMessage(invalidImagePromptText),
   ];
 
-  // Create Arina model with lower token limit (short response expected)
-  const invalidModel = createArinaModel({ maxTokens: 300 });
+  // Create Arina model with lower token limit (short response expected, async - loads from dynamic config)
+  const invalidModel = await createArinaModel({ maxTokens: 300 });
   const invalidResponse = await invalidModel.invoke(invalidMessages);
 
   // Extract token usage from response metadata

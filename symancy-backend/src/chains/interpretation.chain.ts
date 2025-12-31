@@ -189,7 +189,7 @@ export async function generateInterpretation(
 
     systemPrompt = arinaSystemPrompt;
     interpretationPrompt = arinaInterpretationPrompt;
-    model = createArinaModel();
+    model = await createArinaModel();
   } else {
     // Cassandra persona
     await loadCassandraPrompts();
@@ -200,7 +200,7 @@ export async function generateInterpretation(
 
     systemPrompt = cassandraSystemPrompt;
     interpretationPrompt = cassandraInterpretationPrompt;
-    model = createCassandraModel();
+    model = await createCassandraModel();
   }
 
   // Format vision result for prompt

@@ -1,6 +1,9 @@
 /**
  * OpenRouter-backed ChatOpenAI models factory
  * Creates LangChain ChatOpenAI instances configured for OpenRouter API
+ *
+ * Models are loaded from dynamic configuration (system_config table)
+ * with fallback to constants for resilience.
  */
 import { ChatOpenAI } from "@langchain/openai";
 import { getEnv } from "../../config/env.js";
@@ -11,6 +14,7 @@ import {
   MODEL_VISION,
   RETRY_ATTEMPTS,
 } from "../../config/constants.js";
+import { getConfig } from "../../modules/config/service.js";
 
 /**
  * OpenRouter API base URL
@@ -82,18 +86,24 @@ function createChatOpenAIInstance(
  * Create Arina persona model
  * Used for Arina-style interpretations with warm, archetypal tone
  *
+ * Loads model from dynamic config (interpretation_model) with fallback to constant.
+ *
  * Optimized parameters for interpretation variety:
  * - High temperature (0.9) for creative diversity
  * - Frequency penalty (0.6) to reduce token repetition
  * - Presence penalty (0.5) to encourage new topics
  * - Max tokens (1200) for controlled length
  */
-export function createArinaModel(options?: ModelOptions): ChatOpenAI {
-  return createChatOpenAIInstance(MODEL_ARINA, {
-    temperature: 0.9,
+export async function createArinaModel(options?: ModelOptions): Promise<ChatOpenAI> {
+  const modelName = await getConfig("interpretation_model", MODEL_ARINA);
+  const temperature = await getConfig("interpretation_temperature", 0.9);
+  const maxTokens = await getConfig("interpretation_max_tokens", 1200);
+
+  return createChatOpenAIInstance(modelName, {
+    temperature,
     frequencyPenalty: 0.6,
     presencePenalty: 0.5,
-    maxTokens: 1200,
+    maxTokens,
     ...options,
   });
 }
@@ -101,34 +111,49 @@ export function createArinaModel(options?: ModelOptions): ChatOpenAI {
 /**
  * Create Cassandra persona model
  * Used for Cassandra-style interpretations with analytical, direct tone
+ *
+ * Loads model from dynamic config with fallback to constant.
  */
-export function createCassandraModel(options?: ModelOptions): ChatOpenAI {
-  return createChatOpenAIInstance(MODEL_CASSANDRA, {
+export async function createCassandraModel(options?: ModelOptions): Promise<ChatOpenAI> {
+  const modelName = await getConfig("interpretation_model", MODEL_CASSANDRA);
+  const temperature = await getConfig("interpretation_temperature", 0.7);
+
+  return createChatOpenAIInstance(modelName, {
     ...options,
-    temperature: options?.temperature ?? 0.7,
+    temperature: options?.temperature ?? temperature,
   });
 }
 
 /**
  * Create general chat model
  * Used for conversational responses and follow-up questions
+ *
+ * Loads model from dynamic config with fallback to constant.
  */
-export function createChatModel(options?: ModelOptions): ChatOpenAI {
-  return createChatOpenAIInstance(MODEL_CHAT, options);
+export async function createChatModel(options?: ModelOptions): Promise<ChatOpenAI> {
+  const modelName = await getConfig("chat_model", MODEL_CHAT);
+
+  return createChatOpenAIInstance(modelName, options);
 }
 
 /**
  * Create vision analysis model
  * Used for analyzing images (coffee grounds, palms, tarot cards)
  *
+ * Loads model from dynamic config (vision_model) with fallback to constant.
+ *
  * Optimized parameters for accurate pattern detection:
  * - Low temperature (0.3) for consistency
  * - Max tokens (800) for concise structured output
  */
-export function createVisionModel(options?: ModelOptions): ChatOpenAI {
-  return createChatOpenAIInstance(MODEL_VISION, {
-    temperature: 0.3,
-    maxTokens: 800,
+export async function createVisionModel(options?: ModelOptions): Promise<ChatOpenAI> {
+  const modelName = await getConfig("vision_model", MODEL_VISION);
+  const temperature = await getConfig("vision_temperature", 0.3);
+  const maxTokens = await getConfig("vision_max_tokens", 800);
+
+  return createChatOpenAIInstance(modelName, {
+    temperature,
+    maxTokens,
     ...options,
   });
 }

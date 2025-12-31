@@ -195,8 +195,8 @@ export async function validateCoffeeGrounds(
   // Load system prompt
   const systemPrompt = await loadValidationPrompt();
 
-  // Create vision model with lower token limit for fast validation
-  const model = createVisionModel({
+  // Create vision model with lower token limit for fast validation (async - loads from dynamic config)
+  const model = await createVisionModel({
     maxTokens: 150, // Small response needed
     temperature: 0.1, // More deterministic
     timeout: 15000, // 15 seconds - validation should be fast

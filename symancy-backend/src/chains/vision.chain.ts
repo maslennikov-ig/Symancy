@@ -285,8 +285,8 @@ export async function analyzeVision(
   // Load system prompt
   const systemPrompt = await loadVisionPrompt();
 
-  // Create vision model instance
-  const model = createVisionModel();
+  // Create vision model instance (async - loads from dynamic config)
+  const model = await createVisionModel();
 
   // Build multimodal message with image
   const messages = [
@@ -368,7 +368,7 @@ export async function analyzeVision(
  */
 export async function createVisionChain() {
   const systemPrompt = await loadVisionPrompt();
-  const model = createVisionModel();
+  const model = await createVisionModel();
 
   // Return a function that matches LangChain Runnable interface
   return {
