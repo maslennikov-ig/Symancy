@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.15] - 2025-12-31
+
+### Fixed
+- **utils**: update 1 source file(s) (4fa1858)
+- **telegram**: use HEX colors directly from Telegram theme (9d441e0)
+
 ## [0.5.14] - 2025-12-31
 
 ### Added

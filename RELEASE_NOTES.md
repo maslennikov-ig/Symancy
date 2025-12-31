@@ -2,6 +2,19 @@
 
 User-facing release notes for all versions.
 
+## v0.5.15
+
+_Released on 2025-12-31_
+
+### 🐛 Bug Fixes
+
+- **utils**: Update 1 source file(s)
+- **telegram**: Use HEX colors directly from Telegram theme
+
+---
+
+_This release was automatically generated from 2 commits._
+
 ## v0.5.14
 
 _Released on 2025-12-31_
