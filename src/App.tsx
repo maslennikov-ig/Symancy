@@ -46,20 +46,84 @@ type View = 'uploader' | 'history';
 /**
  * Wrapper component that redirects Telegram WebApp users to /chat
  * This ensures the optimized chat experience for Telegram Mini App users
+ *
+ * Fixes applied:
+ * - CRITICAL-BUG-1: Added proper loading state to prevent race condition
+ * - HIGH-BUG-3: Added try-catch error handling for Telegram API failures
  */
 const TelegramRedirectGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [state, setState] = useState<{
+    isChecking: boolean;
+    error: Error | null;
+  }>({ isChecking: location.pathname === '/', error: null });
 
   useEffect(() => {
-    // Only redirect from home page, not other routes
-    if (location.pathname === '/' && isTelegramWebApp()) {
-      navigate('/chat', { replace: true });
+    // Only check on home page
+    if (location.pathname !== '/') {
+      setState({ isChecking: false, error: null });
+      return;
     }
+
+    const checkAndRedirect = async () => {
+      try {
+        // Wait for Telegram script to load (max 200ms)
+        await new Promise<void>((resolve) => {
+          if (window.Telegram?.WebApp) {
+            resolve();
+            return;
+          }
+
+          // Poll for Telegram object with timeout
+          const timeout = setTimeout(resolve, 200);
+          const interval = setInterval(() => {
+            if (window.Telegram?.WebApp) {
+              clearTimeout(timeout);
+              clearInterval(interval);
+              resolve();
+            }
+          }, 50);
+        });
+
+        // Check again after waiting
+        if (isTelegramWebApp()) {
+          navigate('/chat', { replace: true });
+        }
+      } catch (error) {
+        console.error('Telegram redirect guard error:', error);
+        setState({
+          isChecking: false,
+          error: error instanceof Error ? error : new Error('Failed to initialize Telegram WebApp'),
+        });
+        return;
+      }
+
+      setState((prev) => ({ ...prev, isChecking: false }));
+    };
+
+    checkAndRedirect();
   }, [location.pathname, navigate]);
 
-  // Show loading while redirecting in Telegram
-  if (location.pathname === '/' && isTelegramWebApp()) {
+  // Error state - show fallback UI
+  if (state.error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="text-center">
+          <p className="text-destructive mb-4">Failed to initialize Telegram WebApp</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Reload
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state - prevents flash of wrong content
+  if (state.isChecking && location.pathname === '/') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <LoaderIcon className="w-8 h-8 animate-spin text-primary" />

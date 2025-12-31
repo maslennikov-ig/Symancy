@@ -31,7 +31,8 @@ const Chat: React.FC<ChatProps> = ({ language: propLanguage, t: propT }) => {
   const { user, unifiedUser, isTelegramUser, session } = useAuth();
 
   // Detect if running in Telegram Mini App and get viewport height
-  const { isWebApp: isTelegramMiniApp, viewportHeight } = useTelegramWebApp();
+  // MEDIUM-BUG-4 FIX: Use stable height for layout (excludes keyboard)
+  const { isWebApp: isTelegramMiniApp, viewportStableHeight } = useTelegramWebApp();
 
   const language = propLanguage || 'ru';
   const t = propT || ((key: keyof typeof translations.en) => i18n_t(key, language));
@@ -177,9 +178,10 @@ const Chat: React.FC<ChatProps> = ({ language: propLanguage, t: propT }) => {
     <div
       className="flex flex-col bg-background"
       style={{
-        // Use full viewport in Telegram, h-screen otherwise
+        // Use stable viewport in Telegram (excludes keyboard), h-screen otherwise
+        // MEDIUM-BUG-4 FIX: Using stable height for consistent layout
         height: isTelegramMiniApp
-          ? `${viewportHeight || window.innerHeight}px`
+          ? `${viewportStableHeight || window.innerHeight}px`
           : '100vh',
       }}
     >

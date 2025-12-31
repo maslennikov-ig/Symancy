@@ -7,6 +7,16 @@
  * @module hooks/useTelegramWebApp
  */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import {
+  ThemeParams,
+  SafeAreaInset,
+  bindTelegramTheme,
+  bindSafeAreaToCss,
+  bindViewportToCss,
+} from '../utils/telegramTheme';
+
+// Re-export types for consumers
+export type { ThemeParams, SafeAreaInset };
 
 /**
  * Telegram WebApp user data structure
@@ -19,38 +29,6 @@ export interface TelegramWebAppUser {
   language_code?: string;
   is_premium?: boolean;
   photo_url?: string;
-}
-
-/**
- * Telegram WebApp theme parameters
- */
-export interface ThemeParams {
-  bg_color?: string;
-  text_color?: string;
-  hint_color?: string;
-  link_color?: string;
-  button_color?: string;
-  button_text_color?: string;
-  secondary_bg_color?: string;
-  header_bg_color?: string;
-  accent_text_color?: string;
-  section_bg_color?: string;
-  section_header_text_color?: string;
-  subtitle_text_color?: string;
-  destructive_text_color?: string;
-  // Bot API 8.0 additions
-  bottom_bar_bg_color?: string;
-  section_separator_color?: string;
-}
-
-/**
- * Safe area inset type (Bot API 8.0+)
- */
-export interface SafeAreaInset {
-  top: number;
-  bottom: number;
-  left: number;
-  right: number;
 }
 
 /**
@@ -153,9 +131,16 @@ export interface UseTelegramWebAppReturn {
   isWebApp: boolean;
   /** Whether WebApp is ready (script loaded and initialized) */
   isReady: boolean;
-  /** Raw initData string for server verification */
+  /**
+   * Raw initData string for server verification
+   * WARNING: MUST be validated on your backend before trusting!
+   * @see https://docs.telegram-mini-apps.com/platform/authorizing-user
+   */
   initData: string | null;
-  /** Parsed user data (not verified, for display only) */
+  /**
+   * Parsed user data - FOR DISPLAY ONLY
+   * WARNING: DO NOT trust without server-side validation!
+   */
   user: TelegramWebAppUser | null;
   /** Color scheme from Telegram */
   colorScheme: 'light' | 'dark';
@@ -167,7 +152,15 @@ export interface UseTelegramWebAppReturn {
   platform: string | null;
   /** Start parameter from WebApp link */
   startParam: string | null;
-  /** Stable viewport height (updates on viewportChanged event) */
+  /**
+   * Stable viewport height - excludes keyboard (use for main layout)
+   * MEDIUM-BUG-4 FIX: Renamed for clarity
+   */
+  viewportStableHeight: number;
+  /**
+   * Dynamic viewport height - includes keyboard changes
+   * @deprecated Use viewportStableHeight for layout, this is for special cases only
+   */
   viewportHeight: number;
   /** Expand the WebApp to full height */
   expand: () => void;
@@ -222,74 +215,15 @@ export interface UseTelegramWebAppReturn {
  * }
  * ```
  */
-/**
- * Bind Telegram ThemeParams to CSS variables
- * Creates --tg-* CSS variables from Telegram's theme
- * Optimized: Only updates changed values to minimize DOM reflows
- *
- * @param themeParams - Theme parameters from Telegram WebApp
- * @param previousTheme - Previous theme params for comparison (optional)
- * @returns The current theme params for future comparison
- * @internal
- */
-function bindThemeToCss(
-  themeParams: ThemeParams,
-  previousTheme?: ThemeParams
-): ThemeParams {
-  const root = document.documentElement;
-  const prev = previousTheme || {};
-
-  // Map of theme param keys to CSS variable names
-  const themeMapping: Record<keyof ThemeParams, string> = {
-    bg_color: '--tg-bg-color',
-    text_color: '--tg-text-color',
-    hint_color: '--tg-hint-color',
-    link_color: '--tg-link-color',
-    button_color: '--tg-button-color',
-    button_text_color: '--tg-button-text-color',
-    secondary_bg_color: '--tg-secondary-bg-color',
-    header_bg_color: '--tg-header-bg-color',
-    accent_text_color: '--tg-accent-text-color',
-    section_bg_color: '--tg-section-bg-color',
-    section_header_text_color: '--tg-section-header-text-color',
-    subtitle_text_color: '--tg-subtitle-text-color',
-    destructive_text_color: '--tg-destructive-text-color',
-    bottom_bar_bg_color: '--tg-bottom-bar-bg-color',
-    section_separator_color: '--tg-section-separator-color',
-  };
-
-  // Only update changed values to minimize DOM reflows
-  (Object.keys(themeMapping) as Array<keyof ThemeParams>).forEach((key) => {
-    const value = themeParams[key];
-    const prevValue = prev[key];
-    if (value && value !== prevValue) {
-      root.style.setProperty(themeMapping[key], value);
-    }
-  });
-
-  return { ...themeParams };
-}
-
-/**
- * Bind safe area insets to CSS variables
- * Creates --tg-safe-area-* CSS variables for iOS safe area handling
- *
- * @param safeAreaInset - Safe area inset from Telegram WebApp (Bot API 8.0+)
- * @internal
- */
-function bindSafeAreaToCss(safeAreaInset: SafeAreaInset | undefined) {
-  const root = document.documentElement;
-  root.style.setProperty('--tg-safe-area-top', `${safeAreaInset?.top || 0}px`);
-  root.style.setProperty('--tg-safe-area-bottom', `${safeAreaInset?.bottom || 0}px`);
-  root.style.setProperty('--tg-safe-area-left', `${safeAreaInset?.left || 0}px`);
-  root.style.setProperty('--tg-safe-area-right', `${safeAreaInset?.right || 0}px`);
-}
+// MEDIUM-QUALITY-1 FIX: Removed duplicate bindThemeToCss and bindSafeAreaToCss
+// Now using shared utilities from '../utils/telegramTheme'
 
 export function useTelegramWebApp(): UseTelegramWebAppReturn {
   const [isReady, setIsReady] = useState(false);
   const [webApp, setWebApp] = useState<TelegramWebApp | null>(null);
-  // CRITICAL-3 FIX: Add state for viewport height
-  const [viewportHeight, setViewportHeight] = useState(0);
+  // MEDIUM-BUG-4 FIX: Track both viewport heights
+  const [viewportStableHeight, setViewportStableHeight] = useState(0);
+  const [viewportDynamicHeight, setViewportDynamicHeight] = useState(0);
 
   // HIGH-1 FIX: Track previous theme for efficient CSS updates
   const previousThemeRef = useRef<ThemeParams>({});
@@ -314,18 +248,20 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
     }
 
     // HIGH-1 FIX: Bind ThemeParams with previous value comparison
-    previousThemeRef.current = bindThemeToCss(
+    // MEDIUM-QUALITY-1 FIX: Using shared utility
+    previousThemeRef.current = bindTelegramTheme(
       tg.themeParams,
       previousThemeRef.current
     );
 
-    // Bind safe area insets to CSS variables
+    // Bind safe area insets to CSS variables (using shared utility)
     bindSafeAreaToCss(tg.safeAreaInset);
 
     // CRITICAL-1 & CRITICAL-2 FIX: Stable function references created ONCE
     const handleThemeChanged = () => {
       // HIGH-1 FIX: Only update changed CSS variables
-      previousThemeRef.current = bindThemeToCss(
+      // MEDIUM-QUALITY-1 FIX: Using shared utility
+      previousThemeRef.current = bindTelegramTheme(
         webAppSnapshot.themeParams,
         previousThemeRef.current
       );
@@ -350,32 +286,44 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
       bindSafeAreaToCss(webAppSnapshot.safeAreaInset);
     };
 
-    // CRITICAL-3 FIX: Listen for viewport changes
+    // MEDIUM-BUG-4 FIX: Listen for viewport changes - track both heights
     const handleViewportChanged = () => {
-      setViewportHeight(webAppSnapshot.viewportStableHeight);
+      setViewportStableHeight(webAppSnapshot.viewportStableHeight);
+      setViewportDynamicHeight(webAppSnapshot.viewportHeight);
+      // Also update CSS variables
+      bindViewportToCss(webAppSnapshot.viewportHeight, webAppSnapshot.viewportStableHeight);
     };
 
-    if (typeof tg.onEvent === 'function') {
-      tg.onEvent('themeChanged', handleThemeChanged);
-      tg.onEvent('safeAreaChanged', handleSafeAreaChanged);
-      // CRITICAL-3 FIX: Add viewportChanged listener
-      tg.onEvent('viewportChanged', handleViewportChanged);
-    }
+    // HIGH-BUG-2 FIX: Store listener references to ensure proper cleanup
+    const listeners: Array<{ event: string; handler: () => void }> = [];
 
-    // CRITICAL-3 FIX: Set initial viewport height
-    setViewportHeight(tg.viewportStableHeight);
+    const addEventListenerSafe = (event: string, handler: () => void) => {
+      if (typeof tg.onEvent === 'function') {
+        tg.onEvent(event, handler);
+        listeners.push({ event, handler });
+      }
+    };
+
+    addEventListenerSafe('themeChanged', handleThemeChanged);
+    addEventListenerSafe('safeAreaChanged', handleSafeAreaChanged);
+    addEventListenerSafe('viewportChanged', handleViewportChanged);
+
+    // MEDIUM-BUG-4 FIX: Set initial viewport heights (both)
+    setViewportStableHeight(tg.viewportStableHeight);
+    setViewportDynamicHeight(tg.viewportHeight);
     setWebApp(webAppSnapshot);
     setIsReady(true);
 
-    // CRITICAL-1 FIX: Cleanup with SAME stable function references
+    // CRITICAL-1 FIX: Cleanup with stored listener references
     return () => {
       // Remove tg-webapp class on cleanup
       document.documentElement.classList.remove('tg-webapp');
 
+      // HIGH-BUG-2 FIX: Only remove listeners that were actually added
       if (typeof tg.offEvent === 'function') {
-        tg.offEvent('themeChanged', handleThemeChanged);
-        tg.offEvent('safeAreaChanged', handleSafeAreaChanged);
-        tg.offEvent('viewportChanged', handleViewportChanged);
+        listeners.forEach(({ event, handler }) => {
+          tg.offEvent!(event, handler);
+        });
       }
     };
   }, []); // Empty deps - run once only
@@ -500,7 +448,9 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
     version,
     platform,
     startParam,
-    viewportHeight, // CRITICAL-3 FIX: Export viewport height
+    // MEDIUM-BUG-4 FIX: Export both viewport heights with clear naming
+    viewportStableHeight,
+    viewportHeight: viewportDynamicHeight, // For backward compatibility
     expand,
     close,
     showPopup,
