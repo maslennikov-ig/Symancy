@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, lazy, Suspense } from 'react';
-import { Routes, Route, useLocation } from 'react-router';
+import { Routes, Route, useLocation, useNavigate } from 'react-router';
 import imageCompression from 'browser-image-compression';
 import ChatOnboarding from './components/features/ChatOnboarding';
 import { analyzeCoffeeCup, AnalysisResponse, UserData, AnalysisError } from './services/analysisService';
@@ -10,6 +10,7 @@ import Header from './components/layout/Header';
 import ImageUploader from './components/features/analysis/ImageUploader';
 import ResultDisplay from './components/features/analysis/ResultDisplay';
 import { LoaderIcon } from './components/icons/LoaderIcon';
+import { isTelegramWebApp } from './hooks/useTelegramWebApp';
 
 // Heavy components - load on demand
 const HistoryDisplay = lazy(() => import('./components/features/history/HistoryDisplay'));
@@ -41,6 +42,33 @@ import type { ProductType } from './types/payment';
 type Theme = 'light' | 'dark';
 type FocusArea = 'wellbeing' | 'career' | 'relationships';
 type View = 'uploader' | 'history';
+
+/**
+ * Wrapper component that redirects Telegram WebApp users to /chat
+ * This ensures the optimized chat experience for Telegram Mini App users
+ */
+const TelegramRedirectGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Only redirect from home page, not other routes
+    if (location.pathname === '/' && isTelegramWebApp()) {
+      navigate('/chat', { replace: true });
+    }
+  }, [location.pathname, navigate]);
+
+  // Show loading while redirecting in Telegram
+  if (location.pathname === '/' && isTelegramWebApp()) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <LoaderIcon className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
 
 const App: React.FC = () => {
   const { user } = useAuth();
@@ -418,28 +446,30 @@ const App: React.FC = () => {
   );
 
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><LoaderIcon className="w-8 h-8 animate-spin" /></div>}>
-      <Routes>
-        <Route path="/" element={mainAppContent} />
-        <Route path="/pricing" element={<Pricing language={language} t={t} />} />
-        <Route path="/payment/success" element={<PaymentSuccess />} />
-        <Route path="/payment/result" element={<PaymentResult />} />
-        <Route path="/offer" element={<Terms language={language} t={t} />} />
-        <Route path="/terms" element={<Terms language={language} t={t} />} />
-        <Route path="/contacts" element={<Contacts language={language} t={t} />} />
-        <Route path="/test-payment" element={<TestPayment />} />
-        <Route path="/link" element={<Link language={language} t={t} />} />
-        <Route
-          path="/chat"
-          element={
-            <ErrorBoundary language={language}>
-              <Chat language={language} t={t} />
-            </ErrorBoundary>
-          }
-        />
-        <Route path="/admin/*" element={<AdminApp />} />
-      </Routes>
-    </Suspense>
+    <TelegramRedirectGuard>
+      <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><LoaderIcon className="w-8 h-8 animate-spin" /></div>}>
+        <Routes>
+          <Route path="/" element={mainAppContent} />
+          <Route path="/pricing" element={<Pricing language={language} t={t} />} />
+          <Route path="/payment/success" element={<PaymentSuccess />} />
+          <Route path="/payment/result" element={<PaymentResult />} />
+          <Route path="/offer" element={<Terms language={language} t={t} />} />
+          <Route path="/terms" element={<Terms language={language} t={t} />} />
+          <Route path="/contacts" element={<Contacts language={language} t={t} />} />
+          <Route path="/test-payment" element={<TestPayment />} />
+          <Route path="/link" element={<Link language={language} t={t} />} />
+          <Route
+            path="/chat"
+            element={
+              <ErrorBoundary language={language}>
+                <Chat language={language} t={t} />
+              </ErrorBoundary>
+            }
+          />
+          <Route path="/admin/*" element={<AdminApp />} />
+        </Routes>
+      </Suspense>
+    </TelegramRedirectGuard>
   );
 };
 

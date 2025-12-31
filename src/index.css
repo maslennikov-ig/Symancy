@@ -110,6 +110,46 @@ html, body {
   max-width: 100vw;
 }
 
+/* Telegram Mini App specific styles */
+/* When running inside Telegram WebApp, prevent vertical scrolling and use full viewport */
+html.tg-webapp,
+html.tg-webapp body {
+  overflow: hidden;
+  height: 100%;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
+}
+
+html.tg-webapp #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Use Telegram CSS variables when available (with fallbacks to our theme) */
+.tg-webapp {
+  /* Map Telegram theme variables to our design system */
+  --background: var(--tg-bg-color, oklch(1 0 0));
+  --foreground: var(--tg-text-color, oklch(0.145 0 0));
+  --muted-foreground: var(--tg-hint-color, oklch(0.556 0 0));
+  --primary: var(--tg-button-color, oklch(0.205 0 0));
+  --primary-foreground: var(--tg-button-text-color, oklch(0.985 0 0));
+  --secondary: var(--tg-secondary-bg-color, oklch(0.97 0 0));
+  --card: var(--tg-secondary-bg-color, oklch(1 0 0));
+  --border: var(--tg-hint-color, oklch(0.922 0 0));
+  --accent: var(--tg-accent-text-color, var(--accent));
+}
+
+/* Telegram safe area support via CSS variables */
+.tg-webapp .tg-safe-area-top {
+  padding-top: var(--tg-safe-area-top, 0px);
+}
+
+.tg-webapp .tg-safe-area-bottom {
+  padding-bottom: var(--tg-safe-area-bottom, 0px);
+}
+
 /* Chat container - MUST fill parent height */
 .chat-onboarding-container {
   display: flex !important;

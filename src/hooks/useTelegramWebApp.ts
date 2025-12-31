@@ -302,6 +302,9 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
     // CRITICAL-1 FIX: Capture snapshot for stable closure references
     const webAppSnapshot = tg;
 
+    // Add tg-webapp class to HTML element for CSS targeting
+    document.documentElement.classList.add('tg-webapp');
+
     // Signal to Telegram that the WebApp is ready
     tg.ready();
 
@@ -366,6 +369,9 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
 
     // CRITICAL-1 FIX: Cleanup with SAME stable function references
     return () => {
+      // Remove tg-webapp class on cleanup
+      document.documentElement.classList.remove('tg-webapp');
+
       if (typeof tg.offEvent === 'function') {
         tg.offEvent('themeChanged', handleThemeChanged);
         tg.offEvent('safeAreaChanged', handleSafeAreaChanged);
