@@ -22,6 +22,29 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
+ * Wait for Telegram WebApp to be injected by Telegram client
+ * Polls for window.Telegram.WebApp with timeout
+ */
+async function waitForTelegramWebApp(timeoutMs = 1000, intervalMs = 50): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+
+    // Already available
+    if (window.Telegram?.WebApp) return true;
+
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+        if (window.Telegram?.WebApp) {
+            console.log('[Auth] Telegram WebApp appeared after', Date.now() - start, 'ms');
+            return true;
+        }
+        await new Promise(resolve => setTimeout(resolve, intervalMs));
+    }
+
+    console.log('[Auth] Telegram WebApp not found after', timeoutMs, 'ms');
+    return false;
+}
+
+/**
  * Get Telegram initData from WebApp object
  * Uses direct access to window.Telegram.WebApp.initData which is injected by Telegram
  */
@@ -35,7 +58,6 @@ function getTelegramInitData(): string | null {
 
     console.log('[Auth] WebApp exists:', !!webApp);
     console.log('[Auth] initData length:', initData?.length ?? 0);
-    console.log('[Auth] initData preview:', initData ? `${initData.slice(0, 80)}...` : '(empty)');
 
     // initData can be empty string in some contexts, check for actual content
     if (initData && initData.length > 0) {
@@ -61,11 +83,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         const initAuth = async () => {
             console.log('[Auth] Starting auth initialization...');
-            console.log('[Auth] isTelegramWebApp:', isTelegramWebApp());
+
+            // Wait for Telegram WebApp to be injected (may take a moment)
+            const hasTelegram = await waitForTelegramWebApp();
+            console.log('[Auth] hasTelegram:', hasTelegram);
 
             // Priority 1: Check for Telegram WebApp initData (auto-auth in Mini Apps)
-            // Using TMA.js SDK's retrieveRawInitData - no polling needed
-            if (isTelegramWebApp()) {
+            if (hasTelegram) {
                 const initData = getTelegramInitData();
                 console.log('[Auth] Got initData:', !!initData);
                 if (initData) {
