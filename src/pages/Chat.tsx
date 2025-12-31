@@ -28,7 +28,7 @@ interface ChatProps {
 const Chat: React.FC<ChatProps> = ({ language: propLanguage, t: propT }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, unifiedUser, isTelegramUser, session } = useAuth();
+  const { user, unifiedUser, isTelegramUser, session, loading: authLoading } = useAuth();
 
   // Detect if running in Telegram Mini App and get viewport height
   // MEDIUM-BUG-4 FIX: Use stable height for layout (excludes keyboard)
@@ -127,6 +127,34 @@ const Chat: React.FC<ChatProps> = ({ language: propLanguage, t: propT }) => {
     },
     [conversationId, sendMessage]
   );
+
+  // Show loading state while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <LoaderIcon className="w-8 h-8 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">{t('chat.loading')}</p>
+      </div>
+    );
+  }
+
+  // If auth is complete but user is not authenticated, show error
+  if (!user && !unifiedUser) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+        <div className="text-center text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/50 p-6 rounded-lg border border-amber-300 dark:border-amber-700 max-w-md">
+          <p className="font-bold mb-2">{t('error.unauthorized')}</p>
+          <p className="mb-4 text-muted-foreground">{t('chat.authRequired')}</p>
+          <button
+            onClick={() => navigate('/')}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            {t('pricing.button.return')}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Show loading state if creating conversation
   if (isLoading) {

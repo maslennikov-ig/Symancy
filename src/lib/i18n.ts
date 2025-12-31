@@ -203,6 +203,7 @@ export const translations = {
     'chat.assistantTyping': 'Assistant is typing',
     'chat.analysisResult': 'Analysis Result',
     'chat.userUploadedImage': 'User uploaded image',
+    'chat.authRequired': 'Please open this app through Telegram to start chatting.',
     'error.title': 'Error',
     'error.reload': 'Reload Page',
     // Account Linking
@@ -702,6 +703,7 @@ export const translations = {
     'chat.assistantTyping': 'Ассистент печатает',
     'chat.analysisResult': 'Результат анализа',
     'chat.userUploadedImage': 'Загруженное изображение',
+    'chat.authRequired': 'Пожалуйста, откройте это приложение через Telegram для начала общения.',
     'error.title': 'Ошибка',
     'error.reload': 'Перезагрузить страницу',
     // Account Linking
@@ -1201,6 +1203,7 @@ export const translations = {
     'chat.assistantTyping': '助手正在输入',
     'chat.analysisResult': '分析结果',
     'chat.userUploadedImage': '用户上传的图片',
+    'chat.authRequired': '请通过 Telegram 打开此应用程序开始聊天。',
     'error.title': '错误',
     'error.reload': '重新加载页面',
     // Account Linking
