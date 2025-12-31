@@ -7,9 +7,17 @@
  * Fixes applied:
  * - HIGH-PERF-1: Batch CSS updates using cssText for single DOM write
  * - MEDIUM-QUALITY-1: Extracted shared logic to eliminate duplication
+ * - QUALITY-TELEGRAM-SDK: Uses official Telegram SDK to bind CSS vars in sync with WebApp rules
  *
  * @module utils/telegramTheme
  */
+import {
+  bindThemeParamsCssVars,
+  init as initTelegramSdk,
+  isThemeParamsCssVarsBound,
+  isThemeParamsMounted,
+  mountThemeParamsSync,
+} from '@telegram-apps/sdk';
 
 /**
  * Telegram WebApp theme parameters
@@ -88,6 +96,41 @@ const TAILWIND_COLOR_MAPPING: Array<{ cssVar: string; sources: Array<keyof Theme
 ];
 
 const hslCache = new Map<string, string>();
+
+let sdkInitialized = false;
+let themeCssVarsCleanup: VoidFunction | null = null;
+
+function ensureTelegramSdkInitialized(): void {
+  if (sdkInitialized) return;
+  if (typeof window === 'undefined' || !window.Telegram?.WebApp) return;
+
+  try {
+    initTelegramSdk();
+    sdkInitialized = true;
+  } catch (error) {
+    console.warn('[Telegram SDK] init failed:', error);
+  }
+}
+
+function ensureOfficialThemeBinding(): void {
+  if (!sdkInitialized) return;
+
+  try {
+    if (mountThemeParamsSync.isAvailable() && !isThemeParamsMounted()) {
+      mountThemeParamsSync();
+    }
+
+    if (
+      !themeCssVarsCleanup &&
+      bindThemeParamsCssVars.isAvailable() &&
+      !isThemeParamsCssVarsBound()
+    ) {
+      themeCssVarsCleanup = bindThemeParamsCssVars();
+    }
+  } catch (error) {
+    console.warn('[Telegram SDK] theme binding failed:', error);
+  }
+}
 
 function normalizeHexColor(hexColor?: string): string | null {
   if (!hexColor) return null;
@@ -208,6 +251,9 @@ export function bindTelegramTheme(
   themeParams: ThemeParams,
   previousTheme?: ThemeParams
 ): ThemeParams {
+  ensureTelegramSdkInitialized();
+  ensureOfficialThemeBinding();
+
   const root = document.documentElement;
   const prev = previousTheme || {};
 
@@ -291,6 +337,9 @@ export function initTelegramCssVariables(tg: {
   viewportHeight: number;
   viewportStableHeight: number;
 }): void {
+  ensureTelegramSdkInitialized();
+  ensureOfficialThemeBinding();
+
   bindTelegramTheme(tg.themeParams);
   bindSafeAreaToCss(tg.safeAreaInset);
   bindViewportToCss(tg.viewportHeight, tg.viewportStableHeight);
