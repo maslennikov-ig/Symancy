@@ -103,10 +103,12 @@ const MODEL_PRICES: Record<string, number> = {
   'google/gemini-1.5-flash': 0.075,
   'google/gemini-2.0-flash': 0.1,
   'google/gemini-2.0-flash-exp:free': 0,
+  'google/gemini-3-flash-preview': 0.1, // Legacy Vision model
   'openai/gpt-4o-mini': 0.15,
   'anthropic/claude-3.5-sonnet': 3.0,
   'anthropic/claude-3-haiku': 0.25,
   'xiaomi/mimo-v2-flash:free': 0,
+  'x-ai/grok-vision-beta': 2.0, // Vision model - $2.00 per 1M tokens
 };
 
 // Chart colors for different models (using CSS variables)
