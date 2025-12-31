@@ -14,7 +14,7 @@ import { initTelegramCssVariables } from './utils/telegramTheme';
  */
 function initTelegramWebApp() {
   const tg = window.Telegram?.WebApp;
-  if (!tg?.initData) return;
+  if (!tg) return;
 
   // Add tg-webapp class immediately for CSS targeting
   document.documentElement.classList.add('tg-webapp');

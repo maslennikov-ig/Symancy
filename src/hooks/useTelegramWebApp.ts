@@ -330,7 +330,7 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
 
   // MED-1 FIX: Remove useMemo for simple property access
   // Simple property access - no need for useMemo overhead
-  const isWebApp = !!webApp?.initData;
+  const isWebApp = !!webApp;
   const initData = webApp?.initData || null;
   const user = webApp?.initDataUnsafe?.user || null;
   const startParam = webApp?.initDataUnsafe?.start_param || null;
@@ -467,5 +467,5 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
  * @returns True if Telegram.WebApp is available with initData
  */
 export function isTelegramWebApp(): boolean {
-  return !!window.Telegram?.WebApp?.initData;
+  return !!window.Telegram?.WebApp;
 }

@@ -21,6 +21,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+async function waitForTelegramInitData(timeoutMs = 2000, intervalMs = 50): Promise<string | null> {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+        const initData = window.Telegram?.WebApp?.initData;
+        if (initData) {
+            return initData;
+        }
+        await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    }
+    return window.Telegram?.WebApp?.initData || null;
+}
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [unifiedUser, setUnifiedUser] = useState<UnifiedUser | null>(null);
@@ -38,7 +53,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const initAuth = async () => {
             // Priority 1: Check for Telegram WebApp initData (auto-auth in Mini Apps)
             if (isTelegramWebApp()) {
-                const initData = window.Telegram?.WebApp?.initData;
+                const initData = await waitForTelegramInitData();
                 if (initData) {
                     try {
                         const response = await webAppLogin(initData);
@@ -62,6 +77,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         console.error('WebApp auto-auth failed:', error);
                         // Continue to other auth methods
                     }
+                } else {
+                    console.warn('Telegram WebApp detected but initData not available after waiting');
                 }
             }
 
