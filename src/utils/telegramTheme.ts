@@ -65,6 +65,126 @@ const THEME_CSS_MAPPING: Record<keyof ThemeParams, string> = {
   section_separator_color: '--tg-section-separator-color',
 };
 
+const TAILWIND_COLOR_MAPPING: Array<{ cssVar: string; sources: Array<keyof ThemeParams> }> = [
+  { cssVar: '--background', sources: ['bg_color'] },
+  { cssVar: '--foreground', sources: ['text_color'] },
+  { cssVar: '--card', sources: ['secondary_bg_color', 'bg_color'] },
+  { cssVar: '--card-foreground', sources: ['text_color'] },
+  { cssVar: '--popover', sources: ['secondary_bg_color', 'bg_color'] },
+  { cssVar: '--popover-foreground', sources: ['text_color'] },
+  { cssVar: '--secondary', sources: ['secondary_bg_color', 'bg_color'] },
+  { cssVar: '--secondary-foreground', sources: ['text_color'] },
+  { cssVar: '--muted', sources: ['secondary_bg_color', 'bg_color'] },
+  { cssVar: '--muted-foreground', sources: ['hint_color', 'subtitle_text_color', 'text_color'] },
+  { cssVar: '--accent', sources: ['link_color', 'accent_text_color', 'button_color'] },
+  { cssVar: '--accent-foreground', sources: ['text_color', 'button_text_color'] },
+  { cssVar: '--primary', sources: ['button_color', 'link_color'] },
+  { cssVar: '--primary-foreground', sources: ['button_text_color', 'text_color'] },
+  { cssVar: '--destructive', sources: ['destructive_text_color', 'button_color'] },
+  { cssVar: '--destructive-foreground', sources: ['bg_color', 'secondary_bg_color', 'text_color'] },
+  { cssVar: '--border', sources: ['hint_color', 'section_separator_color'] },
+  { cssVar: '--input', sources: ['secondary_bg_color', 'bg_color'] },
+  { cssVar: '--ring', sources: ['link_color', 'button_color'] },
+];
+
+const hslCache = new Map<string, string>();
+
+function normalizeHexColor(hexColor?: string): string | null {
+  if (!hexColor) return null;
+  const trimmed = hexColor.trim();
+  if (!trimmed) return null;
+
+  let value = trimmed.startsWith('#') ? trimmed.slice(1) : trimmed;
+  if (value.length === 3) {
+    value = value
+      .split('')
+      .map((char) => char + char)
+      .join('');
+  }
+
+  if (!/^[\da-fA-F]{6}$/.test(value)) {
+    return null;
+  }
+
+  return value.toLowerCase();
+}
+
+function formatNumber(value: number): string {
+  if (!Number.isFinite(value)) {
+    return '0';
+  }
+  const rounded = Number(value.toFixed(2));
+  return `${rounded}`;
+}
+
+function formatPercent(value: number): string {
+  const clamped = Math.min(Math.max(value, 0), 1);
+  return `${formatNumber(clamped * 100)}%`;
+}
+
+function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
+  const rNorm = r / 255;
+  const gNorm = g / 255;
+  const bNorm = b / 255;
+  const max = Math.max(rNorm, gNorm, bNorm);
+  const min = Math.min(rNorm, gNorm, bNorm);
+  const delta = max - min;
+  const l = (max + min) / 2;
+
+  if (delta === 0) {
+    return { h: 0, s: 0, l };
+  }
+
+  const s = delta / (1 - Math.abs(2 * l - 1));
+  let h: number;
+
+  switch (max) {
+    case rNorm:
+      h = ((gNorm - bNorm) / delta) % 6;
+      break;
+    case gNorm:
+      h = (bNorm - rNorm) / delta + 2;
+      break;
+    default:
+      h = (rNorm - gNorm) / delta + 4;
+      break;
+  }
+
+  h *= 60;
+  if (h < 0) {
+    h += 360;
+  }
+
+  return { h, s, l };
+}
+
+function hexToHslComponents(hexColor?: string): string | null {
+  const normalized = normalizeHexColor(hexColor);
+  if (!normalized) return null;
+
+  const cached = hslCache.get(normalized);
+  if (cached) return cached;
+
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  const { h, s, l } = rgbToHsl(r, g, b);
+
+  const result = `${formatNumber((h + 360) % 360)} ${formatPercent(s)} ${formatPercent(l)}`;
+  hslCache.set(normalized, result);
+  return result;
+}
+
+function pickThemeColor(theme: ThemeParams, sources: Array<keyof ThemeParams>): string | null {
+  for (const key of sources) {
+    const value = theme[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value;
+    }
+  }
+  return null;
+}
+
 /**
  * Bind Telegram ThemeParams to CSS variables
  *
@@ -100,6 +220,21 @@ export function bindTelegramTheme(
     if (value && value !== prevValue) {
       updates.push(`${THEME_CSS_MAPPING[key]}: ${value}`);
     }
+  });
+
+  // Map Telegram colors to Tailwind CSS custom properties (convert HEX -> HSL components)
+  TAILWIND_COLOR_MAPPING.forEach(({ cssVar, sources }) => {
+    const value = pickThemeColor(themeParams, sources);
+    if (!value) return;
+
+    const hslValue = hexToHslComponents(value);
+    if (!hslValue) return;
+
+    const prevValue = pickThemeColor(prev, sources);
+    const prevHslValue = prevValue ? hexToHslComponents(prevValue) : null;
+    if (prevHslValue === hslValue) return;
+
+    updates.push(`${cssVar}: ${hslValue}`);
   });
 
   // HIGH-PERF-1 FIX: Single batch update using cssText
