@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.19] - 2025-12-31
+
+### Fixed
+- **symancy-backend/src/api/messages/send-message.ts**: update 1 source file(s) (b41268e)
+
 ## [0.5.18] - 2025-12-31
 
 ### Added
