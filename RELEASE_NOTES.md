@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.12
+
+_Released on 2025-12-31_
+
+### 🐛 Bug Fixes
+
+- **src/main.tsx**: Update 3 source file(s), update docs
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.11
 
 _Released on 2025-12-30_
