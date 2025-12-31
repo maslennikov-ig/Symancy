@@ -5,6 +5,7 @@ import { Session, User, Provider } from '@supabase/supabase-js';
 import type { UnifiedUser, TelegramAuthData } from '../types/omnichannel';
 import { telegramLogin, webAppLogin, getCurrentUser, storeToken, getStoredToken, clearToken } from '../services/authService';
 import { isTelegramWebApp } from '../hooks/useTelegramWebApp';
+import { init as initTelegramSdk, retrieveRawInitData } from '@telegram-apps/sdk';
 
 interface AuthContextType {
     user: User | null;
@@ -21,19 +22,31 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-async function waitForTelegramInitData(timeoutMs = 2000, intervalMs = 50): Promise<string | null> {
+/**
+ * Get Telegram initData using TMA.js SDK (recommended approach)
+ * The SDK parses launch parameters from URL, storage, and other sources
+ * @see https://docs.telegram-mini-apps.com/packages/telegram-apps-sdk/3-x
+ */
+function getTelegramInitData(): string | null {
     if (typeof window === 'undefined') {
         return null;
     }
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
-        const initData = window.Telegram?.WebApp?.initData;
-        if (initData) {
-            return initData;
-        }
-        await new Promise((resolve) => setTimeout(resolve, intervalMs));
+
+    try {
+        // Initialize SDK first (safe to call multiple times)
+        initTelegramSdk();
+
+        // Use SDK's retrieveRawInitData - the officially recommended method
+        const initData = retrieveRawInitData();
+        return initData || null;
+    } catch (error) {
+        // SDK not available or init failed - try fallback
+        console.warn('[Auth] TMA SDK init failed, trying fallback:', error);
+
+        // Fallback to direct WebApp access for older clients
+        const fallbackData = window.Telegram?.WebApp?.initData;
+        return fallbackData || null;
     }
-    return window.Telegram?.WebApp?.initData || null;
 }
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -52,8 +65,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         const initAuth = async () => {
             // Priority 1: Check for Telegram WebApp initData (auto-auth in Mini Apps)
+            // Using TMA.js SDK's retrieveRawInitData - no polling needed
             if (isTelegramWebApp()) {
-                const initData = await waitForTelegramInitData();
+                const initData = getTelegramInitData();
                 if (initData) {
                     try {
                         const response = await webAppLogin(initData);
@@ -78,7 +92,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         // Continue to other auth methods
                     }
                 } else {
-                    console.warn('Telegram WebApp detected but initData not available after waiting');
+                    console.warn('[Auth] Telegram WebApp detected but initData not available');
                 }
             }
 
