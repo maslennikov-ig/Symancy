@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.16
+
+_Released on 2025-12-31_
+
+### 🐛 Bug Fixes
+
+- **utils**: Update 1 source file(s)
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.15
 
 _Released on 2025-12-31_
