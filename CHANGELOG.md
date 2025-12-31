@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.13] - 2025-12-31
+
+### Added
+- **vision**: switch to x-ai/grok-vision-beta model (9df8a0d)
+- **admin**: track Vision model costs separately from Interpretation model (ec1d3ef)
+
 ## [0.5.12] - 2025-12-31
 
 ### Fixed

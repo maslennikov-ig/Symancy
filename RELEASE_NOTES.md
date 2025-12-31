@@ -2,6 +2,19 @@
 
 User-facing release notes for all versions.
 
+## v0.5.13
+
+_Released on 2025-12-31_
+
+### ✨ New Features
+
+- **vision**: Switch to x-ai/grok-vision-beta model
+- **admin**: Track Vision model costs separately from Interpretation model
+
+---
+
+_This release was automatically generated from 2 commits._
+
 ## v0.5.12
 
 _Released on 2025-12-31_
