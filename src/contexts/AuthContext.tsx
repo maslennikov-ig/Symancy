@@ -32,21 +32,31 @@ function getTelegramInitData(): string | null {
         return null;
     }
 
+    // First, try SDK approach
     try {
         // Initialize SDK first (safe to call multiple times)
         initTelegramSdk();
 
         // Use SDK's retrieveRawInitData - the officially recommended method
         const initData = retrieveRawInitData();
-        return initData || null;
+        console.log('[Auth] SDK initData:', initData ? `${initData.slice(0, 50)}...` : 'null');
+        if (initData) {
+            return initData;
+        }
     } catch (error) {
-        // SDK not available or init failed - try fallback
-        console.warn('[Auth] TMA SDK init failed, trying fallback:', error);
-
-        // Fallback to direct WebApp access for older clients
-        const fallbackData = window.Telegram?.WebApp?.initData;
-        return fallbackData || null;
+        console.warn('[Auth] TMA SDK failed:', error);
     }
+
+    // Fallback to direct WebApp access
+    const webApp = window.Telegram?.WebApp;
+    console.log('[Auth] Fallback - WebApp exists:', !!webApp);
+    console.log('[Auth] Fallback - initData:', webApp?.initData ? `${webApp.initData.slice(0, 50)}...` : 'empty');
+
+    if (webApp?.initData) {
+        return webApp.initData;
+    }
+
+    return null;
 }
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -64,10 +74,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         let cancelled = false;
 
         const initAuth = async () => {
+            console.log('[Auth] Starting auth initialization...');
+            console.log('[Auth] isTelegramWebApp:', isTelegramWebApp());
+
             // Priority 1: Check for Telegram WebApp initData (auto-auth in Mini Apps)
             // Using TMA.js SDK's retrieveRawInitData - no polling needed
             if (isTelegramWebApp()) {
                 const initData = getTelegramInitData();
+                console.log('[Auth] Got initData:', !!initData);
                 if (initData) {
                     try {
                         const response = await webAppLogin(initData);
