@@ -127,18 +127,49 @@ html.tg-webapp #root {
   overflow: hidden;
 }
 
-/* Use Telegram CSS variables when available (with fallbacks to our theme) */
+/*
+ * Telegram Mini App Theme Integration
+ *
+ * CRITICAL FIX: Telegram sends HEX colors (#ffffff), but Tailwind expects HSL values.
+ * Instead of overriding CSS variables, we apply Telegram colors directly to elements.
+ */
 .tg-webapp {
-  /* Map Telegram theme variables to our design system */
-  --background: var(--tg-bg-color, oklch(1 0 0));
-  --foreground: var(--tg-text-color, oklch(0.145 0 0));
-  --muted-foreground: var(--tg-hint-color, oklch(0.556 0 0));
-  --primary: var(--tg-button-color, oklch(0.205 0 0));
-  --primary-foreground: var(--tg-button-text-color, oklch(0.985 0 0));
-  --secondary: var(--tg-secondary-bg-color, oklch(0.97 0 0));
-  --card: var(--tg-secondary-bg-color, oklch(1 0 0));
-  --border: var(--tg-hint-color, oklch(0.922 0 0));
-  --accent: var(--tg-accent-text-color, var(--accent));
+  /* Apply Telegram colors directly (HEX format) */
+  background-color: var(--tg-bg-color) !important;
+  color: var(--tg-text-color) !important;
+}
+
+/* Override specific Tailwind utility classes for Telegram context */
+.tg-webapp .bg-background {
+  background-color: var(--tg-bg-color, inherit) !important;
+}
+
+.tg-webapp .bg-card {
+  background-color: var(--tg-secondary-bg-color, inherit) !important;
+}
+
+.tg-webapp .text-foreground {
+  color: var(--tg-text-color, inherit) !important;
+}
+
+.tg-webapp .text-muted-foreground {
+  color: var(--tg-hint-color, inherit) !important;
+}
+
+.tg-webapp .text-primary {
+  color: var(--tg-link-color, inherit) !important;
+}
+
+.tg-webapp .bg-primary {
+  background-color: var(--tg-button-color, inherit) !important;
+}
+
+.tg-webapp .text-primary-foreground {
+  color: var(--tg-button-text-color, inherit) !important;
+}
+
+.tg-webapp .border-border {
+  border-color: var(--tg-hint-color, inherit) !important;
 }
 
 /* Telegram safe area support via CSS variables */
