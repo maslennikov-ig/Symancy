@@ -5,7 +5,6 @@ import { Session, User, Provider } from '@supabase/supabase-js';
 import type { UnifiedUser, TelegramAuthData } from '../types/omnichannel';
 import { telegramLogin, webAppLogin, getCurrentUser, storeToken, getStoredToken, clearToken } from '../services/authService';
 import { isTelegramWebApp } from '../hooks/useTelegramWebApp';
-import { init as initTelegramSdk, retrieveRawInitData } from '@telegram-apps/sdk';
 
 interface AuthContextType {
     user: User | null;
@@ -23,37 +22,24 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
- * Get Telegram initData using TMA.js SDK (recommended approach)
- * The SDK parses launch parameters from URL, storage, and other sources
- * @see https://docs.telegram-mini-apps.com/packages/telegram-apps-sdk/3-x
+ * Get Telegram initData from WebApp object
+ * Uses direct access to window.Telegram.WebApp.initData which is injected by Telegram
  */
 function getTelegramInitData(): string | null {
     if (typeof window === 'undefined') {
         return null;
     }
 
-    // First, try SDK approach
-    try {
-        // Initialize SDK first (safe to call multiple times)
-        initTelegramSdk();
-
-        // Use SDK's retrieveRawInitData - the officially recommended method
-        const initData = retrieveRawInitData();
-        console.log('[Auth] SDK initData:', initData ? `${initData.slice(0, 50)}...` : 'null');
-        if (initData) {
-            return initData;
-        }
-    } catch (error) {
-        console.warn('[Auth] TMA SDK failed:', error);
-    }
-
-    // Fallback to direct WebApp access
     const webApp = window.Telegram?.WebApp;
-    console.log('[Auth] Fallback - WebApp exists:', !!webApp);
-    console.log('[Auth] Fallback - initData:', webApp?.initData ? `${webApp.initData.slice(0, 50)}...` : 'empty');
+    const initData = webApp?.initData;
 
-    if (webApp?.initData) {
-        return webApp.initData;
+    console.log('[Auth] WebApp exists:', !!webApp);
+    console.log('[Auth] initData length:', initData?.length ?? 0);
+    console.log('[Auth] initData preview:', initData ? `${initData.slice(0, 80)}...` : '(empty)');
+
+    // initData can be empty string in some contexts, check for actual content
+    if (initData && initData.length > 0) {
+        return initData;
     }
 
     return null;
