@@ -2,6 +2,30 @@
 
 User-facing release notes for all versions.
 
+## v0.5.18
+
+_Released on 2025-12-31_
+
+### ✨ New Features
+
+- **symancy-backend/src/app.ts**: Add 2 source file(s), update 1 source file(s)
+- **models**: Load LLM models from dynamic config (system_config table)
+
+### 🔧 Improvements
+
+- **Authentication**: Use TMA.js SDK retrieveRawInitData for Telegram auth
+
+### 🐛 Bug Fixes
+
+- Add Telegram WebApp SDK script to index.html
+- **Authentication**: Wait for Telegram WebApp to be injected before auth check
+- **chat**: Wait for AuthContext loading before checking user state
+- **vision**: Update MODEL_VISION to grok-4.1-fast
+
+---
+
+_This release was automatically generated from 9 commits._
+
 ## v0.5.17
 
 _Released on 2025-12-31_

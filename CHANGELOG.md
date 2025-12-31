@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.18] - 2025-12-31
+
+### Added
+- **symancy-backend/src/app.ts**: add 2 source file(s), update 1 source file(s) (85d8425)
+- **models**: load LLM models from dynamic config (system_config table) (65b142a)
+
+### Changed
+- **auth**: use TMA.js SDK retrieveRawInitData for Telegram auth (a48c91e)
+
+### Fixed
+- add Telegram WebApp SDK script to index.html (ac517f5)
+- **auth**: wait for Telegram WebApp to be injected before auth check (7c84a3a)
+- **chat**: wait for AuthContext loading before checking user state (05f5fda)
+- **vision**: update MODEL_VISION to grok-4.1-fast (2fab8f0)
+
+### Other
+- simplify initData retrieval, add more logging (9666cb3)
+- add logging for Telegram auth flow (d4cf535)
+
 ## [0.5.17] - 2025-12-31
 
 ### Fixed
