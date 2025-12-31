@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.14
+
+_Released on 2025-12-31_
+
+### ✨ New Features
+
+- **admin**: Add 8 source file(s), update 6 source file(s), +1 more
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.13
 
 _Released on 2025-12-31_
