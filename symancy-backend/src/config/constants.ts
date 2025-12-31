@@ -169,7 +169,7 @@ export const MODEL_CHAT = "xiaomi/mimo-v2-flash:free";
  * Model for vision analysis (multimodal)
  * Always operates in English - receives English prompts and returns English descriptions
  */
-export const MODEL_VISION = "x-ai/grok-vision-beta";
+export const MODEL_VISION = "x-ai/grok-4.1-fast";
 
 // =============================================================================
 // Timeouts
