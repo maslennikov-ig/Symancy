@@ -6,7 +6,7 @@
  * @module components/ErrorBoundary
  */
 import React, { Component, ReactNode } from 'react';
-import { Lang } from '../lib/i18n';
+import { Lang, translations } from '../lib/i18n';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -24,6 +24,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     super(props);
     this.state = { hasError: false };
   }
+
+  private t = (key: keyof typeof translations.en): string => {
+    const lang = this.props.language || 'ru';
+    return translations[lang]?.[key] || translations.en[key] || key;
+  };
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
@@ -76,9 +81,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               marginBottom: '8px',
             }}
           >
-            {lang === 'ru' ? 'Что-то пошло не так' :
-             lang === 'zh' ? '出了点问题' :
-             'Something went wrong'}
+            {this.t('error.boundary.title')}
           </h2>
           <p
             style={{
@@ -88,9 +91,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               maxWidth: '300px',
             }}
           >
-            {lang === 'ru' ? 'Попробуйте обновить страницу' :
-             lang === 'zh' ? '请尝试刷新页面' :
-             'Please try refreshing the page'}
+            {this.t('error.boundary.description')}
           </p>
           <button
             onClick={this.handleReload}
@@ -105,9 +106,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               cursor: 'pointer',
             }}
           >
-            {lang === 'ru' ? 'Обновить' :
-             lang === 'zh' ? '刷新' :
-             'Refresh'}
+            {this.t('error.boundary.refresh')}
           </button>
         </div>
       );

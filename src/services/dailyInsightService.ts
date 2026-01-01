@@ -138,6 +138,12 @@ export function generateDailyInsight(
   language: InsightLanguage = 'ru',
   persona: Persona = 'arina'
 ): DailyInsight {
+  // Validate language
+  const validLanguages: InsightLanguage[] = ['ru', 'en', 'zh'];
+  if (!validLanguages.includes(language)) {
+    console.warn(`[dailyInsightService] Invalid language '${language}', falling back to 'ru'`);
+  }
+
   const today = new Date();
   const dayOfYear = getDayOfYear(today);
 

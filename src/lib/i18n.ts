@@ -206,6 +206,9 @@ export const translations = {
     'chat.authRequired': 'Please open this app through Telegram to start chatting.',
     'error.title': 'Error',
     'error.reload': 'Reload Page',
+    'error.boundary.title': 'Something went wrong',
+    'error.boundary.description': 'Please try refreshing the page',
+    'error.boundary.refresh': 'Refresh',
     // Account Linking
     'link.title': 'Link Account',
     'link.subtitle': 'Please use a valid link from Telegram',
@@ -823,6 +826,9 @@ export const translations = {
     'chat.authRequired': 'Пожалуйста, откройте это приложение через Telegram для начала общения.',
     'error.title': 'Ошибка',
     'error.reload': 'Перезагрузить страницу',
+    'error.boundary.title': 'Что-то пошло не так',
+    'error.boundary.description': 'Попробуйте обновить страницу',
+    'error.boundary.refresh': 'Обновить',
     // Account Linking
     'link.title': 'Привязка аккаунта',
     'link.subtitle': 'Пожалуйста, используйте действительную ссылку из Telegram',
@@ -1440,6 +1446,9 @@ export const translations = {
     'chat.authRequired': '请通过 Telegram 打开此应用程序开始聊天。',
     'error.title': '错误',
     'error.reload': '重新加载页面',
+    'error.boundary.title': '出了点问题',
+    'error.boundary.description': '请尝试刷新页面',
+    'error.boundary.refresh': '刷新',
     // Account Linking
     'link.title': '关联账户',
     'link.subtitle': '请使用来自 Telegram 的有效链接',

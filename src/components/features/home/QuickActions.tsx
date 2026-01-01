@@ -64,7 +64,7 @@ function ChatIcon({ className }: { className?: string }) {
 /**
  * QuickActions - Two side-by-side action buttons
  */
-export function QuickActions({ t, className }: QuickActionsProps) {
+function QuickActionsComponent({ t, className }: QuickActionsProps) {
   const navigate = useNavigate();
   const { hapticFeedback, isWebApp } = useTelegramWebApp();
 
@@ -126,3 +126,5 @@ export function QuickActions({ t, className }: QuickActionsProps) {
     </div>
   );
 }
+
+export const QuickActions = React.memo(QuickActionsComponent);

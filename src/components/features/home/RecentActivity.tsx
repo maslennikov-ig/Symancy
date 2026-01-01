@@ -47,7 +47,7 @@ function formatRelativeTime(dateString: string, t: (key: string) => string): str
 /**
  * RecentActivity - Last activity card
  */
-export function RecentActivity({ t, className }: RecentActivityProps) {
+function RecentActivityComponent({ t, className }: RecentActivityProps) {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [lastItem, setLastItem] = useState<HistoryItem | null>(null);
@@ -164,3 +164,5 @@ export function RecentActivity({ t, className }: RecentActivityProps) {
     </Card>
   );
 }
+
+export const RecentActivity = React.memo(RecentActivityComponent);

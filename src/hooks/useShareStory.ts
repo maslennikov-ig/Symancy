@@ -53,7 +53,7 @@ export interface UseShareStoryReturn {
 /**
  * Bot username for deep links
  */
-const BOT_USERNAME = 'CoffeePsychologistBot';
+const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME || 'CoffeePsychologistBot';
 
 /**
  * Hook for sharing content to Telegram Stories
@@ -112,6 +112,13 @@ export function useShareStory(): UseShareStoryReturn {
         // Trigger haptic feedback for user action
         hapticFeedback.impact('medium');
 
+        // Validate image URL is publicly accessible HTTPS
+        if (!imageUrl.startsWith('https://')) {
+          console.error('[useShareStory] Image URL must be publicly accessible HTTPS URL:', imageUrl);
+          hapticFeedback.notification('error');
+          return false;
+        }
+
         const webAppWithShare = webApp as unknown as TelegramWebAppWithShareStory;
 
         // Create deep link to the specific analysis
@@ -156,6 +163,13 @@ export function useShareStory(): UseShareStoryReturn {
 
       try {
         hapticFeedback.impact('medium');
+
+        // Validate image URL is publicly accessible HTTPS
+        if (!mediaUrl.startsWith('https://')) {
+          console.error('[useShareStory] Image URL must be publicly accessible HTTPS URL:', mediaUrl);
+          hapticFeedback.notification('error');
+          return false;
+        }
 
         const webAppWithShare = webApp as unknown as TelegramWebAppWithShareStory;
 

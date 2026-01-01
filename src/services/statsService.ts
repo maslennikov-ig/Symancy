@@ -39,39 +39,42 @@ export async function getUserStats(unifiedUserId?: string): Promise<UserStats> {
       // Use custom Supabase client with Telegram JWT for RLS
       const client = createSupabaseWithToken(telegramToken);
 
-      // Count completed analyses for this unified user
-      const { count: analysesCount, error: analysesError } = await client
-        .from('analysis_history')
-        .select('*', { count: 'exact', head: true })
-        .eq('unified_user_id', unifiedUserId)
-        .eq('status', 'completed');
+      // Run all queries in parallel for better performance
+      const [analysesResult, conversationsResult, purchasesResult] =
+        await Promise.all([
+          // Count completed analyses for this unified user
+          client
+            .from('analysis_history')
+            .select('*', { count: 'exact', head: true })
+            .eq('unified_user_id', unifiedUserId)
+            .eq('status', 'completed'),
+          // Count messages via conversations table (uses message_count field)
+          client
+            .from('conversations')
+            .select('message_count')
+            .eq('unified_user_id', unifiedUserId),
+          // Sum credits used from successful purchases for this unified user
+          client
+            .from('purchases')
+            .select('credits_granted')
+            .eq('unified_user_id', unifiedUserId)
+            .eq('status', 'succeeded'),
+        ]);
 
-      if (!analysesError && analysesCount !== null) {
-        stats.analysesCount = analysesCount;
+      // Process results
+      if (!analysesResult.error && analysesResult.count !== null) {
+        stats.analysesCount = analysesResult.count;
       }
 
-      // Count messages via conversations table (uses message_count field)
-      const { data: conversations, error: convError } = await client
-        .from('conversations')
-        .select('message_count')
-        .eq('unified_user_id', unifiedUserId);
-
-      if (!convError && conversations) {
-        stats.messagesCount = conversations.reduce(
+      if (!conversationsResult.error && conversationsResult.data) {
+        stats.messagesCount = conversationsResult.data.reduce(
           (sum, c) => sum + (c.message_count || 0),
           0
         );
       }
 
-      // Sum credits used from successful purchases for this unified user
-      const { data: purchases, error: purchasesError } = await client
-        .from('purchases')
-        .select('credits_granted')
-        .eq('unified_user_id', unifiedUserId)
-        .eq('status', 'succeeded');
-
-      if (!purchasesError && purchases) {
-        stats.creditsUsed = purchases.reduce(
+      if (!purchasesResult.error && purchasesResult.data) {
+        stats.creditsUsed = purchasesResult.data.reduce(
           (sum, p) => sum + (p.credits_granted || 0),
           0
         );
@@ -90,39 +93,40 @@ export async function getUserStats(unifiedUserId?: string): Promise<UserStats> {
       return stats;
     }
 
-    // Count completed analyses for auth user
+    // Run all queries in parallel for better performance
     // Note: analysis_history uses telegram_user_id, not auth user_id
     // For web users, we need to check if they have a linked unified_user
-    const { count: analysesCount, error: analysesError } = await supabase
-      .from('analysis_history')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'completed');
+    const [analysesResult, conversationsResult, purchasesResult] =
+      await Promise.all([
+        // Count completed analyses for auth user
+        supabase
+          .from('analysis_history')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'completed'),
+        // Count messages via conversations table
+        supabase.from('conversations').select('message_count'),
+        // Sum credits used from successful purchases
+        supabase
+          .from('purchases')
+          .select('credits_granted')
+          .eq('user_id', user.id)
+          .eq('status', 'succeeded'),
+      ]);
 
-    if (!analysesError && analysesCount !== null) {
-      stats.analysesCount = analysesCount;
+    // Process results
+    if (!analysesResult.error && analysesResult.count !== null) {
+      stats.analysesCount = analysesResult.count;
     }
 
-    // Count messages via conversations table
-    const { data: conversations, error: convError } = await supabase
-      .from('conversations')
-      .select('message_count');
-
-    if (!convError && conversations) {
-      stats.messagesCount = conversations.reduce(
+    if (!conversationsResult.error && conversationsResult.data) {
+      stats.messagesCount = conversationsResult.data.reduce(
         (sum, c) => sum + (c.message_count || 0),
         0
       );
     }
 
-    // Sum credits used from successful purchases
-    const { data: purchases, error: purchasesError } = await supabase
-      .from('purchases')
-      .select('credits_granted')
-      .eq('user_id', user.id)
-      .eq('status', 'succeeded');
-
-    if (!purchasesError && purchases) {
-      stats.creditsUsed = purchases.reduce(
+    if (!purchasesResult.error && purchasesResult.data) {
+      stats.creditsUsed = purchasesResult.data.reduce(
         (sum, p) => sum + (p.credits_granted || 0),
         0
       );

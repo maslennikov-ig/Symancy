@@ -30,7 +30,7 @@ interface DailyInsightCardProps {
 /**
  * DailyInsightCard - Daily insight teaser with gradient background
  */
-export function DailyInsightCard({
+function DailyInsightCardComponent({
   t,
   language,
   dailyInsightCache,
@@ -98,3 +98,5 @@ export function DailyInsightCard({
     </Card>
   );
 }
+
+export const DailyInsightCard = React.memo(DailyInsightCardComponent);

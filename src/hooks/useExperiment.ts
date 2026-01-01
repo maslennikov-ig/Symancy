@@ -174,16 +174,23 @@ export function useExperiment(experimentId: string): UseExperimentReturn {
   const initRef = useRef(false);
 
   useEffect(() => {
-    // Wait for Telegram WebApp to initialize (if available)
-    // Give it a short timeout to avoid blocking non-Telegram users
+    // Check if we're in Telegram environment
+    const isTelegram = !!window.Telegram?.WebApp;
+
+    if (!isTelegram) {
+      // Not in Telegram - initialize immediately
+      initializeExperiment();
+      return;
+    }
+
+    // In Telegram - wait for ready event or timeout
     const initTimeout = setTimeout(() => {
       if (!initRef.current) {
         initializeExperiment();
       }
     }, 100);
 
-    // Also initialize when Telegram is ready
-    if (isReady || !window.Telegram?.WebApp) {
+    if (isReady) {
       clearTimeout(initTimeout);
       initializeExperiment();
     }
@@ -270,13 +277,23 @@ export function useAllExperiments(): {
   const initRef = useRef(false);
 
   useEffect(() => {
+    // Check if we're in Telegram environment
+    const isTelegram = !!window.Telegram?.WebApp;
+
+    if (!isTelegram) {
+      // Not in Telegram - initialize immediately
+      initializeAllExperiments();
+      return;
+    }
+
+    // In Telegram - wait for ready event or timeout
     const initTimeout = setTimeout(() => {
       if (!initRef.current) {
         initializeAllExperiments();
       }
     }, 100);
 
-    if (isReady || !window.Telegram?.WebApp) {
+    if (isReady) {
       clearTimeout(initTimeout);
       initializeAllExperiments();
     }

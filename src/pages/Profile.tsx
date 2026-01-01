@@ -26,6 +26,9 @@ import { LoaderIcon } from '../components/icons/LoaderIcon';
 import { translations, Lang, t as i18n_t } from '../lib/i18n';
 import type { UserCredits } from '../types/payment';
 
+// Build-time constant from vite.config.ts
+declare const __APP_VERSION__: string;
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -560,8 +563,8 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
     ? credits.basic_credits + credits.pro_credits + credits.cassandra_credits
     : 0;
 
-  // App version (from package.json via env)
-  const appVersion = import.meta.env.VITE_APP_VERSION || '0.5.13';
+  // App version (from package.json via vite.config.ts define)
+  const appVersion = __APP_VERSION__ || '0.5.13';
 
   // Loading state
   if (prefsLoading) {

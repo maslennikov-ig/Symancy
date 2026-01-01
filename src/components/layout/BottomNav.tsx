@@ -181,13 +181,11 @@ export function BottomNav({ language, t, className }: BottomNavProps): React.Rea
               minWidth: '64px',
               position: 'relative',
               // Smooth transition for color changes
-              transition: 'color 0.2s ease, transform 0.15s ease',
+              transition: 'color 0.2s ease',
               // Active state styling
               color: isActive
                 ? 'var(--tg-theme-button-color, hsl(var(--primary)))'
                 : 'var(--tg-theme-hint-color, hsl(var(--muted-foreground)))',
-              // Slightly scale up active icon
-              transform: isActive ? 'scale(1.05)' : 'scale(1)',
             }}
             aria-current={isActive ? 'page' : undefined}
             aria-label={t(item.labelKey)}
@@ -195,10 +193,11 @@ export function BottomNav({ language, t, className }: BottomNavProps): React.Rea
             {/* Icon container */}
             <span
               style={{
-                fontSize: isActive ? '24px' : '22px',
+                fontSize: '24px',
                 lineHeight: 1,
                 marginBottom: '2px',
-                transition: 'font-size 0.15s ease',
+                opacity: isActive ? 1 : 0.7,
+                transition: 'opacity 0.15s ease',
               }}
             >
               {item.icon}

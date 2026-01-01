@@ -25,7 +25,7 @@ interface BalanceCardProps {
 /**
  * BalanceCard - Compact credit balance display for Home dashboard
  */
-export function BalanceCard({ t, className }: BalanceCardProps) {
+function BalanceCardComponent({ t, className }: BalanceCardProps) {
   const navigate = useNavigate();
   const [credits, setCredits] = useState<UserCredits | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,6 +77,7 @@ export function BalanceCard({ t, className }: BalanceCardProps) {
 
   // Calculate totals
   const basicTotal = credits?.basic_credits ?? 0;
+  const proTotal = credits?.pro_credits ?? 0;
   const cassandraTotal = credits?.cassandra_credits ?? 0;
 
   return (
@@ -100,6 +101,18 @@ export function BalanceCard({ t, className }: BalanceCardProps) {
           {/* Divider */}
           <div className="h-10 w-px bg-border" />
 
+          {/* PRO Credits */}
+          <div className="flex flex-col items-center">
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-xl">&#127775;</span>
+              <span className="text-2xl font-bold">{proTotal}</span>
+            </div>
+            <span className="text-xs text-muted-foreground">{t('credits.type.pro')}</span>
+          </div>
+
+          {/* Divider */}
+          <div className="h-10 w-px bg-border" />
+
           {/* Cassandra Credits */}
           <div className="flex flex-col items-center">
             <div className="flex items-center gap-1.5 mb-1">
@@ -118,3 +131,5 @@ export function BalanceCard({ t, className }: BalanceCardProps) {
     </Card>
   );
 }
+
+export const BalanceCard = React.memo(BalanceCardComponent);

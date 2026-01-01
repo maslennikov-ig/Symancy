@@ -378,7 +378,7 @@ export function useCloudStorage(): CloudStorageReturn {
 
   /**
    * Update one or more preferences
-   * Uses functional update pattern to avoid stale closures and race conditions
+   * Properly awaits storage operation to avoid race conditions
    */
   const updatePreferences = useCallback(async (updates: Partial<UserPreferences>) => {
     // Wait for initial load to complete
@@ -390,26 +390,22 @@ export function useCloudStorage(): CloudStorageReturn {
     try {
       setError(null);
 
-      // Use functional update to avoid stale closures
-      setPreferences(prevPrefs => {
-        const newPrefs = { ...prevPrefs, ...updates };
+      // Calculate new preferences using current state
+      const newPrefs = { ...preferences, ...updates };
 
-        // Persist to storage asynchronously (don't await here)
-        cloudStorageSetItem(
-          STORAGE_KEYS.PREFERENCES,
-          JSON.stringify(newPrefs)
-        ).catch(err => {
-          console.error('[useCloudStorage] Failed to save preferences:', err);
-          setError(err instanceof Error ? err.message : 'Failed to save preferences');
-        });
+      // Update state immediately for responsive UI
+      setPreferences(newPrefs);
 
-        return newPrefs;
-      });
+      // Persist to storage and await result
+      await cloudStorageSetItem(
+        STORAGE_KEYS.PREFERENCES,
+        JSON.stringify(newPrefs)
+      );
     } catch (err) {
       console.error('[useCloudStorage] updatePreferences error:', err);
       setError(err instanceof Error ? err.message : 'Failed to save preferences');
     }
-  }, []); // No dependencies - stable reference
+  }, [preferences]); // Add preferences to dependency array since we read it directly
 
   /**
    * Reset preferences to defaults
