@@ -602,7 +602,7 @@ export const translations = {
     'analysis.error.analysisFailed': 'Analysis failed. Please try again.',
     // Share to Story (Telegram Mini App)
     'share.toStory.button': 'Share to Story',
-    'share.toStory.caption': '\u2615 My coffee analysis from @CoffeePsychologistBot',
+    'share.toStory.caption': '\u2615 My coffee analysis from @coffeeveda_bot',
     'share.toStory.widgetName': 'Try it!',
     'share.toStory.unavailable': 'Sharing not available',
     'share.toStory.success': 'Shared successfully!',
@@ -1222,7 +1222,7 @@ export const translations = {
     'analysis.error.analysisFailed': 'Анализ не удался. Попробуйте снова.',
     // Share to Story (Telegram Mini App)
     'share.toStory.button': 'Поделиться в Stories',
-    'share.toStory.caption': '\u2615 Мой кофейный анализ от @CoffeePsychologistBot',
+    'share.toStory.caption': '\u2615 Мой кофейный анализ от @coffeeveda_bot',
     'share.toStory.widgetName': 'Попробовать!',
     'share.toStory.unavailable': 'Функция недоступна',
     'share.toStory.success': 'Успешно опубликовано!',
@@ -1842,7 +1842,7 @@ export const translations = {
     'analysis.error.analysisFailed': '分析失败，请重试',
     // Share to Story (Telegram Mini App)
     'share.toStory.button': '分享到动态',
-    'share.toStory.caption': '\u2615 我的咖啡分析来自 @CoffeePsychologistBot',
+    'share.toStory.caption': '\u2615 我的咖啡分析来自 @coffeeveda_bot',
     'share.toStory.widgetName': '试试看！',
     'share.toStory.unavailable': '分享功能不可用',
     'share.toStory.success': '分享成功！',

@@ -53,7 +53,7 @@ export interface UseShareStoryReturn {
 /**
  * Bot username for deep links
  */
-const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME || 'CoffeePsychologistBot';
+const BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_NAME || 'coffeeveda_bot';
 
 /**
  * Hook for sharing content to Telegram Stories
@@ -126,7 +126,7 @@ export function useShareStory(): UseShareStoryReturn {
 
         // Share to story with widget link
         webAppWithShare.shareToStory!(imageUrl, {
-          text: '\u2615 My coffee analysis from @CoffeePsychologistBot',
+          text: '\u2615 My coffee analysis from @coffeeveda_bot',
           widget_link: {
             url: widgetUrl,
             name: 'Try it!',
