@@ -110,6 +110,33 @@ export interface TelegramWebApp {
     show: () => void;
     hide: () => void;
   };
+  // CloudStorage API (Bot API 6.9+)
+  CloudStorage?: {
+    getItem: (
+      key: string,
+      callback: (error: Error | null, value: string | null) => void
+    ) => void;
+    getItems: (
+      keys: string[],
+      callback: (error: Error | null, values: Record<string, string>) => void
+    ) => void;
+    setItem: (
+      key: string,
+      value: string,
+      callback?: (error: Error | null, success: boolean) => void
+    ) => void;
+    removeItem: (
+      key: string,
+      callback?: (error: Error | null, success: boolean) => void
+    ) => void;
+    removeItems: (
+      keys: string[],
+      callback?: (error: Error | null, success: boolean) => void
+    ) => void;
+    getKeys: (
+      callback: (error: Error | null, keys: string[]) => void
+    ) => void;
+  };
 }
 
 /**
@@ -425,16 +452,55 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
     });
   }, [webApp]);
 
-  // Haptic feedback
+  // Haptic feedback with Web Vibration API fallback
   const hapticFeedback = useMemo(() => ({
     impact: (style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft') => {
-      webApp?.HapticFeedback?.impactOccurred(style);
+      if (webApp?.HapticFeedback?.impactOccurred) {
+        webApp.HapticFeedback.impactOccurred(style);
+      } else if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        // Fallback to Web Vibration API
+        const durations: Record<typeof style, number> = {
+          light: 10,
+          medium: 20,
+          heavy: 30,
+          rigid: 15,
+          soft: 25
+        };
+        try {
+          navigator.vibrate(durations[style] || 20);
+        } catch {
+          // Vibration API not supported or blocked
+        }
+      }
     },
     notification: (type: 'error' | 'success' | 'warning') => {
-      webApp?.HapticFeedback?.notificationOccurred(type);
+      if (webApp?.HapticFeedback?.notificationOccurred) {
+        webApp.HapticFeedback.notificationOccurred(type);
+      } else if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        // Fallback to Web Vibration API with patterns
+        const patterns: Record<typeof type, number | number[]> = {
+          error: [50, 50, 50],
+          success: [30],
+          warning: [30, 30]
+        };
+        try {
+          navigator.vibrate(patterns[type] || [30]);
+        } catch {
+          // Vibration API not supported or blocked
+        }
+      }
     },
     selection: () => {
-      webApp?.HapticFeedback?.selectionChanged();
+      if (webApp?.HapticFeedback?.selectionChanged) {
+        webApp.HapticFeedback.selectionChanged();
+      } else if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        // Short vibration for selection feedback
+        try {
+          navigator.vibrate(5);
+        } catch {
+          // Vibration API not supported or blocked
+        }
+      }
     },
   }), [webApp]);
 

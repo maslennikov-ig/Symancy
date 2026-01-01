@@ -1,30 +1,37 @@
+/**
+ * Error Boundary Component
+ *
+ * Catches JavaScript errors in child component tree and displays fallback UI.
+ *
+ * @module components/ErrorBoundary
+ */
 import React, { Component, ReactNode } from 'react';
-import { translations, Lang, t as i18n_t } from '../lib/i18n';
+import { Lang } from '../lib/i18n';
 
-interface Props {
+interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
   language?: Lang;
 }
 
-interface State {
+interface ErrorBoundaryState {
   hasError: boolean;
-  error: Error | null;
+  error?: Error;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ErrorBoundary caught:', error, errorInfo);
-    // TODO: Send to error monitoring (Sentry, etc.)
+    console.error('[ErrorBoundary] Caught error:', error, errorInfo);
+    // TODO: Send to error tracking service (Sentry, etc.)
   }
 
   handleReload = () => {
@@ -32,48 +39,76 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   render() {
-    const { language = 'en' } = this.props;
-    const t = (key: keyof typeof translations.en) => i18n_t(key, language);
-
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
+      const lang = this.props.language || 'ru';
+
       return (
-        <div style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'var(--color-background, #fff)',
-          color: 'var(--color-foreground, #000)',
-        }}>
-          <div style={{
-            textAlign: 'center',
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '100vh',
             padding: '24px',
-            maxWidth: '400px',
-          }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '16px' }}>
-              {t('error.title')}
-            </h2>
-            <p style={{ marginBottom: '16px', color: 'var(--color-muted-foreground, #666)' }}>
-              {this.state.error?.message || 'An unexpected error occurred'}
-            </p>
-            <button
-              onClick={this.handleReload}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'var(--color-primary, #007bff)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-            >
-              {t('error.reload')}
-            </button>
+            textAlign: 'center',
+            backgroundColor: 'var(--tg-theme-bg-color, hsl(var(--background)))',
+            color: 'var(--tg-theme-text-color, hsl(var(--foreground)))',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '48px',
+              marginBottom: '16px',
+            }}
+          >
+            {/* Warning emoji for visual feedback */}
+            {'\u26A0\uFE0F'}
           </div>
+          <h2
+            style={{
+              fontSize: '20px',
+              fontWeight: 600,
+              marginBottom: '8px',
+            }}
+          >
+            {lang === 'ru' ? 'Что-то пошло не так' :
+             lang === 'zh' ? '出了点问题' :
+             'Something went wrong'}
+          </h2>
+          <p
+            style={{
+              fontSize: '14px',
+              color: 'var(--tg-theme-hint-color, hsl(var(--muted-foreground)))',
+              marginBottom: '24px',
+              maxWidth: '300px',
+            }}
+          >
+            {lang === 'ru' ? 'Попробуйте обновить страницу' :
+             lang === 'zh' ? '请尝试刷新页面' :
+             'Please try refreshing the page'}
+          </p>
+          <button
+            onClick={this.handleReload}
+            style={{
+              padding: '12px 24px',
+              fontSize: '14px',
+              fontWeight: 500,
+              backgroundColor: 'var(--tg-theme-button-color, hsl(var(--primary)))',
+              color: 'var(--tg-theme-button-text-color, hsl(var(--primary-foreground)))',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+            }}
+          >
+            {lang === 'ru' ? 'Обновить' :
+             lang === 'zh' ? '刷新' :
+             'Refresh'}
+          </button>
         </div>
       );
     }
@@ -81,3 +116,5 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
+
+export default ErrorBoundary;

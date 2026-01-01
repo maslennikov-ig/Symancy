@@ -25,12 +25,24 @@ const TestPayment = lazy(() => import('./pages/TestPayment'));
 const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
 const PaymentResult = lazy(() => import('./pages/PaymentResult'));
 const Chat = lazy(() => import('./pages/Chat'));
+const History = lazy(() => import('./pages/History'));
 const Link = lazy(() => import('./pages/Link'));
+const Profile = lazy(() => import('./pages/Profile'));
+const ProfileCredits = lazy(() => import('./pages/Profile/Credits'));
 const AdminApp = lazy(() => import('./admin/AdminApp'));
+
+// Telegram Mini App pages
+const Home = lazy(() => import('./pages/Home'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+const Analysis = lazy(() => import('./pages/Analysis'));
+
+// Layout components
+import { AppLayout } from './components/layout/AppLayout';
 import { MysticalBackground } from './components/features/MysticalCoffeeCupIllustration';
 import { OfficialLogo } from './components/icons/OfficialLogo';
 import { useAuth } from './contexts/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { useCloudStorage } from './hooks/useCloudStorage';
 
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './components/ui/card';
 import { Button } from './components/ui/button';
@@ -44,15 +56,18 @@ type FocusArea = 'wellbeing' | 'career' | 'relationships';
 type View = 'uploader' | 'history';
 
 /**
- * Wrapper component that redirects Telegram WebApp users to /chat
- * This ensures the optimized chat experience for Telegram Mini App users
+ * Wrapper component that handles Telegram WebApp initialization
+ *
+ * NEW BEHAVIOR (2025-01):
+ * - Telegram users now see Home page at `/` (no redirect to /chat)
+ * - Home page includes BottomNav for navigation to Chat, History, Profile
+ * - This guard only handles initialization, not routing
  *
  * Fixes applied:
  * - CRITICAL-BUG-1: Added proper loading state to prevent race condition
  * - HIGH-BUG-3: Added try-catch error handling for Telegram API failures
  */
 const TelegramRedirectGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const navigate = useNavigate();
   const location = useLocation();
   const [state, setState] = useState<{
     isChecking: boolean;
@@ -60,13 +75,13 @@ const TelegramRedirectGuard: React.FC<{ children: React.ReactNode }> = ({ childr
   }>({ isChecking: location.pathname === '/', error: null });
 
   useEffect(() => {
-    // Only check on home page
+    // Only perform initialization check on home page
     if (location.pathname !== '/') {
       setState({ isChecking: false, error: null });
       return;
     }
 
-    const checkAndRedirect = async () => {
+    const initializeTelegram = async () => {
       try {
         // Wait for Telegram script to load (max 200ms)
         await new Promise<void>((resolve) => {
@@ -86,12 +101,10 @@ const TelegramRedirectGuard: React.FC<{ children: React.ReactNode }> = ({ childr
           }, 50);
         });
 
-        // Check again after waiting
-        if (isTelegramWebApp()) {
-          navigate('/chat', { replace: true });
-        }
+        // Telegram WebApp initialized (or not present for web users)
+        // No redirect - let the router handle displaying appropriate content
       } catch (error) {
-        console.error('Telegram redirect guard error:', error);
+        console.error('Telegram initialization error:', error);
         setState({
           isChecking: false,
           error: error instanceof Error ? error : new Error('Failed to initialize Telegram WebApp'),
@@ -102,8 +115,8 @@ const TelegramRedirectGuard: React.FC<{ children: React.ReactNode }> = ({ childr
       setState((prev) => ({ ...prev, isChecking: false }));
     };
 
-    checkAndRedirect();
-  }, [location.pathname, navigate]);
+    initializeTelegram();
+  }, [location.pathname]);
 
   // Error state - show fallback UI
   if (state.error) {
@@ -136,6 +149,7 @@ const TelegramRedirectGuard: React.FC<{ children: React.ReactNode }> = ({ childr
 
 const App: React.FC = () => {
   const { user } = useAuth();
+  const { onboardingCompleted, isLoading: cloudStorageLoading } = useCloudStorage();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
@@ -509,11 +523,48 @@ const App: React.FC = () => {
     </div>
   );
 
+  /**
+   * HomeRoute - Renders different content based on environment
+   * - Telegram Mini App users: Show Onboarding if not completed, then Home with BottomNav
+   * - Web users: Show the original mainAppContent
+   */
+  const homeRouteElement = isTelegramWebApp() ? (
+    // Show loading while checking CloudStorage
+    cloudStorageLoading ? (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <LoaderIcon className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    ) : // Show Onboarding if not completed
+    !onboardingCompleted ? (
+      <Onboarding language={language} t={t} />
+    ) : (
+      // Show Home with BottomNav after onboarding
+      <AppLayout language={language} t={t}>
+        <Home language={language} t={t} />
+      </AppLayout>
+    )
+  ) : (
+    mainAppContent
+  );
+
+  /**
+   * Wrap Telegram Mini App routes with AppLayout for BottomNav
+   */
+  const withAppLayout = (element: React.ReactNode, showBottomNav = true) => (
+    <AppLayout language={language} t={t} showBottomNav={showBottomNav}>
+      {element}
+    </AppLayout>
+  );
+
   return (
-    <TelegramRedirectGuard>
-      <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><LoaderIcon className="w-8 h-8 animate-spin" /></div>}>
-        <Routes>
-          <Route path="/" element={mainAppContent} />
+    <ErrorBoundary language={language}>
+      <TelegramRedirectGuard>
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><LoaderIcon className="w-8 h-8 animate-spin" /></div>}>
+          <Routes>
+          {/* Home route - different content for Telegram vs Web */}
+          <Route path="/" element={homeRouteElement} />
+
+          {/* Static pages - no BottomNav */}
           <Route path="/pricing" element={<Pricing language={language} t={t} />} />
           <Route path="/payment/success" element={<PaymentSuccess />} />
           <Route path="/payment/result" element={<PaymentResult />} />
@@ -522,18 +573,43 @@ const App: React.FC = () => {
           <Route path="/contacts" element={<Contacts language={language} t={t} />} />
           <Route path="/test-payment" element={<TestPayment />} />
           <Route path="/link" element={<Link language={language} t={t} />} />
+
+          {/* Onboarding route for Telegram Mini App */}
+          <Route
+            path="/onboarding"
+            element={<Onboarding language={language} t={t} />}
+          />
+
+          {/* Photo Analysis flow for Telegram Mini App */}
+          <Route
+            path="/analysis"
+            element={<Analysis language={language} t={t} />}
+          />
+
+          {/* Telegram Mini App routes - with BottomNav */}
           <Route
             path="/chat"
-            element={
-              <ErrorBoundary language={language}>
-                <Chat language={language} t={t} />
-              </ErrorBoundary>
-            }
+            element={withAppLayout(<Chat language={language} t={t} />)}
           />
+          <Route
+            path="/history"
+            element={withAppLayout(<History language={language} t={t} />)}
+          />
+          <Route
+            path="/profile"
+            element={withAppLayout(<Profile language={language} t={t} />)}
+          />
+          <Route
+            path="/profile/credits"
+            element={withAppLayout(<ProfileCredits language={language} t={t} />)}
+          />
+
+          {/* Admin routes - no BottomNav */}
           <Route path="/admin/*" element={<AdminApp />} />
-        </Routes>
-      </Suspense>
-    </TelegramRedirectGuard>
+          </Routes>
+        </Suspense>
+      </TelegramRedirectGuard>
+    </ErrorBoundary>
   );
 };
 
