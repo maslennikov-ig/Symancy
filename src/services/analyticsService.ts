@@ -1,17 +1,32 @@
 // services/analyticsService.ts
-// Analytics service for payment funnel tracking (Feature 002-pre-mvp-payments)
+// Analytics service for payment funnel and user journey tracking
 
 import { supabase } from '../lib/supabaseClient';
 import type { ProductType } from '../types/payment';
 
 /**
- * Analytics events for payment funnel tracking
+ * Persona types for analysis tracking
+ */
+export type PersonaType = 'arina' | 'cassandra';
+
+/**
+ * Analytics events for payment funnel and user journey tracking
  */
 export type AnalyticsEvent =
+  // Payment funnel events
   | 'tariff_view'
   | 'payment_started'
   | 'payment_succeeded'
-  | 'payment_canceled';
+  | 'payment_canceled'
+  // User journey events
+  | 'app_open'
+  | 'onboarding_started'
+  | 'onboarding_completed'
+  | 'analysis_started'
+  | 'analysis_completed'
+  | 'share_clicked'
+  | 'notification_enabled'
+  | 'notification_disabled';
 
 /**
  * Options for tracking an analytics event
@@ -109,5 +124,129 @@ export function trackPaymentCanceled(
     productType,
     amountRub,
     metadata,
+  });
+}
+
+// =============================================================================
+// User Journey Tracking
+// =============================================================================
+
+/**
+ * Get the current platform (Telegram WebApp or web)
+ *
+ * @returns Platform string ('android', 'ios', 'web', 'macos', 'tdesktop', etc.)
+ */
+function getPlatform(): string {
+  if (typeof window !== 'undefined' && window.Telegram?.WebApp?.platform) {
+    return window.Telegram.WebApp.platform;
+  }
+  return 'web';
+}
+
+/**
+ * Track app open event
+ *
+ * @param source - Optional source of the app open (e.g., 'deeplink', 'notification', 'organic')
+ */
+export function trackAppOpen(source?: string): Promise<void> {
+  return trackEvent({
+    event: 'app_open',
+    metadata: {
+      source: source || 'organic',
+      platform: getPlatform(),
+    },
+  });
+}
+
+/**
+ * Track onboarding started event
+ */
+export function trackOnboardingStarted(): Promise<void> {
+  return trackEvent({
+    event: 'onboarding_started',
+  });
+}
+
+/**
+ * Track onboarding completed event
+ *
+ * @param language - The language selected during onboarding
+ */
+export function trackOnboardingCompleted(language: string): Promise<void> {
+  return trackEvent({
+    event: 'onboarding_completed',
+    metadata: {
+      language,
+    },
+  });
+}
+
+/**
+ * Track analysis started event (photo uploaded)
+ *
+ * @param persona - The persona selected for analysis ('arina' or 'cassandra')
+ */
+export function trackAnalysisStarted(persona: PersonaType): Promise<void> {
+  return trackEvent({
+    event: 'analysis_started',
+    metadata: {
+      persona,
+    },
+  });
+}
+
+/**
+ * Track analysis completed event
+ *
+ * @param persona - The persona that performed the analysis
+ * @param durationMs - Duration of the analysis in milliseconds
+ */
+export function trackAnalysisCompleted(
+  persona: PersonaType,
+  durationMs: number
+): Promise<void> {
+  return trackEvent({
+    event: 'analysis_completed',
+    metadata: {
+      persona,
+      duration_ms: durationMs,
+    },
+  });
+}
+
+/**
+ * Track share button clicked event
+ *
+ * @param contentType - Type of content being shared (e.g., 'analysis_result', 'app_link')
+ * @param method - Share method used (e.g., 'telegram', 'copy_link', 'native_share')
+ */
+export function trackShareClicked(
+  contentType: string,
+  method: string
+): Promise<void> {
+  return trackEvent({
+    event: 'share_clicked',
+    metadata: {
+      content_type: contentType,
+      method,
+    },
+  });
+}
+
+/**
+ * Track notification enabled event
+ */
+export function trackNotificationEnabled(): Promise<void> {
+  return trackEvent({
+    event: 'notification_enabled',
+  });
+}
+
+/**
+ * Track notification disabled event
+ */
+export function trackNotificationDisabled(): Promise<void> {
+  return trackEvent({
+    event: 'notification_disabled',
   });
 }

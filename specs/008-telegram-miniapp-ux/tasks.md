@@ -9,29 +9,31 @@
 ## CONTEXT FOR NEXT SESSION (English)
 
 ```
-TASK: Telegram Mini App UX implementation COMPLETE (Phase 1-3)
+TASK: Telegram Mini App UX implementation COMPLETE (ALL PHASES 1-4)
 
 COMPLETED (All Phases):
 - Phase 1: Bottom Navigation, Home Dashboard, Profile, History, App Layout, CloudStorage, i18n ✓
 - Phase 2: Onboarding Flow (4 steps), Photo Analysis Flow, PersonaSelector ✓
 - Phase 3: Daily Insights Service (14 insights × 3 languages), Statistics Service (real Supabase data) ✓
+- Phase 4: Share to Story, Push Notifications, Extended Analytics, A/B Testing Framework ✓
 
-REMAINING (Phase 4 - Growth, optional):
-1. Share functionality (shareToStory)
-2. Push notifications (Telegram bot)
-3. Analytics dashboard
-4. A/B testing framework
-
-FILES CREATED IN THIS SESSION:
-- src/pages/Onboarding/* (5 files)
-- src/pages/Analysis/* (4 files)
-- src/components/features/onboarding/StepIndicator.tsx
-- src/components/features/analysis/PersonaSelector.tsx
-- src/services/dailyInsightService.ts
-- src/services/statsService.ts
+FILES CREATED IN PHASE 4:
+- src/hooks/useShareStory.ts - Share to Telegram Stories API wrapper
+- src/hooks/useNotifications.ts - Push notification permission management
+- src/hooks/useExperiment.ts - A/B testing experiment hook
+- src/components/features/share/ShareButton.tsx - Share button component
+- src/components/features/settings/NotificationToggle.tsx - Notification toggle UI
+- src/services/abTestingService.ts - A/B testing service with 3 experiments
+- src/services/analyticsService.ts - Extended with 8 new event types
 
 TECH STACK: React 19, TypeScript, Vite, shadcn/ui, Supabase, Telegram Mini Apps SDK
 PATTERN: Orchestrator - gather context, delegate to subagents, verify with type-check/build
+
+INTEGRATION TODO (for next session if needed):
+- Add ShareButton to Analysis result page
+- Add NotificationToggle to Profile settings section
+- Add analytics tracking calls throughout the app
+- Use useExperiment hook in components for A/B testing
 ```
 
 ---
@@ -199,12 +201,114 @@ PATTERN: Orchestrator - gather context, delegate to subagents, verify with type-
 
 ---
 
-## Phase 4: Growth ❌ NOT STARTED
+## Phase 4: Growth ✅ COMPLETED
 
-- [ ] Share functionality
-- [ ] Push notifications (Telegram bot)
-- [ ] Analytics dashboard
-- [ ] A/B testing framework
+### Task 4.1: Share to Story ✅
+- **Status**: [X] Completed
+- **Priority**: P1
+- **Spec Section**: 3.1 (Sharing Features)
+
+**Requirements** (from spec + Context7):
+- Use `shareToStory` from Telegram Mini Apps SDK (Bot API 7.8+)
+- Share analysis result as story with:
+  - `media_url`: Generated image with analysis preview
+  - `text`: Short caption (0-200 chars for regular, 0-2048 for premium)
+  - `widget_link`: Deep link back to app with analysis ID
+- Availability check with `shareToStory.isAvailable()` or `shareToStory.ifAvailable()`
+
+**Files to create**:
+- `src/hooks/useShareStory.ts` - Hook with shareToStory API wrapper
+- `src/components/features/share/ShareButton.tsx` - Share button component
+- Update `src/pages/Analysis/` - Add share after analysis complete
+
+**i18n keys needed**:
+- `share.toStory.button`, `share.toStory.caption`, `share.toStory.widgetName`
+- `share.toStory.unavailable`, `share.toStory.success`
+
+---
+
+### Task 4.2: Push Notifications Opt-in ✅
+- **Status**: [X] Completed
+- **Priority**: P1
+- **Spec Section**: 3.1 (Privacy & Permissions)
+
+**Requirements** (from spec + Context7):
+- Use `requestWriteAccess` from SDK (Bot API 6.9+) to get permission
+- Show toggle in Profile settings
+- Store preference in CloudStorage AND backend (notification_settings JSONB)
+- Backend already has ProactiveMessageService for:
+  - `inactive-reminder` (7+ days inactive)
+  - `weekly-checkin` (weekly engagement)
+  - `daily-fortune` (daily insight)
+
+**Files to create**:
+- `src/hooks/useNotifications.ts` - Hook for notification permission
+- `src/components/features/settings/NotificationToggle.tsx` - UI toggle
+- Update `src/pages/Profile.tsx` - Add notification settings section
+
+**i18n keys needed**:
+- `notifications.title`, `notifications.description`
+- `notifications.enable`, `notifications.disable`
+- `notifications.permission.request`, `notifications.permission.granted`, `notifications.permission.denied`
+- `notifications.types.dailyFortune`, `notifications.types.weeklyCheckin`
+
+---
+
+### Task 4.3: Extended Analytics Service ✅
+- **Status**: [X] Completed
+- **Priority**: P2
+
+**Requirements**:
+- Extend existing `analyticsService.ts` with more events
+- Track user journey through the app
+- Insert into `payment_analytics` table (already exists)
+
+**Events to add**:
+| Event | Parameters | When |
+|-------|------------|------|
+| `app_open` | `source`, `platform` | App mounted |
+| `onboarding_started` | - | Onboarding begins |
+| `onboarding_completed` | `language` | Onboarding finished |
+| `analysis_started` | `persona` | Photo uploaded |
+| `analysis_completed` | `persona`, `duration_ms` | Analysis done |
+| `share_clicked` | `content_type`, `method` | Share button tapped |
+| `notification_enabled` | - | User enabled notifications |
+| `notification_disabled` | - | User disabled notifications |
+
+**Files to modify**:
+- `src/services/analyticsService.ts` - Add new event types and tracking functions
+- `src/App.tsx` - Track app_open
+- `src/pages/Onboarding/index.tsx` - Track onboarding events
+- `src/pages/Analysis/index.tsx` - Track analysis events
+
+---
+
+### Task 4.4: A/B Testing Framework ✅
+- **Status**: [X] Completed
+- **Priority**: P2
+
+**Requirements**:
+- Simple feature flags / experiment system
+- Store assigned variant in CloudStorage (persists across sessions)
+- Deterministic assignment based on user ID hash
+- Track variant exposure in analytics
+
+**Files to create**:
+- `src/services/abTestingService.ts` - Core A/B testing logic
+- `src/hooks/useExperiment.ts` - Hook for consuming experiments
+
+**Initial experiments**:
+| Experiment | Variants | Description |
+|------------|----------|-------------|
+| `onboarding_flow` | `control`, `simplified` | Test 4-step vs 2-step onboarding |
+| `share_button_style` | `icon`, `text`, `icon_text` | Test share button presentation |
+| `daily_insight_position` | `top`, `bottom` | Test insight card position |
+
+**API Design**:
+```typescript
+const { variant, isLoading } = useExperiment('onboarding_flow');
+// variant: 'control' | 'simplified' | null
+```
 
 ---
 

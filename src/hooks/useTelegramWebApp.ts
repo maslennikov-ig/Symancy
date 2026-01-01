@@ -137,6 +137,8 @@ export interface TelegramWebApp {
       callback: (error: Error | null, keys: string[]) => void
     ) => void;
   };
+  // Write Access API (Bot API 6.9+) - Request permission to send messages
+  requestWriteAccess?: (callback: (granted: boolean) => void) => void;
 }
 
 /**
