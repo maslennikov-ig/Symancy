@@ -532,8 +532,14 @@ export function useTelegramWebApp(): UseTelegramWebAppReturn {
 /**
  * Check if running inside Telegram WebApp (synchronous, for guards)
  *
- * @returns True if Telegram.WebApp is available with initData
+ * IMPORTANT: We check for initData, not just WebApp object existence.
+ * The SDK creates window.Telegram.WebApp even in regular browsers,
+ * but initData is only present when opened inside Telegram.
+ *
+ * @returns True if actually running inside Telegram (has initData)
  */
 export function isTelegramWebApp(): boolean {
-  return !!window.Telegram?.WebApp;
+  // Check for initData - only present when opened inside Telegram
+  // Empty string means not in Telegram, non-empty means in Telegram
+  return !!window.Telegram?.WebApp?.initData;
 }
