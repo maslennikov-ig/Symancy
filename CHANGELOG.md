@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.20] - 2026-01-01
+
+### Added
+- **telegram-miniapp**: implement Phase 4 Growth features (f9c4d18)
+- **telegram-miniapp**: implement complete UX (Phase 1-3) (e3805bf)
+
+### Fixed
+- **components**: update 13 source file(s), update docs (d220ee7)
+
 ## [0.5.19] - 2025-12-31
 
 ### Fixed

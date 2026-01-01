@@ -2,6 +2,23 @@
 
 User-facing release notes for all versions.
 
+## v0.5.20
+
+_Released on 2026-01-01_
+
+### ✨ New Features
+
+- **telegram-miniapp**: Implement Phase 4 Growth features
+- **telegram-miniapp**: Implement complete UX (Phase 1-3)
+
+### 🐛 Bug Fixes
+
+- **components**: Update 13 source file(s), update docs
+
+---
+
+_This release was automatically generated from 3 commits._
+
 ## v0.5.19
 
 _Released on 2025-12-31_
