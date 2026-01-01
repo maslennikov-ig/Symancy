@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.22
+
+_Released on 2026-01-01_
+
+### 🐛 Bug Fixes
+
+- Detect Telegram context by initData instead of WebApp object
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.21
 
 _Released on 2026-01-01_

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.22] - 2026-01-01
+
+### Fixed
+- detect Telegram context by initData instead of WebApp object (55418e6)
+
 ## [0.5.21] - 2026-01-01
 
 ### Fixed
