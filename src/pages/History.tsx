@@ -79,19 +79,6 @@ const History: React.FC<HistoryProps> = ({ language: propLanguage, t: propT }) =
     setSelectedAnalysis(null);
   }, []);
 
-  /**
-   * Handle closing history (back navigation)
-   * Navigate to home for Telegram Mini App, or go back
-   */
-  const handleClose = useCallback(() => {
-    if (isWebApp) {
-      // In Telegram Mini App, navigate to home
-      navigate('/');
-    } else {
-      // On web, go back in history
-      navigate(-1);
-    }
-  }, [navigate, isWebApp]);
 
   // Show loading while auth is initializing
   if (authLoading) {
@@ -168,27 +155,25 @@ const History: React.FC<HistoryProps> = ({ language: propLanguage, t: propT }) =
   // Main history list view
   return (
     <div
-      className="min-h-screen bg-background"
+      className="bg-background"
       style={{
+        minHeight: '100%',
         paddingTop: 'var(--tg-content-safe-area-inset-top, 0px)',
-        paddingBottom: '100px', // Space for BottomNav + safe area
       }}
     >
       {/* Header */}
-      <header className="px-4 pt-4 pb-2">
+      <header className="px-4 pt-4 pb-4">
         <h1 className="text-xl font-bold text-foreground">
           {t('history.title')}
         </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          {t('header.subtitle')}
-        </p>
       </header>
 
       {/* Main content */}
-      <main className="px-4">
+      <main className="px-4 pb-24">
         {!isAuthenticated ? (
           // Show login prompt for unauthenticated users
           <div className="text-center py-12">
+            <div className="text-4xl mb-4">📋</div>
             <h2 className="text-lg font-semibold text-foreground mb-2">
               {t('history.empty.title')}
             </h2>
@@ -206,7 +191,6 @@ const History: React.FC<HistoryProps> = ({ language: propLanguage, t: propT }) =
           >
             <HistoryDisplay
               onSelectAnalysis={handleSelectAnalysis}
-              onClose={handleClose}
               t={t as (key: string) => string}
               language={language}
             />
