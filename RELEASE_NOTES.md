@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.25
+
+_Released on 2026-01-03_
+
+### 🐛 Bug Fixes
+
+- **components**: Update 2 source file(s)
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.24
 
 _Released on 2026-01-03_
