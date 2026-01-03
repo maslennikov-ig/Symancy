@@ -193,7 +193,7 @@ export function BottomNav({ language, t, className }: BottomNavProps): React.Rea
             {/* Icon container */}
             <span
               style={{
-                fontSize: '20px',
+                fontSize: '16px',
                 lineHeight: 1,
                 marginBottom: '2px',
                 opacity: isActive ? 1 : 0.7,
@@ -253,8 +253,8 @@ export function BottomNav({ language, t, className }: BottomNavProps): React.Rea
 function HomeIcon(): React.ReactElement {
   return (
     <svg
-      width="20"
-      height="20"
+      width="16"
+      height="16"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -271,8 +271,8 @@ function HomeIcon(): React.ReactElement {
 function ChatIcon(): React.ReactElement {
   return (
     <svg
-      width="20"
-      height="20"
+      width="16"
+      height="16"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -288,8 +288,8 @@ function ChatIcon(): React.ReactElement {
 function HistoryIcon(): React.ReactElement {
   return (
     <svg
-      width="20"
-      height="20"
+      width="16"
+      height="16"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -306,8 +306,8 @@ function HistoryIcon(): React.ReactElement {
 function ProfileIcon(): React.ReactElement {
   return (
     <svg
-      width="20"
-      height="20"
+      width="16"
+      height="16"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

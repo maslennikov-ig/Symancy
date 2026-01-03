@@ -87,7 +87,16 @@ const Pricing: React.FC<PricingProps> = ({ language: propLanguage, t: propT }) =
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
+    <div
+      className="flex flex-col items-center p-4 bg-background"
+      style={{
+        minHeight: '100%',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingTop: 'var(--tg-content-safe-area-inset-top, 16px)',
+        paddingBottom: 'var(--tg-content-safe-area-inset-bottom, 16px)',
+      }}
+    >
       <div className="w-full max-w-4xl">
         {/* Page header */}
         <div className="text-center mb-12">

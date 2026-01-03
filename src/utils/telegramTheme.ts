@@ -76,10 +76,9 @@ const THEME_CSS_MAPPING: Record<keyof ThemeParams, string> = {
 const TAILWIND_COLOR_MAPPING: Array<{ cssVar: string; sources: Array<keyof ThemeParams> }> = [
   { cssVar: '--background', sources: ['bg_color'] },
   { cssVar: '--foreground', sources: ['text_color'] },
-  { cssVar: '--card', sources: ['secondary_bg_color', 'bg_color'] },
-  { cssVar: '--card-foreground', sources: ['text_color'] },
-  { cssVar: '--popover', sources: ['secondary_bg_color', 'bg_color'] },
-  { cssVar: '--popover-foreground', sources: ['text_color'] },
+  // NOTE: --card, --card-foreground, --popover, --popover-foreground are NOT mapped
+  // to preserve our dark theme card styles (dark cards in dark mode)
+  // Telegram's secondary_bg_color in dark mode is often lighter which breaks our design
   { cssVar: '--secondary', sources: ['secondary_bg_color', 'bg_color'] },
   { cssVar: '--secondary-foreground', sources: ['text_color'] },
   { cssVar: '--muted', sources: ['secondary_bg_color', 'bg_color'] },

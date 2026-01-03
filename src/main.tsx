@@ -19,6 +19,15 @@ function initTelegramWebApp() {
   // Add tg-webapp class immediately for CSS targeting
   document.documentElement.classList.add('tg-webapp');
 
+  // Set dark/light class based on Telegram's colorScheme
+  if (tg.colorScheme === 'dark') {
+    document.documentElement.classList.remove('light');
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.add('light');
+  }
+
   // Signal to Telegram that the WebApp is ready
   tg.ready();
 

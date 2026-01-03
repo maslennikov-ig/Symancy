@@ -111,20 +111,20 @@ html, body {
 }
 
 /* Telegram Mini App specific styles */
-/* When running inside Telegram WebApp, prevent vertical scrolling and use full viewport */
+/* When running inside Telegram WebApp, use full viewport with scrollable content */
 html.tg-webapp,
 html.tg-webapp body {
-  overflow: hidden;
   height: 100%;
-  position: fixed;
   width: 100%;
-  top: 0;
-  left: 0;
+  margin: 0;
+  padding: 0;
 }
 
 html.tg-webapp #root {
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 /*
