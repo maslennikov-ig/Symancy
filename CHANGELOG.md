@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.24] - 2026-01-03
+
+### Added
+- **components**: add 2 source file(s), update 5 source file(s), +2 more (84263a5)
+
+### Fixed
+- redesign History page, fix balance RLS policy (c6ad597)
+- dark theme cards, scroll, and smaller BottomNav icons (48dfd31)
+
+### Other
+- add telegram miniapp fixes continuation prompt (6b5a61b)
+
 ## [0.5.23] - 2026-01-03
 
 ### Fixed

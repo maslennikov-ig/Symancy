@@ -2,6 +2,23 @@
 
 User-facing release notes for all versions.
 
+## v0.5.24
+
+_Released on 2026-01-03_
+
+### ✨ New Features
+
+- **components**: Add 2 source file(s), update 5 source file(s), +2 more
+
+### 🐛 Bug Fixes
+
+- Redesign History page, fix balance RLS policy
+- Dark theme cards, scroll, and smaller BottomNav icons
+
+---
+
+_This release was automatically generated from 4 commits._
+
 ## v0.5.23
 
 _Released on 2026-01-03_
