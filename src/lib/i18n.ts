@@ -518,6 +518,8 @@ export const translations = {
     'home.recentActivity': 'Recent Activity',
     'home.recentActivity.empty': 'No activity yet',
     'home.recentActivity.open': 'Open',
+    'home.recentActivity.analysisCompleted': 'Analysis completed',
+    'home.recentActivity.defaultTitle': 'Coffee Analysis',
     'home.topUp': 'Top Up Balance',
     // Profile Screen (Telegram Mini App)
     'profile.title': 'Profile',
@@ -1138,6 +1140,8 @@ export const translations = {
     'home.recentActivity': 'Последняя активность',
     'home.recentActivity.empty': 'Пока нет активности',
     'home.recentActivity.open': 'Открыть',
+    'home.recentActivity.analysisCompleted': 'Анализ завершён',
+    'home.recentActivity.defaultTitle': 'Анализ кофе',
     'home.topUp': 'Пополнить баланс',
     // Profile Screen (Telegram Mini App)
     'profile.title': 'Профиль',
@@ -1758,6 +1762,8 @@ export const translations = {
     'home.recentActivity': '最近活动',
     'home.recentActivity.empty': '暂无活动',
     'home.recentActivity.open': '打开',
+    'home.recentActivity.analysisCompleted': '分析已完成',
+    'home.recentActivity.defaultTitle': '咖啡分析',
     'home.topUp': '充值',
     // Profile Screen (Telegram Mini App)
     'profile.title': '个人资料',

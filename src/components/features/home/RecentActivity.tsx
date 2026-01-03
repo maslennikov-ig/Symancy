@@ -126,7 +126,7 @@ function RecentActivityComponent({ t, className }: RecentActivityProps) {
   const analysisSummary = lastItem.analysis?.intro?.substring(0, 80) ||
     (lastItem.analysis?.sections?.[0]?.content?.substring(0, 80)) ||
     lastItem.focus_area ||
-    'Analysis completed';
+    t('home.recentActivity.analysisCompleted');
 
   const timeAgo = formatRelativeTime(lastItem.created_at, t);
 
@@ -148,7 +148,7 @@ function RecentActivityComponent({ t, className }: RecentActivityProps) {
           {/* Activity content */}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground truncate">
-              {lastItem.focus_area || 'Coffee Analysis'}
+              {lastItem.focus_area || t('home.recentActivity.defaultTitle')}
             </p>
             <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
               {analysisSummary}

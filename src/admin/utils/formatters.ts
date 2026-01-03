@@ -44,21 +44,26 @@ export const numberFormatterEN = new Intl.NumberFormat('en-US');
 /**
  * Format a date string to relative time (e.g., "2 hours ago")
  * Includes validation for invalid dates and future dates
+ * @param dateString - ISO date string
+ * @param t - Optional translation function for i18n support
  */
-export function formatRelativeTime(dateString: string | null): string {
+export function formatRelativeTime(
+  dateString: string | null,
+  t?: (key: string) => string
+): string {
   if (!dateString) return '-';
 
   const date = new Date(dateString);
   if (isNaN(date.getTime())) {
     console.warn(`Invalid date string: ${dateString}`);
-    return 'Invalid date';
+    return t?.('time.invalidDate') || 'Invalid';
   }
 
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
 
   // Handle future dates
-  if (diffMs < 0) return 'In the future';
+  if (diffMs < 0) return t?.('time.future') || 'Future';
 
   const diffSecs = Math.floor(diffMs / 1000);
   const diffMins = Math.floor(diffSecs / 60);
@@ -68,22 +73,38 @@ export function formatRelativeTime(dateString: string | null): string {
   if (diffDays > 7) {
     return date.toLocaleDateString('ru-RU');
   }
-  if (diffDays > 0) return `${diffDays}d ago`;
-  if (diffHours > 0) return `${diffHours}h ago`;
-  if (diffMins > 0) return `${diffMins}m ago`;
-  return 'Just now';
+  if (diffDays > 0) {
+    const template = t?.('time.daysAgo') || '{n}d ago';
+    return template.replace('{n}', String(diffDays));
+  }
+  if (diffHours > 0) {
+    const template = t?.('time.hoursAgo') || '{n}h ago';
+    return template.replace('{n}', String(diffHours));
+  }
+  if (diffMins > 0) {
+    const template = t?.('time.minutesAgo') || '{n}m ago';
+    return template.replace('{n}', String(diffMins));
+  }
+  return t?.('time.justNow') || 'Just now';
 }
 
 /**
  * Format date to locale string with time
+ * @param dateString - ISO date string
+ * @param locale - Locale for formatting (default: 'ru-RU')
+ * @param t - Optional translation function for error messages
  */
-export function formatDate(dateString: string | null, locale = 'ru-RU'): string {
+export function formatDate(
+  dateString: string | null,
+  locale = 'ru-RU',
+  t?: (key: string) => string
+): string {
   if (!dateString) return '-';
 
   const date = new Date(dateString);
   if (isNaN(date.getTime())) {
     console.warn(`Invalid date string: ${dateString}`);
-    return 'Invalid date';
+    return t?.('time.invalidDate') || 'Invalid';
   }
 
   return date.toLocaleDateString(locale, {
@@ -97,14 +118,21 @@ export function formatDate(dateString: string | null, locale = 'ru-RU'): string 
 
 /**
  * Format date to short locale string (no time)
+ * @param dateString - ISO date string
+ * @param locale - Locale for formatting (default: 'ru-RU')
+ * @param t - Optional translation function for error messages
  */
-export function formatDateShort(dateString: string | null, locale = 'ru-RU'): string {
+export function formatDateShort(
+  dateString: string | null,
+  locale = 'ru-RU',
+  t?: (key: string) => string
+): string {
   if (!dateString) return '-';
 
   const date = new Date(dateString);
   if (isNaN(date.getTime())) {
     console.warn(`Invalid date string: ${dateString}`);
-    return 'Invalid date';
+    return t?.('time.invalidDate') || 'Invalid';
   }
 
   return date.toLocaleDateString(locale, {
@@ -116,14 +144,21 @@ export function formatDateShort(dateString: string | null, locale = 'ru-RU'): st
 
 /**
  * Format date to full locale string (for detail views)
+ * @param dateString - ISO date string
+ * @param locale - Locale for formatting (default: 'ru-RU')
+ * @param t - Optional translation function for error messages
  */
-export function formatFullDate(dateString: string | null, locale = 'ru-RU'): string {
+export function formatFullDate(
+  dateString: string | null,
+  locale = 'ru-RU',
+  t?: (key: string) => string
+): string {
   if (!dateString) return '-';
 
   const date = new Date(dateString);
   if (isNaN(date.getTime())) {
     console.warn(`Invalid date string: ${dateString}`);
-    return 'Invalid date';
+    return t?.('time.invalidDate') || 'Invalid';
   }
 
   return date.toLocaleString(locale, {
