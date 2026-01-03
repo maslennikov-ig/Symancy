@@ -66,25 +66,27 @@ export function AppLayout({
     <div
       className="app-layout"
       style={{
-        minHeight: '100vh',
+        height: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        // Safe area padding for Telegram Mini App
-        // Use contentSafeAreaInset for scrollable content areas (not safeAreaInset which is for fixed chrome)
-        paddingTop: 'var(--tg-content-safe-area-inset-top, 0px)',
-        // Bottom padding when BottomNav is visible
-        paddingBottom: shouldShowBottomNav
-          ? `calc(${BOTTOM_NAV_HEIGHT}px + var(--tg-content-safe-area-inset-bottom, 0px))`
-          : 'var(--tg-content-safe-area-inset-bottom, 0px)',
+        overflow: 'hidden',
       }}
     >
-      {/* Page content */}
+      {/* Scrollable content area */}
       <div
         className="app-layout-content"
         style={{
           flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          // Use -webkit-overflow-scrolling for smooth scroll on iOS
+          WebkitOverflowScrolling: 'touch',
+          // Safe area padding for Telegram Mini App
+          paddingTop: 'var(--tg-content-safe-area-inset-top, 0px)',
+          // Bottom padding when BottomNav is visible
+          paddingBottom: shouldShowBottomNav
+            ? `calc(${BOTTOM_NAV_HEIGHT}px + var(--tg-content-safe-area-inset-bottom, 0px) + 16px)`
+            : 'var(--tg-content-safe-area-inset-bottom, 0px)',
         }}
       >
         {children}

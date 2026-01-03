@@ -150,9 +150,9 @@ export function BottomNav({ language, t, className }: BottomNavProps): React.Rea
         borderTop: '1px solid var(--tg-theme-hint-color, hsl(var(--border)))',
         // Safe area padding for devices with home indicators
         paddingBottom: 'var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))',
-        paddingTop: '8px',
-        paddingLeft: '8px',
-        paddingRight: '8px',
+        paddingTop: '4px',
+        paddingLeft: '4px',
+        paddingRight: '4px',
         display: 'flex',
         justifyContent: 'space-around',
         alignItems: 'flex-start',
@@ -174,11 +174,11 @@ export function BottomNav({ language, t, className }: BottomNavProps): React.Rea
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '4px 12px 8px',
+              padding: '4px 8px 6px',
               backgroundColor: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              minWidth: '64px',
+              minWidth: '56px',
               position: 'relative',
               // Smooth transition for color changes
               transition: 'color 0.2s ease',
@@ -193,7 +193,7 @@ export function BottomNav({ language, t, className }: BottomNavProps): React.Rea
             {/* Icon container */}
             <span
               style={{
-                fontSize: '24px',
+                fontSize: '20px',
                 lineHeight: 1,
                 marginBottom: '2px',
                 opacity: isActive ? 1 : 0.7,
@@ -253,8 +253,8 @@ export function BottomNav({ language, t, className }: BottomNavProps): React.Rea
 function HomeIcon(): React.ReactElement {
   return (
     <svg
-      width="24"
-      height="24"
+      width="20"
+      height="20"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -271,8 +271,8 @@ function HomeIcon(): React.ReactElement {
 function ChatIcon(): React.ReactElement {
   return (
     <svg
-      width="24"
-      height="24"
+      width="20"
+      height="20"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -288,8 +288,8 @@ function ChatIcon(): React.ReactElement {
 function HistoryIcon(): React.ReactElement {
   return (
     <svg
-      width="24"
-      height="24"
+      width="20"
+      height="20"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -306,8 +306,8 @@ function HistoryIcon(): React.ReactElement {
 function ProfileIcon(): React.ReactElement {
   return (
     <svg
-      width="24"
-      height="24"
+      width="20"
+      height="20"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

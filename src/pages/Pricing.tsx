@@ -124,7 +124,7 @@ const Pricing: React.FC<PricingProps> = ({ language: propLanguage, t: propT }) =
                   {tariff.featureKeys.map((featureKey, index) => (
                     <li
                       key={index}
-                      className="text-sm flex items-start gap-2"
+                      className="text-sm flex items-start gap-2 text-foreground"
                     >
                       <span className="text-primary">✓</span>
                       <span>{t(featureKey as any)}</span>

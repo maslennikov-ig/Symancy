@@ -8,14 +8,15 @@
 
 /**
  * Height of the bottom navigation bar in pixels
+ * Compact size for better screen utilization
  */
-export const BOTTOM_NAV_HEIGHT = 80;
+export const BOTTOM_NAV_HEIGHT = 56;
 
 /**
  * Total space needed for bottom nav + safe area padding
  * Used for bottom padding in scrollable content areas
  */
-export const BOTTOM_NAV_TOTAL_SPACE = 100;
+export const BOTTOM_NAV_TOTAL_SPACE = 72;
 
 /**
  * Default safe area fallback values

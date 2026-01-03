@@ -91,10 +91,10 @@ export async function getUserCredits(): Promise<UserCredits | null> {
     // Use custom Supabase client with Telegram JWT
     const client = createSupabaseWithToken(telegramToken);
 
-    // For Telegram users, query the omnichannel user_credits table
+    // For Telegram users, query the omnichannel unified_user_credits table
     // The JWT contains 'sub' claim with unified_user_id
     const { data, error } = await client
-      .from('user_credits')
+      .from('unified_user_credits')
       .select('*')
       .single();
 

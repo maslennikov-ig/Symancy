@@ -65,10 +65,9 @@ const Home: React.FC<HomeProps> = ({ language: propLanguage, t: propT }) => {
 
   return (
     <div
-      className="min-h-screen bg-background"
+      className="bg-background"
       style={{
-        paddingTop: 'var(--tg-content-safe-area-inset-top, 0px)',
-        paddingBottom: '100px', // Space for BottomNav + safe area
+        minHeight: '100%',
       }}
     >
       {/* Header */}
