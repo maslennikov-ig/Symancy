@@ -380,7 +380,7 @@ export function setupRouter(): void {
       .setChatMenuButton({
         menu_button: {
           type: "web_app",
-          text: "Открыть чат",
+          text: "Symancy",
           web_app: {
             url: env.WEBAPP_URL,
           },

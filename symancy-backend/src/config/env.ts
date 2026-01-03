@@ -48,7 +48,7 @@ const EnvSchema = z.object({
   LOG_LEVEL: LogLevelSchema.default("info"),
   ADMIN_CHAT_ID: z.coerce.number().optional(),
   FRONTEND_URL: z.string().url().optional(),
-  WEBAPP_URL: z.string().url().optional(),  // Telegram WebApp URL (e.g., https://symancy.ru/chat)
+  WEBAPP_URL: z.string().url().optional(),  // Telegram WebApp URL (e.g., https://symancy.ru)
 
   // Webhook Configuration
   WEBHOOK_BASE_URL: z.string().url().default("https://symancy.ru"),
