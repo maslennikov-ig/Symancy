@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.23
+
+_Released on 2026-01-03_
+
+### 🐛 Bug Fixes
+
+- Layout issues, credits query, and dark theme
+
+---
+
+_This release was automatically generated from 3 commits._
+
 ## v0.5.22
 
 _Released on 2026-01-01_

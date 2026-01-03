@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.23] - 2026-01-03
+
+### Fixed
+- layout issues, credits query, and dark theme (255427d)
+
+### Other
+- update project files (ac10a3c)
+- **release**: v0.5.23 (31a653c)
+
 ## [0.5.22] - 2026-01-01
 
 ### Fixed
