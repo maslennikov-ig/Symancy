@@ -2,6 +2,19 @@
 
 User-facing release notes for all versions.
 
+## v0.5.27
+
+_Released on 2026-01-03_
+
+### 🐛 Bug Fixes
+
+- **i18n**: Replace hardcoded text with translations
+- **telegram**: Rename menu button to 'Symancy' and open Home by default
+
+---
+
+_This release was automatically generated from 2 commits._
+
 ## v0.5.26
 
 _Released on 2026-01-03_

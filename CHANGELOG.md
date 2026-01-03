@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.27] - 2026-01-03
+
+### Fixed
+- **i18n**: replace hardcoded text with translations (4872d49)
+- **telegram**: rename menu button to 'Symancy' and open Home by default (72280ce)
+
 ## [0.5.26] - 2026-01-03
 
 ### Fixed
