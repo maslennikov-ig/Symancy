@@ -194,19 +194,22 @@ export function ChatWindow({
             rows={1}
             style={{
               flex: 1,
-              padding: '12px 16px',
+              // Compact padding in Telegram to fit placeholder in one line
+              padding: isTelegramMiniApp ? '10px 12px' : '12px 16px',
               borderRadius: '20px',
               border: '1px solid var(--tg-hint-color, hsl(var(--border)))',
               // Use Telegram theme colors with fallback
               backgroundColor: 'var(--tg-secondary-bg-color, hsl(var(--secondary)))',
               color: 'var(--tg-text-color, hsl(var(--foreground)))',
-              fontSize: '1rem',
+              // Smaller font in Telegram to fit placeholder
+              fontSize: isTelegramMiniApp ? '0.9375rem' : '1rem',
               resize: 'none',
               outline: 'none',
               fontFamily: 'inherit',
-              minHeight: '44px',
+              minHeight: isTelegramMiniApp ? '40px' : '44px',
               maxHeight: '120px',
-              overflow: 'auto',
+              // Hide scroll for single-row mode, show only when content grows
+              overflow: inputValue.includes('\n') ? 'auto' : 'hidden',
             }}
           />
           <button

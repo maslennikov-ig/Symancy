@@ -181,11 +181,12 @@ export function BottomNav({ language, t, className }: BottomNavProps): React.Rea
               minWidth: '56px',
               position: 'relative',
               // Smooth transition for color changes
-              transition: 'color 0.2s ease',
-              // Active state styling
+              transition: 'color 0.2s ease, opacity 0.2s ease',
+              // Active state styling - use text-color with opacity for inactive to ensure visibility
               color: isActive
                 ? 'var(--tg-theme-button-color, hsl(var(--primary)))'
-                : 'var(--tg-theme-hint-color, hsl(var(--muted-foreground)))',
+                : 'var(--tg-theme-text-color, hsl(var(--foreground)))',
+              opacity: isActive ? 1 : 0.6,
             }}
             aria-current={isActive ? 'page' : undefined}
             aria-label={t(item.labelKey)}
@@ -193,11 +194,12 @@ export function BottomNav({ language, t, className }: BottomNavProps): React.Rea
             {/* Icon container */}
             <span
               style={{
-                fontSize: '16px',
+                fontSize: '22px',
                 lineHeight: 1,
                 marginBottom: '2px',
-                opacity: isActive ? 1 : 0.7,
-                transition: 'opacity 0.15s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
               {item.icon}
@@ -253,8 +255,8 @@ export function BottomNav({ language, t, className }: BottomNavProps): React.Rea
 function HomeIcon(): React.ReactElement {
   return (
     <svg
-      width="16"
-      height="16"
+      width="22"
+      height="22"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -271,8 +273,8 @@ function HomeIcon(): React.ReactElement {
 function ChatIcon(): React.ReactElement {
   return (
     <svg
-      width="16"
-      height="16"
+      width="22"
+      height="22"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -288,8 +290,8 @@ function ChatIcon(): React.ReactElement {
 function HistoryIcon(): React.ReactElement {
   return (
     <svg
-      width="16"
-      height="16"
+      width="22"
+      height="22"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -306,8 +308,8 @@ function HistoryIcon(): React.ReactElement {
 function ProfileIcon(): React.ReactElement {
   return (
     <svg
-      width="16"
-      height="16"
+      width="22"
+      height="22"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
