@@ -78,6 +78,17 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 /**
+ * Get filtered nav items based on context
+ * In Telegram Mini App, hide Chat (use native Telegram chat instead)
+ */
+function getNavItems(isTelegramMiniApp: boolean): NavItem[] {
+  if (isTelegramMiniApp) {
+    return NAV_ITEMS.filter(item => item.id !== 'chat');
+  }
+  return NAV_ITEMS;
+}
+
+/**
  * Routes where BottomNav should be hidden
  */
 const HIDDEN_ROUTES = ['/admin', '/payment', '/terms', '/contacts'];
@@ -162,7 +173,7 @@ export function BottomNav({ language, t, className }: BottomNavProps): React.Rea
       }}
       aria-label="Main navigation"
     >
-      {NAV_ITEMS.map((item) => {
+      {getNavItems(isWebApp).map((item) => {
         const isActive = isActiveRoute(location.pathname, item.route);
 
         return (

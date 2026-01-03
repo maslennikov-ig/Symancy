@@ -3,7 +3,9 @@
  *
  * Displays a daily insight teaser with coffee-themed gradient background.
  * Uses CloudStorage cache if available for the insight content.
- * "Learn more" button navigates to chat with insight context.
+ * "Learn more" button:
+ * - In Telegram Mini App: closes app to return to native bot chat
+ * - On Web: navigates to in-app chat with insight context
  *
  * @module components/features/home/DailyInsightCard
  */
@@ -14,6 +16,7 @@ import { Button } from '../../ui/button';
 import { cn } from '../../../lib/utils';
 import type { DailyInsightCache } from '../../../hooks/useCloudStorage';
 import { getInsightContent } from '../../../services/dailyInsightService';
+import { useTelegramWebApp } from '../../../hooks/useTelegramWebApp';
 
 interface DailyInsightCardProps {
   /** Translation function */
@@ -37,6 +40,7 @@ function DailyInsightCardComponent({
   className,
 }: DailyInsightCardProps) {
   const navigate = useNavigate();
+  const { isWebApp, close, hapticFeedback } = useTelegramWebApp();
 
   // Use cached insight if valid, or generate new one using the service
   const insightContent = useMemo(() => {
@@ -49,7 +53,14 @@ function DailyInsightCardComponent({
     : insightContent;
 
   const handleLearnMore = () => {
-    // Navigate to chat with insight context
+    if (isWebApp) {
+      // In Telegram Mini App, close to return to native bot chat
+      // User can ask about the insight directly in Telegram
+      hapticFeedback.impact('light');
+      close();
+      return;
+    }
+    // On web, navigate to in-app chat with insight context
     navigate('/chat', {
       state: {
         initialMessage: insightContent,

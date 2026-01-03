@@ -66,14 +66,17 @@ function ChatIcon({ className }: { className?: string }) {
  */
 function QuickActionsComponent({ t, className }: QuickActionsProps) {
   const navigate = useNavigate();
-  const { hapticFeedback, isWebApp } = useTelegramWebApp();
+  const { hapticFeedback, isWebApp, close } = useTelegramWebApp();
 
   const handleNewAnalysis = () => {
     // Trigger haptic feedback on Telegram
     if (isWebApp) {
       hapticFeedback.impact('medium');
+      // In Telegram Mini App, close to return to bot chat for photo upload
+      close();
+      return;
     }
-    // Navigate to chat - photo upload is handled in chat
+    // On web, navigate to chat with camera intent
     navigate('/chat', {
       state: {
         openCamera: true,
@@ -86,7 +89,11 @@ function QuickActionsComponent({ t, className }: QuickActionsProps) {
     // Trigger haptic feedback on Telegram
     if (isWebApp) {
       hapticFeedback.impact('light');
+      // In Telegram Mini App, close to return to native bot chat
+      close();
+      return;
     }
+    // On web, navigate to in-app chat
     navigate('/chat');
   };
 
