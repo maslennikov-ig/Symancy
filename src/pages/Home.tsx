@@ -88,6 +88,7 @@ const Home: React.FC<HomeProps> = ({ language: propLanguage, t: propT }) => {
         {isAuthenticated && (
           <BalanceCard
             t={t as (key: string) => string}
+            language={language}
           />
         )}
 

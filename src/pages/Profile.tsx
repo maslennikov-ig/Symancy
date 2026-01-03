@@ -23,6 +23,7 @@ import { getUserStats, type UserStats } from '../services/statsService';
 import { Card, CardContent } from '../components/ui/card';
 import { Switch } from '../components/ui/switch';
 import { LoaderIcon } from '../components/icons/LoaderIcon';
+import { TelegramLinkPrompt } from '../components/features/auth/TelegramLinkPrompt';
 import { translations, Lang, t as i18n_t } from '../lib/i18n';
 import type { UserCredits } from '../types/payment';
 
@@ -456,7 +457,7 @@ function ThemeSelector({
 export function Profile({ language, t }: ProfileProps): React.ReactElement {
   const navigate = useNavigate();
   const { user: telegramUser, hapticFeedback, isWebApp } = useTelegramWebApp();
-  const { unifiedUser, isTelegramUser } = useAuth();
+  const { user, unifiedUser, isTelegramUser } = useAuth();
   const {
     preferences,
     isLoading: prefsLoading,
@@ -469,22 +470,29 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
   const [stats, setStats] = useState<UserStats>({ analysesCount: 0, messagesCount: 0, creditsUsed: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
 
+  // Fetch credits function - extracted for reuse on Telegram link
+  const fetchCredits = useCallback(async () => {
+    try {
+      setCreditsLoading(true);
+      const result = await getUserCredits();
+      setCredits(result);
+    } catch (error) {
+      console.error('Failed to fetch credits:', error);
+    } finally {
+      setCreditsLoading(false);
+    }
+  }, []);
+
   // Fetch credits on mount
   useEffect(() => {
-    async function fetchCredits() {
-      try {
-        setCreditsLoading(true);
-        const result = await getUserCredits();
-        setCredits(result);
-      } catch (error) {
-        console.error('Failed to fetch credits:', error);
-      } finally {
-        setCreditsLoading(false);
-      }
-    }
-
     fetchCredits();
-  }, []);
+  }, [fetchCredits]);
+
+  // Handler for when Telegram is successfully linked
+  const handleTelegramLinked = useCallback(() => {
+    // Refresh credits after linking (credits are merged on backend)
+    fetchCredits();
+  }, [fetchCredits]);
 
   // Fetch real stats from Supabase
   useEffect(() => {
@@ -537,26 +545,26 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
 
   const handleNavigateToHelp = useCallback(() => {
     hapticFeedback.impact('light');
-    // TODO: Navigate to help page or open external link
-    window.open('https://symancy.ru/help', '_blank');
-  }, [hapticFeedback]);
+    // Navigate to contacts page (in-app) instead of external link
+    navigate('/contacts');
+  }, [hapticFeedback, navigate]);
 
   const handleNavigateToAbout = useCallback(() => {
     hapticFeedback.impact('light');
     navigate('/terms');
   }, [hapticFeedback, navigate]);
 
-  // Get user display info
-  const displayName =
-    telegramUser?.first_name ||
-    unifiedUser?.display_name ||
-    t('profile.title');
-  const fullName = telegramUser
-    ? `${telegramUser.first_name}${telegramUser.last_name ? ` ${telegramUser.last_name}` : ''}`
-    : displayName;
-  const username = telegramUser?.username;
-  const isPremium = telegramUser?.is_premium;
-  const photoUrl = telegramUser?.photo_url;
+  // Get user display info - support both Telegram and Web users
+  const isWebUser = !isTelegramUser && !!user;
+  const displayName = isWebUser
+    ? (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || t('profile.title'))
+    : (telegramUser?.first_name || unifiedUser?.display_name || t('profile.title'));
+  const fullName = isWebUser
+    ? displayName
+    : (telegramUser ? `${telegramUser.first_name}${telegramUser.last_name ? ` ${telegramUser.last_name}` : ''}` : displayName);
+  const username = isWebUser ? user?.email : telegramUser?.username;
+  const isPremium = !isWebUser && telegramUser?.is_premium;
+  const photoUrl = isWebUser ? user?.user_metadata?.avatar_url : telegramUser?.photo_url;
 
   // Calculate total credits
   const totalCredits = credits
@@ -857,98 +865,160 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
             {t('profile.accountLinking')}
           </h2>
 
-          {/* Telegram - always linked in Mini App */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '12px 0',
-              borderBottom: '1px solid var(--tg-theme-hint-color, hsl(var(--border)))',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '20px' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-                </svg>
-              </span>
-              <span
-                style={{
-                  color: 'var(--tg-theme-text-color, hsl(var(--foreground)))',
-                  fontSize: '15px',
-                }}
-              >
-                Telegram
-              </span>
-            </div>
-            <span
-              style={{
-                color: 'var(--tg-theme-button-color, hsl(var(--primary)))',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-            >
-              <CheckIcon />
-            </span>
-          </div>
+          {/* Show TelegramLinkPrompt for web users without linked Telegram */}
+          {isWebUser && !unifiedUser?.is_telegram_linked && (
+            <TelegramLinkPrompt
+              language={language}
+              t={t}
+              onLinked={handleTelegramLinked}
+              variant="inline"
+            />
+          )}
 
-          {/* Email - for future linking */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '12px 0',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '20px' }}>
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                  <polyline points="22,6 12,13 2,6" />
-                </svg>
-              </span>
-              <span
-                style={{
-                  color: 'var(--tg-theme-text-color, hsl(var(--foreground)))',
-                  fontSize: '15px',
-                }}
-              >
-                Email
-              </span>
-            </div>
-            <button
+          {/* Telegram linked status - for Telegram users or web users with linked Telegram */}
+          {(isTelegramUser || unifiedUser?.is_telegram_linked) && (
+            <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                border: '1px solid var(--tg-theme-button-color, hsl(var(--primary)))',
-                backgroundColor: 'transparent',
-                color: 'var(--tg-theme-button-color, hsl(var(--primary)))',
-                fontSize: '13px',
-                cursor: 'pointer',
-              }}
-              onClick={() => {
-                hapticFeedback.impact('light');
-                // TODO: Implement email linking
+                justifyContent: 'space-between',
+                padding: '12px 0',
+                borderBottom: isWebUser ? '1px solid var(--tg-theme-hint-color, hsl(var(--border)))' : 'none',
               }}
             >
-              <PlusIcon />
-              <span>Link</span>
-            </button>
-          </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '20px' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+                  </svg>
+                </span>
+                <span
+                  style={{
+                    color: 'var(--tg-theme-text-color, hsl(var(--foreground)))',
+                    fontSize: '15px',
+                  }}
+                >
+                  Telegram
+                </span>
+              </div>
+              <span
+                style={{
+                  color: 'var(--tg-theme-button-color, hsl(var(--primary)))',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <CheckIcon />
+              </span>
+            </div>
+          )}
+
+          {/* Email status for web users */}
+          {isWebUser && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 0',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '20px' }}>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <polyline points="22,6 12,13 2,6" />
+                  </svg>
+                </span>
+                <span
+                  style={{
+                    color: 'var(--tg-theme-text-color, hsl(var(--foreground)))',
+                    fontSize: '15px',
+                  }}
+                >
+                  {user?.email || 'Email'}
+                </span>
+              </div>
+              <span
+                style={{
+                  color: 'var(--tg-theme-button-color, hsl(var(--primary)))',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <CheckIcon />
+              </span>
+            </div>
+          )}
+
+          {/* Email linking for Telegram users (not web users) */}
+          {isTelegramUser && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 0',
+                borderTop: '1px solid var(--tg-theme-hint-color, hsl(var(--border)))',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '20px' }}>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <polyline points="22,6 12,13 2,6" />
+                  </svg>
+                </span>
+                <span
+                  style={{
+                    color: 'var(--tg-theme-text-color, hsl(var(--foreground)))',
+                    fontSize: '15px',
+                  }}
+                >
+                  Email
+                </span>
+              </div>
+              <button
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--tg-theme-button-color, hsl(var(--primary)))',
+                  backgroundColor: 'transparent',
+                  color: 'var(--tg-theme-button-color, hsl(var(--primary)))',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                }}
+                onClick={() => {
+                  hapticFeedback.impact('light');
+                  // TODO: Implement email linking
+                }}
+              >
+                <PlusIcon />
+                <span>Link</span>
+              </button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

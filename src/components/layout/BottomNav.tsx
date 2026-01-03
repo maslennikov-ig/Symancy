@@ -80,7 +80,7 @@ const NAV_ITEMS: NavItem[] = [
 /**
  * Routes where BottomNav should be hidden
  */
-const HIDDEN_ROUTES = ['/admin', '/payment', '/terms', '/contacts', '/pricing'];
+const HIDDEN_ROUTES = ['/admin', '/payment', '/terms', '/contacts'];
 
 /**
  * Check if current route matches nav item

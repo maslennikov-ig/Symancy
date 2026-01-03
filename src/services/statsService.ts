@@ -39,14 +39,34 @@ export async function getUserStats(unifiedUserId?: string): Promise<UserStats> {
       // Use custom Supabase client with Telegram JWT for RLS
       const client = createSupabaseWithToken(telegramToken);
 
+      // First, get the telegram_id from unified_users table
+      // This is needed because analysis_history stores telegram_user_id, not unified_user_id
+      const { data: unifiedUserData, error: userError } = await client
+        .from('unified_users')
+        .select('telegram_id')
+        .eq('id', unifiedUserId)
+        .single();
+
+      if (userError) {
+        console.warn('[statsService] Failed to fetch unified user:', userError);
+        return stats; // Return default stats
+      }
+
+      const telegramUserId = unifiedUserData?.telegram_id;
+
+      if (!telegramUserId) {
+        console.warn('[statsService] No telegram_id found for unified user:', unifiedUserId);
+        return stats; // Return default stats - analysis_history requires telegram_user_id
+      }
+
       // Run all queries in parallel for better performance
       const [analysesResult, conversationsResult, purchasesResult] =
         await Promise.all([
-          // Count completed analyses for this unified user
+          // Count completed analyses by telegram_user_id (always populated in analysis_history)
           client
             .from('analysis_history')
             .select('*', { count: 'exact', head: true })
-            .eq('unified_user_id', unifiedUserId)
+            .eq('telegram_user_id', telegramUserId)
             .eq('status', 'completed'),
           // Count messages via conversations table (uses message_count field)
           client
