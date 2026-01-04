@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.40
+
+_Released on 2026-01-04_
+
+### 🔧 Improvements
+
+- **share**: Share text instead of image, copy to clipboard in WebApp
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.39
 
 _Released on 2026-01-04_
