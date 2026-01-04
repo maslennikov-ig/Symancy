@@ -159,7 +159,6 @@ export async function requestEmailLink(telegramToken: string, email: string): Pr
   const linkTokenResponse = await fetch(`${API_BASE_URL}/api/auth/link-token`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
       'Authorization': `Bearer ${telegramToken}`,
     },
   });
