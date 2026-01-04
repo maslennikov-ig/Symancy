@@ -21,10 +21,21 @@ const SCHEDULES = {
     tz: "Europe/Moscow",
     description: "Weekly check-in for all active users",
   },
-  "daily-fortune": {
+  // DEPRECATED: Replaced by morning-insight
+  // "daily-fortune": {
+  //   cron: "0 8 * * *",
+  //   tz: "Europe/Moscow",
+  //   description: "Daily fortune for users with spiritual goal",
+  // },
+  "morning-insight": {
     cron: "0 8 * * *", // Daily at 8:00 MSK
     tz: "Europe/Moscow",
-    description: "Daily fortune for users with spiritual goal",
+    description: "Generate and send personalized morning advice",
+  },
+  "evening-insight": {
+    cron: "0 20 * * *", // Daily at 20:00 MSK
+    tz: "Europe/Moscow",
+    description: "Generate and send personalized evening insight",
   },
   "photo-cleanup": {
     cron: "0 3 * * *", // Daily at 3:00 AM MSK

@@ -42,7 +42,9 @@ export interface ProactiveEligibleUser {
 export type ProactiveMessageType =
   | "inactive-reminder"
   | "weekly-checkin"
-  | "daily-fortune";
+  | "daily-fortune"
+  | "morning-insight"
+  | "evening-insight";
 
 /**
  * Result of sending proactive message
