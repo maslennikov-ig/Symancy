@@ -2,26 +2,93 @@ import { supabase, createSupabaseWithToken } from '../lib/supabaseClient';
 import { AnalysisResponse } from './analysisService';
 import { getStoredToken } from './authService';
 
+/**
+ * UI-expected format for history items
+ * This matches what HistoryDisplay, History page, and App.tsx expect
+ */
 export interface HistoryItem {
   id: string;
   created_at: string;
   analysis: AnalysisResponse;
   focus_area: string;
+  /** Optional image URL for display */
+  image_url?: string;
+  /** Original persona (arina, cassandra, etc.) */
+  persona?: string;
 }
 
-// Assumes a table 'analysis_history' exists with columns:
-// id (uuid, pk), user_id (uuid, fk to auth.users), created_at (timestamptz), 
-// analysis (jsonb), focus_area (text).
-// RLS is enabled: `auth.uid() = user_id` for SELECT, INSERT.
+/**
+ * Raw database format for analysis_history table
+ */
+interface DbHistoryItem {
+  id: string;
+  telegram_user_id: number;
+  image_url: string | null;
+  analysis_type: string;
+  persona: string;
+  interpretation: string | null;
+  tokens_used: number | null;
+  model_used: string | null;
+  processing_time_ms: number | null;
+  status: string;
+  error_message: string | null;
+  created_at: string;
+  completed_at: string | null;
+  unified_user_id: string | null;
+  vision_model_used: string | null;
+  vision_tokens_used: number | null;
+}
 
+/**
+ * Map analysis_type to focus_area for UI display
+ * Maps to valid FocusArea values: 'wellbeing' | 'career' | 'relationships'
+ */
+function mapAnalysisTypeToFocusArea(analysisType: string): string {
+  const mapping: Record<string, string> = {
+    basic: 'wellbeing',
+    premium: 'wellbeing',
+    cassandra: 'wellbeing',
+    love: 'relationships',
+    career: 'career',
+    health: 'wellbeing',
+    wealth: 'career',
+    relationships: 'relationships',
+    wellbeing: 'wellbeing',
+  };
+  return mapping[analysisType] || 'wellbeing';
+}
+
+/**
+ * Transform database record to UI-expected format
+ */
+function transformDbToUi(dbItem: DbHistoryItem): HistoryItem {
+  return {
+    id: dbItem.id,
+    created_at: dbItem.created_at,
+    analysis: {
+      intro: dbItem.interpretation || '',
+      sections: [], // DB stores plain text, no sections
+    },
+    focus_area: mapAnalysisTypeToFocusArea(dbItem.analysis_type),
+    image_url: dbItem.image_url || undefined,
+    persona: dbItem.persona,
+  };
+}
+
+// Note: saveAnalysis is not currently used - analyses are saved by the backend
+// Keeping for potential future web-only flow
 export const saveAnalysis = async (userId: string, analysis: AnalysisResponse, focusArea: string): Promise<void> => {
   const { error } = await supabase
     .from('analysis_history')
-    // FIX: The variable is named `focusArea`, which needs to be mapped to the `focus_area` database column.
-    .insert([{ user_id: userId, analysis, focus_area: focusArea }]);
+    .insert([{
+      user_id: userId,
+      interpretation: analysis.intro,
+      analysis_type: focusArea,
+      persona: 'arina',
+      status: 'completed'
+    }]);
 
   if (error) {
-    // Log error but don't throw, as it's a non-critical feature.
     console.warn('Failed to save analysis history:', error.message);
   }
 };
@@ -40,7 +107,8 @@ export const getHistory = async (): Promise<HistoryItem[]> => {
     // For Supabase Auth users: RLS uses auth.uid()
     const { data, error } = await client
         .from('analysis_history')
-        .select('*')
+        .select('id, telegram_user_id, image_url, analysis_type, persona, interpretation, status, created_at, completed_at, unified_user_id')
+        .eq('status', 'completed') // Only show completed analyses
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -48,5 +116,7 @@ export const getHistory = async (): Promise<HistoryItem[]> => {
         throw new Error(error.message);
     }
 
-    return (data as HistoryItem[]) || [];
+    // Transform database format to UI format
+    const dbItems = (data || []) as DbHistoryItem[];
+    return dbItems.map(transformDbToUi);
 };
