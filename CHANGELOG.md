@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.41] - 2026-01-04
+
+### Fixed
+- **share**: increase share text limit from 500 to 2000 characters (4d4ff52)
+
 ## [0.5.40] - 2026-01-04
 
 ### Changed
