@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.29] - 2026-01-04
+
+### Added
+- **symancy-backend/src/api/auth/link.ts**: add 1 source file(s), update 4 source file(s) (779a71c)
+
 ## [0.5.28] - 2026-01-04
 
 ### Fixed

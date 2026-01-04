@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.29
+
+_Released on 2026-01-04_
+
+### ✨ New Features
+
+- **symancy-backend/src/api/auth/link.ts**: Add 1 source file(s), update 4 source file(s)
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.28
 
 _Released on 2026-01-04_

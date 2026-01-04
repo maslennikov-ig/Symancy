@@ -1,6 +1,6 @@
 {
   "name": "@symancy/shared-types",
-  "version": "0.5.28",
+  "version": "0.5.29",
   "description": "Shared TypeScript types and Zod schemas for Symancy",
   "type": "module",
   "main": "./dist/index.js",
