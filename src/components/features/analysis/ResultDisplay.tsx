@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { generateShareableImage } from '../../../services/imageGenerator';
 import { ShareIcon } from '../../icons/ShareIcon';
 import { LoaderIcon } from '../../icons/LoaderIcon';
 import { ScrollArea } from '../../ui/scroll-area';
@@ -24,60 +23,39 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme,
   const handleShare = async () => {
     setIsSharing(true);
     try {
-        // Use first section if available, otherwise create a section from intro
-        const mainSection = analysis.sections[0] || (analysis.intro ? {
-            title: t('result.title'),
-            content: analysis.intro.substring(0, 500) + (analysis.intro.length > 500 ? '...' : '')
-        } : null);
+        // Get text content to share
+        const textToShare = analysis.intro ||
+            analysis.sections.map(s => `${s.title}\n${s.content}`).join('\n\n') ||
+            '';
 
-        if (!mainSection) {
+        if (!textToShare) {
             throw new Error("No analysis content found to share.");
         }
 
-        const imageTranslations = {
-            title: t('header.title'),
-            footer: t('share.image.footer'),
-        };
+        // Prepare share text with app link
+        const shareText = `${t('share.text')}\n\n${textToShare.substring(0, 500)}${textToShare.length > 500 ? '...' : ''}\n\n${t('share.image.footer')}`;
 
-        const imageBlob = await generateShareableImage(mainSection, theme, imageTranslations);
-        if (!imageBlob) {
-            throw new Error("Failed to generate image.");
-        }
-
-        const file = new File([imageBlob], 'coffee-analysis.png', { type: 'image/png' });
-        const shareData = {
-            title: t('share.title'),
-            text: t('share.text'),
-            files: [file],
-        };
-
-        // Check if we're in Telegram WebApp on desktop
-        // navigator.share() on Windows opens system dialog, not Telegram
-        const isDesktopWebApp = isTelegramWebApp() &&
-            (window.Telegram?.WebApp?.platform === 'tdesktop' ||
-             window.Telegram?.WebApp?.platform === 'macos' ||
-             window.Telegram?.WebApp?.platform === 'web');
-
-        if (!isDesktopWebApp && navigator.canShare && navigator.canShare(shareData)) {
-            // Mobile: use native share (works well on iOS/Android)
-            await navigator.share(shareData);
+        // In Telegram WebApp: copy to clipboard and show message
+        if (isTelegramWebApp()) {
+            await navigator.clipboard.writeText(shareText);
+            window.Telegram?.WebApp?.showAlert?.(t('share.copiedToClipboard') || 'Copied to clipboard! Paste in any chat to share.');
+        } else if (navigator.share) {
+            // Native share for browsers that support it
+            await navigator.share({
+                title: t('share.title'),
+                text: shareText,
+            });
         } else {
-            // Desktop WebApp or unsupported: download the image
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(imageBlob);
-            link.download = 'coffee-analysis.png';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            // Show success message for WebApp users
-            if (isTelegramWebApp()) {
-                window.Telegram?.WebApp?.showAlert?.(t('share.downloadSuccess') || 'Image saved! You can now share it.');
-            }
+            // Fallback: copy to clipboard
+            await navigator.clipboard.writeText(shareText);
+            alert(t('share.copiedToClipboard') || 'Copied to clipboard!');
         }
     } catch (err) {
         console.error("Sharing failed:", err);
-        alert(t('share.error'));
+        // If clipboard failed, show the text in alert
+        if (err instanceof Error && err.name === 'NotAllowedError') {
+            alert(t('share.error'));
+        }
     } finally {
         setIsSharing(false);
     }
