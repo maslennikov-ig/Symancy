@@ -32,8 +32,8 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme,
             throw new Error("No analysis content found to share.");
         }
 
-        // Prepare share text with app link
-        const shareText = `${t('share.text')}\n\n${textToShare.substring(0, 500)}${textToShare.length > 500 ? '...' : ''}\n\n${t('share.image.footer')}`;
+        // Prepare share text with app link (2000 chars fits well in Telegram messages, max 4096)
+        const shareText = `${t('share.text')}\n\n${textToShare.substring(0, 2000)}${textToShare.length > 2000 ? '...' : ''}\n\n${t('share.image.footer')}`;
 
         // In Telegram WebApp: copy to clipboard and show message
         if (isTelegramWebApp()) {
