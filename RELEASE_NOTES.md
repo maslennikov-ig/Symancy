@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.43
+
+_Released on 2026-01-04_
+
+### 🐛 Bug Fixes
+
+- **share**: Use native navigator.share when available
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.42
 
 _Released on 2026-01-04_
