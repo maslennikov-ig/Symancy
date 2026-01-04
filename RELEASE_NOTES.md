@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.36
+
+_Released on 2026-01-04_
+
+### ✨ New Features
+
+- **history**: Add source indicator (telegram/web) in history list
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.35
 
 _Released on 2026-01-04_
