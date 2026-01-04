@@ -22,6 +22,7 @@ import { registerAuthRoutes } from "./api/auth/index.js";
 import { registerMessagesRoutes } from "./api/messages/index.js";
 import { registerConversationsRoutes } from "./api/conversations/index.js";
 import { registerInsightsRoutes } from "./api/insights/index.js";
+import { registerSettingsRoutes } from "./api/settings/index.js";
 
 const logger = getLogger();
 
@@ -205,6 +206,10 @@ async function startApi() {
   // Register insights routes
   registerInsightsRoutes(fastify);
   logger.info("Insights routes registered");
+
+  // Register settings routes
+  registerSettingsRoutes(fastify);
+  logger.info("Settings routes registered");
 
   await fastify.listen({ port: env.PORT, host: "0.0.0.0" });
   logger.info({ port: env.PORT }, "API server listening");

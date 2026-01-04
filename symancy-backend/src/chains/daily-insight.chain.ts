@@ -9,6 +9,51 @@ import { getSupabase } from "../core/database.js";
 import { searchMemories } from "../services/memory.service.js";
 import { readFile } from "fs/promises";
 import path from "path";
+import { getLogger } from "../core/logger.js";
+
+const chainLogger = getLogger().child({ module: "daily-insight-chain" });
+
+/**
+ * Execute a function with retry and exponential backoff
+ * Used for AI generation calls that may fail due to network/API issues
+ *
+ * @param fn - Async function to execute
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @param initialDelayMs - Initial delay in milliseconds (default: 1000)
+ * @returns Result of the function
+ * @throws Last error if all retries fail
+ */
+export async function generateWithRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  initialDelayMs: number = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      chainLogger.warn(
+        { attempt: attempt + 1, maxRetries, error: lastError.message },
+        "AI generation attempt failed, retrying..."
+      );
+
+      if (attempt < maxRetries - 1) {
+        const delay = initialDelayMs * Math.pow(2, attempt);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  chainLogger.error(
+    { error: lastError?.message },
+    "All AI generation retries failed"
+  );
+  throw lastError;
+}
 
 /**
  * Context for generating personalized insights

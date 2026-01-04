@@ -25,6 +25,8 @@ import { Switch } from '../components/ui/switch';
 import { LoaderIcon } from '../components/icons/LoaderIcon';
 import { TelegramLinkPrompt } from '../components/features/auth/TelegramLinkPrompt';
 import { EmailLinkModal } from '../components/features/auth/EmailLinkModal';
+import { TimezoneSelector } from '../components/features/settings/TimezoneSelector';
+import { InsightTimePicker } from '../components/features/settings/InsightTimePicker';
 import { getStoredToken } from '../services/authService';
 import { translations, Lang, t as i18n_t } from '../lib/i18n';
 import type { UserCredits } from '../types/payment';
@@ -473,6 +475,23 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
   const [statsLoading, setStatsLoading] = useState(true);
   const [showEmailLinkModal, setShowEmailLinkModal] = useState(false);
 
+  // Daily Insights settings state
+  const [timezone, setTimezone] = useState<string>('Europe/Moscow');
+  const [notificationSettings, setNotificationSettings] = useState<{
+    enabled: boolean;
+    morning_enabled: boolean;
+    evening_enabled: boolean;
+    morning_time: string;
+    evening_time: string;
+  }>({
+    enabled: true,
+    morning_enabled: true,
+    evening_enabled: true,
+    morning_time: '08:00',
+    evening_time: '20:00',
+  });
+  const [settingsLoading, setSettingsLoading] = useState(true);
+
   // Fetch credits function - extracted for reuse on Telegram link
   const fetchCredits = useCallback(async () => {
     try {
@@ -515,6 +534,37 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
     fetchStats();
   }, [unifiedUser?.id]);
 
+  // Fetch notification settings from API
+  useEffect(() => {
+    async function fetchNotificationSettings() {
+      try {
+        const token = getStoredToken();
+        if (!token) {
+          setSettingsLoading(false);
+          return;
+        }
+
+        const response = await fetch('/api/settings/notifications', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTimezone(data.timezone || 'Europe/Moscow');
+          if (data.notification_settings) {
+            setNotificationSettings(data.notification_settings);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch notification settings:', error);
+      } finally {
+        setSettingsLoading(false);
+      }
+    }
+
+    fetchNotificationSettings();
+  }, []);
+
   // Handlers
   const handleLanguageChange = useCallback(
     async (lang: Language) => {
@@ -539,6 +589,54 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
       await updatePreferences({ notificationsEnabled: enabled });
     },
     [hapticFeedback, updatePreferences]
+  );
+
+  const handleTimezoneChange = useCallback(
+    async (newTimezone: string) => {
+      hapticFeedback.selection();
+      setTimezone(newTimezone);
+
+      try {
+        const token = getStoredToken();
+        if (!token) return;
+
+        await fetch('/api/settings/timezone', {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ timezone: newTimezone }),
+        });
+      } catch (error) {
+        console.error('Failed to update timezone:', error);
+      }
+    },
+    [hapticFeedback]
+  );
+
+  const handleNotificationSettingsChange = useCallback(
+    async (updates: Partial<typeof notificationSettings>) => {
+      hapticFeedback.selection();
+      setNotificationSettings((prev) => ({ ...prev, ...updates }));
+
+      try {
+        const token = getStoredToken();
+        if (!token) return;
+
+        await fetch('/api/settings/notifications', {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updates),
+        });
+      } catch (error) {
+        console.error('Failed to update notification settings:', error);
+      }
+    },
+    [hapticFeedback]
   );
 
   const handleNavigateToCredits = useCallback(() => {
@@ -851,6 +949,52 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
               onCheckedChange={handleNotificationsToggle}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Daily Insights Settings */}
+      <Card className="mx-4 mt-3">
+        <CardContent className="p-4">
+          <h2
+            style={{
+              margin: '0 0 8px',
+              fontSize: '15px',
+              fontWeight: 600,
+              color: 'var(--tg-theme-text-color, hsl(var(--foreground)))',
+            }}
+          >
+            {t('profile.dailyInsights')}
+          </h2>
+
+          <TimezoneSelector
+            currentTimezone={timezone}
+            onSelect={handleTimezoneChange}
+            t={t}
+          />
+
+          <InsightTimePicker
+            label={t('profile.morningAdvice')}
+            enabled={notificationSettings.morning_enabled}
+            time={notificationSettings.morning_time}
+            onEnabledChange={(enabled) =>
+              handleNotificationSettingsChange({ morning_enabled: enabled })
+            }
+            onTimeChange={(time) =>
+              handleNotificationSettingsChange({ morning_time: time })
+            }
+          />
+
+          <InsightTimePicker
+            label={t('profile.eveningInsight')}
+            enabled={notificationSettings.evening_enabled}
+            time={notificationSettings.evening_time}
+            onEnabledChange={(enabled) =>
+              handleNotificationSettingsChange({ evening_enabled: enabled })
+            }
+            onTimeChange={(time) =>
+              handleNotificationSettingsChange({ evening_time: time })
+            }
+          />
         </CardContent>
       </Card>
 

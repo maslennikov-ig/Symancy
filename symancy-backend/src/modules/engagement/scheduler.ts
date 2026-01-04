@@ -9,6 +9,10 @@ const logger = getLogger().child({ module: "engagement-scheduler" });
 
 /**
  * Schedule configuration for engagement triggers
+ *
+ * Updated for Timezone Support (spec 010):
+ * - Added insight-dispatcher: Hourly cron that dispatches per-user jobs
+ * - Legacy morning-insight/evening-insight kept for fallback (MSK users)
  */
 const SCHEDULES = {
   "inactive-reminder": {
@@ -27,15 +31,30 @@ const SCHEDULES = {
   //   tz: "Europe/Moscow",
   //   description: "Daily fortune for users with spiritual goal",
   // },
+
+  // ==========================================================================
+  // Timezone-aware insight dispatcher (new in spec 010)
+  // Runs every hour and dispatches individual jobs based on user timezones
+  // ==========================================================================
+  "insight-dispatcher": {
+    cron: "0 * * * *", // Every hour at minute 0
+    tz: "UTC",
+    description: "Dispatch daily insights based on user timezones",
+  },
+
+  // ==========================================================================
+  // Legacy batch insight schedules (kept for fallback)
+  // These will catch any users not processed by the dispatcher
+  // ==========================================================================
   "morning-insight": {
     cron: "0 8 * * *", // Daily at 8:00 MSK
     tz: "Europe/Moscow",
-    description: "Generate and send personalized morning advice",
+    description: "Generate and send personalized morning advice (legacy batch)",
   },
   "evening-insight": {
     cron: "0 20 * * *", // Daily at 20:00 MSK
     tz: "Europe/Moscow",
-    description: "Generate and send personalized evening insight",
+    description: "Generate and send personalized evening insight (legacy batch)",
   },
   "photo-cleanup": {
     cron: "0 3 * * *", // Daily at 3:00 AM MSK

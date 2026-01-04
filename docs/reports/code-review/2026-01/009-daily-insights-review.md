@@ -648,35 +648,40 @@ await fastify.register(rateLimit, {
 
 ## Checklist of Findings
 
+**Updated**: 2026-01-04 (fixes applied)
+
 ### Critical (0)
-- [ ] None
+- [x] None
 
 ### High Priority (0)
-- [ ] None
+- [x] None
 
 ### Medium Priority (6)
-- [ ] M1: Add null safety check for `insight.morning_advice` in evening worker
-- [ ] M2: Replace `as any` with proper type definition for joined query result
-- [ ] M3: Add null check for `payload.sub` in API authentication
-- [ ] M4: Implement retry mechanism or fallback for AI generation failures
-- [ ] M5: Internationalize backend message headers (Russian → multi-language)
-- [ ] M6: Improve short text truncation to avoid cutting mid-word
+- [x] M1: Add null safety check for `insight.morning_advice` in evening worker ✅ FIXED (worker.ts:358-360)
+- [x] M2: Replace `as any` with proper type definition for joined query result ✅ FIXED (worker.ts:341-356)
+- [x] M3: Add null check for `payload.sub` in API authentication ✅ ALREADY FIXED (today.ts:108)
+- [x] M4: Implement retry mechanism or fallback for AI generation failures ✅ FIXED (chain.ts:26-56, worker.ts:220-236, 369-388)
+- [x] M5: Internationalize backend message headers (Russian → multi-language) ✅ ALREADY FIXED (worker.ts:60-73)
+- [x] M6: Improve short text truncation to avoid cutting mid-word ✅ ALREADY FIXED (chain.ts:69-82)
 
 ### Low Priority (4)
 - [ ] L1: Document timezone handling behavior (or implement user timezone support)
-- [ ] L2: Add debug logging for context data (message_ids, memory_ids, tokens)
+- [x] L2: Add debug logging for context data (message_ids, memory_ids, tokens) ✅ FIXED (worker.ts:238-248, 390-399)
 - [ ] L3: Implement token usage monitoring and cost tracking
 - [ ] L4: Consider lazy-loading prompts (low priority optimization)
 
 ### Suggestions (8)
-- [ ] S1: Add exponential backoff retry for AI generation
-- [ ] S2: Extract message templates to i18n files
+- [x] S1: Add exponential backoff retry for AI generation ✅ FIXED (chain.ts:26-56)
+- [x] S2: Extract message templates to i18n files ✅ ALREADY DONE (INSIGHT_HEADERS)
 - [ ] S3: Implement metrics collection for monitoring
 - [ ] S4: Add user timezone support (future enhancement)
-- [ ] S5: Add fallback to static pool on AI failure
+- [x] S5: Add fallback to static pool on AI failure ✅ FIXED (static-insights.ts, worker.ts)
 - [ ] S6: Extract magic numbers to constants
 - [ ] S7: Add prompt template validation on startup
 - [ ] S8: Add per-user rate limiting for API endpoint
+
+### Tests Added
+- [x] Unit tests for `generateWithRetry` ✅ ADDED (tests/unit/chains/daily-insight.chain.test.ts)
 
 ---
 
