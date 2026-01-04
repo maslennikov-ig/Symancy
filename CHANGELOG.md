@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.30] - 2026-01-04
+
+### Fixed
+- **services**: update 1 source file(s) (84e30ad)
+
 ## [0.5.29] - 2026-01-04
 
 ### Added
