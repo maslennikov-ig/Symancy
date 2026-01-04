@@ -10,7 +10,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { verifyToken } from '../../services/auth/JwtService.js';
 import { validateAndConsumeLinkToken } from '../../services/auth/LinkTokenService.js';
-import { getUserById } from '../../services/user/UnifiedUserService.js';
+import { findOrCreateByAuthId } from '../../services/user/UnifiedUserService.js';
 import { getSupabase } from '../../core/database.js';
 import { getLogger } from '../../core/logger.js';
 import type { UnifiedUser } from '../../types/omnichannel.js';
@@ -173,16 +173,9 @@ export async function linkHandler(
   // Extract Telegram user from link token
   const telegramUser = linkTokenValidation.unifiedUser!;
 
-  // Get web user from database
-  const webUser = await getUserById(webUserPayload.sub);
-
-  if (!webUser) {
-    logger.warn({ userId: webUserPayload.sub }, 'Web user not found for valid token');
-    return reply.status(404).send({
-      error: 'USER_NOT_FOUND',
-      message: 'Web user not found',
-    });
-  }
+  // Get or create web user from database by auth_id (Supabase Auth user ID)
+  // Note: webUserPayload.sub is auth.users.id, not unified_users.id
+  const webUser = await findOrCreateByAuthId({ authId: webUserPayload.sub });
 
   // Check if web user already has Telegram linked
   if (webUser.telegram_id !== null) {

@@ -189,6 +189,15 @@ export const translations = {
     'linkTelegram.benefit2': 'Messages even when offline',
     'linkTelegram.benefit3': 'Shared credits across channels',
     'linkTelegram.button': 'Login with Telegram',
+    // Email Link Modal (for Telegram users linking email)
+    'emailLink.title': 'Link Email',
+    'emailLink.description': 'After linking, your credits and history will be shared across accounts',
+    'emailLink.input.placeholder': 'Enter email',
+    'emailLink.button.send': 'Send link',
+    'emailLink.success.title': 'Link sent!',
+    'emailLink.success.description': 'Check your email and click the link to complete account linking',
+    'emailLink.error.invalidEmail': 'Invalid email address',
+    'emailLink.error.generic': 'Failed to send link. Please try again.',
     // Omnichannel Chat - Chat UI
     'chat.title': 'Chat',
     'chat.loading': 'Loading chat...',
@@ -811,6 +820,15 @@ export const translations = {
     'linkTelegram.benefit2': 'Сообщения даже когда вы офлайн',
     'linkTelegram.benefit3': 'Общие кредиты во всех каналах',
     'linkTelegram.button': 'Войти через Telegram',
+    // Email Link Modal (for Telegram users linking email)
+    'emailLink.title': 'Привязать Email',
+    'emailLink.description': 'После привязки ваши кредиты и история будут общими для всех аккаунтов',
+    'emailLink.input.placeholder': 'Введите email',
+    'emailLink.button.send': 'Отправить ссылку',
+    'emailLink.success.title': 'Ссылка отправлена!',
+    'emailLink.success.description': 'Проверьте почту и перейдите по ссылке для завершения привязки',
+    'emailLink.error.invalidEmail': 'Некорректный email адрес',
+    'emailLink.error.generic': 'Ошибка отправки. Попробуйте еще раз.',
     // Omnichannel Chat - Chat UI
     'chat.title': 'Чат',
     'chat.loading': 'Загрузка чата...',
@@ -1433,6 +1451,15 @@ export const translations = {
     'linkTelegram.benefit2': '离线时也能收到消息',
     'linkTelegram.benefit3': '跨渠道共享积分',
     'linkTelegram.button': '通过 Telegram 登录',
+    // Email Link Modal (for Telegram users linking email)
+    'emailLink.title': '绑定邮箱',
+    'emailLink.description': '绑定后，您的积分和历史记录将在所有账户间共享',
+    'emailLink.input.placeholder': '输入邮箱',
+    'emailLink.button.send': '发送链接',
+    'emailLink.success.title': '链接已发送！',
+    'emailLink.success.description': '请查看邮箱并点击链接完成账户绑定',
+    'emailLink.error.invalidEmail': '邮箱格式错误',
+    'emailLink.error.generic': '发送失败，请重试。',
     // Omnichannel Chat - Chat UI
     'chat.title': '聊天',
     'chat.loading': '加载聊天中...',

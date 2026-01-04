@@ -142,3 +142,50 @@ export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(TOKEN_EXPIRY_KEY);
 }
+
+/**
+ * Request email link for account linking (Telegram users)
+ *
+ * This function performs two steps:
+ * 1. Creates a link token on the backend (POST /api/auth/link-token)
+ * 2. Sends a magic link to the email with the link URL as redirect
+ *
+ * @param telegramToken - JWT token for authenticated Telegram user
+ * @param email - Email address to link
+ * @throws Error if token creation or magic link fails
+ */
+export async function requestEmailLink(telegramToken: string, email: string): Promise<void> {
+  // Step 1: Create link token on backend
+  const linkTokenResponse = await fetch(`${API_BASE_URL}/api/auth/link-token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${telegramToken}`,
+    },
+  });
+
+  if (!linkTokenResponse.ok) {
+    const error = await linkTokenResponse.json().catch(() => ({ message: 'Failed to create link token' }));
+    throw new Error(error.message || 'Failed to create link token');
+  }
+
+  const { link_url } = await linkTokenResponse.json();
+
+  if (!link_url) {
+    throw new Error('Invalid response from server');
+  }
+
+  // Step 2: Send Supabase magic link with the link URL as redirect
+  const { supabase } = await import('../lib/supabaseClient');
+
+  const { error: otpError } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: link_url,
+    },
+  });
+
+  if (otpError) {
+    throw new Error(otpError.message || 'Failed to send email link');
+  }
+}

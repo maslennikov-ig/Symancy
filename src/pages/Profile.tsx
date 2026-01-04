@@ -24,6 +24,8 @@ import { Card, CardContent } from '../components/ui/card';
 import { Switch } from '../components/ui/switch';
 import { LoaderIcon } from '../components/icons/LoaderIcon';
 import { TelegramLinkPrompt } from '../components/features/auth/TelegramLinkPrompt';
+import { EmailLinkModal } from '../components/features/auth/EmailLinkModal';
+import { getStoredToken } from '../services/authService';
 import { translations, Lang, t as i18n_t } from '../lib/i18n';
 import type { UserCredits } from '../types/payment';
 
@@ -469,6 +471,7 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
   const [creditsLoading, setCreditsLoading] = useState(true);
   const [stats, setStats] = useState<UserStats>({ analysesCount: 0, messagesCount: 0, creditsUsed: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
+  const [showEmailLinkModal, setShowEmailLinkModal] = useState(false);
 
   // Fetch credits function - extracted for reuse on Telegram link
   const fetchCredits = useCallback(async () => {
@@ -1011,7 +1014,7 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
                 }}
                 onClick={() => {
                   hapticFeedback.impact('light');
-                  // TODO: Implement email linking
+                  setShowEmailLinkModal(true);
                 }}
               >
                 <PlusIcon />
@@ -1054,6 +1057,19 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
           </div>
         </CardContent>
       </Card>
+
+      {/* Email Link Modal for Telegram users */}
+      <EmailLinkModal
+        isOpen={showEmailLinkModal}
+        onClose={() => setShowEmailLinkModal(false)}
+        telegramToken={getStoredToken() || ''}
+        language={language}
+        t={t}
+        onSuccess={() => {
+          // Credits might be merged after email linking completes
+          fetchCredits();
+        }}
+      />
     </div>
   );
 }
