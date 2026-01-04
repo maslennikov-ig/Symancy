@@ -35,12 +35,8 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme,
         // Prepare share text with app link (3800 chars + header/footer fits within Telegram's 4096 limit)
         const shareText = `${t('share.text')}\n\n${textToShare.substring(0, 3800)}${textToShare.length > 3800 ? '...' : ''}\n\n${t('share.image.footer')}`;
 
-        // In Telegram WebApp: copy to clipboard and show message
-        if (isTelegramWebApp()) {
-            await navigator.clipboard.writeText(shareText);
-            window.Telegram?.WebApp?.showAlert?.(t('share.copiedToClipboard') || 'Copied to clipboard! Paste in any chat to share.');
-        } else if (navigator.share) {
-            // Native share for browsers that support it
+        // Use native share when available, fallback to clipboard
+        if (navigator.share) {
             await navigator.share({
                 title: t('share.title'),
                 text: shareText,
@@ -48,7 +44,11 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme,
         } else {
             // Fallback: copy to clipboard
             await navigator.clipboard.writeText(shareText);
-            alert(t('share.copiedToClipboard') || 'Copied to clipboard!');
+            if (isTelegramWebApp()) {
+                window.Telegram?.WebApp?.showAlert?.(t('share.copiedToClipboard') || 'Copied to clipboard!');
+            } else {
+                alert(t('share.copiedToClipboard') || 'Copied to clipboard!');
+            }
         }
     } catch (err) {
         console.error("Sharing failed:", err);
