@@ -301,6 +301,54 @@ export async function linkHandler(
       );
     }
 
+    // Migrate analysis_history records to the merged user
+    // analysis_history has both telegram_user_id and unified_user_id
+    // We need to update unified_user_id to point to the merged account
+    const { data: migratedHistory, error: historyError } = await supabase
+      .from('analysis_history')
+      .update({ unified_user_id: webUser.id })
+      .eq('unified_user_id', telegramUser.id)
+      .select('id');
+
+    if (historyError) {
+      logger.error(
+        { error: historyError, sourceUserId: telegramUser.id, targetUserId: webUser.id },
+        'Failed to migrate analysis_history (non-fatal, continuing)'
+      );
+    } else {
+      logger.info(
+        {
+          sourceUserId: telegramUser.id,
+          targetUserId: webUser.id,
+          migratedRecords: migratedHistory?.length || 0,
+        },
+        'Migrated analysis_history records to merged account'
+      );
+    }
+
+    // Migrate conversations to the merged user
+    const { data: migratedConvos, error: convosError } = await supabase
+      .from('conversations')
+      .update({ unified_user_id: webUser.id })
+      .eq('unified_user_id', telegramUser.id)
+      .select('id');
+
+    if (convosError) {
+      logger.error(
+        { error: convosError, sourceUserId: telegramUser.id, targetUserId: webUser.id },
+        'Failed to migrate conversations (non-fatal, continuing)'
+      );
+    } else {
+      logger.info(
+        {
+          sourceUserId: telegramUser.id,
+          targetUserId: webUser.id,
+          migratedRecords: migratedConvos?.length || 0,
+        },
+        'Migrated conversations to merged account'
+      );
+    }
+
     // Delete the separate Telegram user record (cascades to related data)
     const { error: deleteError } = await supabase
       .from('unified_users')
