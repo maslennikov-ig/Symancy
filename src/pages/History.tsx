@@ -46,7 +46,7 @@ interface HistoryProps {
 const History: React.FC<HistoryProps> = ({ language: propLanguage, t: propT }) => {
   const navigate = useNavigate();
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const { isWebApp } = useTelegramWebApp();
+  const { isWebApp, close: closeWebApp } = useTelegramWebApp();
 
   // Use props or fallback to defaults
   const language = propLanguage || 'ru';
@@ -78,6 +78,21 @@ const History: React.FC<HistoryProps> = ({ language: propLanguage, t: propT }) =
   const handleCloseDetail = useCallback(() => {
     setSelectedAnalysis(null);
   }, []);
+
+  /**
+   * Handle "Analyze another" action
+   * - In Telegram WebApp: Close WebApp (user returns to chat to send another photo)
+   * - In Web: Navigate to analysis flow
+   */
+  const handleAnalyzeAnother = useCallback(() => {
+    if (isWebApp) {
+      // In Telegram WebApp, close the app to return to chat
+      closeWebApp();
+    } else {
+      // In web, navigate to analysis page
+      navigate('/analysis');
+    }
+  }, [isWebApp, closeWebApp, navigate]);
 
 
   // Show loading while auth is initializing
@@ -142,7 +157,7 @@ const History: React.FC<HistoryProps> = ({ language: propLanguage, t: propT }) =
           >
             <ResultDisplay
               analysis={selectedAnalysis.analysis}
-              onReset={handleCloseDetail}
+              onReset={handleAnalyzeAnother}
               theme={theme}
               t={t as (key: string) => string}
             />

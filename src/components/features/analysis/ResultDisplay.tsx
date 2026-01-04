@@ -23,9 +23,14 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme,
   const handleShare = async () => {
     setIsSharing(true);
     try {
-        const mainSection = analysis.sections[0];
+        // Use first section if available, otherwise create a section from intro
+        const mainSection = analysis.sections[0] || (analysis.intro ? {
+            title: t('result.title'),
+            content: analysis.intro.substring(0, 500) + (analysis.intro.length > 500 ? '...' : '')
+        } : null);
+
         if (!mainSection) {
-            throw new Error("No analysis sections found to share.");
+            throw new Error("No analysis content found to share.");
         }
 
         const imageTranslations = {
@@ -102,7 +107,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme,
       >
         <Button
           onClick={handleShare}
-          disabled={isSharing || analysis.sections.length === 0}
+          disabled={isSharing || (!analysis.intro && analysis.sections.length === 0)}
           variant="outline"
         >
           {isSharing ? (
