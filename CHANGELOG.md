@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.34] - 2026-01-04
+
+### Fixed
+- **historyService**: transform DB schema to UI format for analysis history (4e0bea2)
+
 ## [0.5.33] - 2026-01-04
 
 ### Fixed
