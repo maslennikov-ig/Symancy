@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.44
+
+_Released on 2026-01-04_
+
+### 🐛 Bug Fixes
+
+- **Interface**: Make history detail view full-width, remove narrow box
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.43
 
 _Released on 2026-01-04_

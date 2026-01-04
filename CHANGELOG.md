@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.44] - 2026-01-04
+
+### Fixed
+- **ui**: make history detail view full-width, remove narrow box (0e417f7)
+
 ## [0.5.43] - 2026-01-04
 
 ### Fixed
