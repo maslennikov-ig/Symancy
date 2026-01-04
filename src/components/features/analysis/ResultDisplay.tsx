@@ -71,12 +71,12 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme,
   );
 
   return (
-    <div className="flex flex-col w-full p-6 sm:p-8 h-full">
+    <div className="flex flex-col w-full py-4 h-full">
       <AnimatedContent delay={0}>
-        <h2 className="flex-shrink-0 text-3xl font-display font-bold text-foreground mb-6 text-center">{t('result.title')}</h2>
+        <h2 className="flex-shrink-0 text-2xl font-display font-bold text-foreground mb-4 text-center">{t('result.title')}</h2>
       </AnimatedContent>
-      <ScrollArea className="w-full bg-muted/50 rounded-lg p-6 prose dark:prose-invert prose-stone border flex-grow min-h-0">
-         <div className="font-sans text-foreground leading-relaxed">
+      <ScrollArea className="w-full flex-grow min-h-0">
+         <div className="font-sans text-foreground leading-relaxed prose prose-sm sm:prose dark:prose-invert prose-stone max-w-none">
             {analysis.intro && (
               <AnimatedContent delay={150}>
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysis.intro}</ReactMarkdown>
@@ -94,8 +94,8 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme,
             ))}
          </div>
       </ScrollArea>
-      <div 
-        className="flex-shrink-0 mt-8 flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 justify-center"
+      <div
+        className="flex-shrink-0 mt-6 flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 justify-center"
       >
         <Button
           onClick={handleShare}
