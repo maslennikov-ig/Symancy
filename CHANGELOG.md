@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.38] - 2026-01-04
+
+### Fixed
+- **history**: share button uses intro when no sections, analyze-another closes WebApp or navigates (c3e01e0)
+
 ## [0.5.37] - 2026-01-04
 
 ### Other

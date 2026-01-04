@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.38
+
+_Released on 2026-01-04_
+
+### 🐛 Bug Fixes
+
+- **history**: Share button uses intro when no sections, analyze-another closes WebApp or navigates
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.37
 
 _Released on 2026-01-04_
