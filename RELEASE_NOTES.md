@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.35
+
+_Released on 2026-01-04_
+
+### 🐛 Bug Fixes
+
+- **auth/link**: Migrate analysis_history and conversations during account merge
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.34
 
 _Released on 2026-01-04_
