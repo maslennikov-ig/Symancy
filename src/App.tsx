@@ -175,11 +175,20 @@ const App: React.FC = () => {
   }, [language]);
 
   const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const storedTheme = window.localStorage.getItem('theme');
-      if (storedTheme === 'light' || storedTheme === 'dark') {
-        return storedTheme;
+    if (typeof window !== 'undefined') {
+      // Priority 1: Use Telegram colorScheme if running in Telegram WebApp
+      const telegramColorScheme = window.Telegram?.WebApp?.colorScheme;
+      if (telegramColorScheme === 'light' || telegramColorScheme === 'dark') {
+        return telegramColorScheme;
       }
+      // Priority 2: Use stored theme from localStorage (for web users)
+      if (window.localStorage) {
+        const storedTheme = window.localStorage.getItem('theme');
+        if (storedTheme === 'light' || storedTheme === 'dark') {
+          return storedTheme;
+        }
+      }
+      // Priority 3: Use system preference
       if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
         return 'dark';
       }
@@ -191,7 +200,10 @@ const App: React.FC = () => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
-    localStorage.setItem('theme', theme);
+    // Only save to localStorage for non-Telegram users (Telegram manages its own theme)
+    if (!window.Telegram?.WebApp?.colorScheme) {
+      localStorage.setItem('theme', theme);
+    }
   }, [theme]);
 
   useEffect(() => {
@@ -564,15 +576,29 @@ const App: React.FC = () => {
           {/* Home route - different content for Telegram vs Web */}
           <Route path="/" element={homeRouteElement} />
 
-          {/* Static pages - no BottomNav */}
-          <Route path="/pricing" element={<Pricing language={language} t={t} />} />
+          {/* Payment result pages - no BottomNav */}
           <Route path="/payment/success" element={<PaymentSuccess />} />
           <Route path="/payment/result" element={<PaymentResult />} />
-          <Route path="/offer" element={<Terms language={language} t={t} />} />
-          <Route path="/terms" element={<Terms language={language} t={t} />} />
-          <Route path="/contacts" element={<Contacts language={language} t={t} />} />
           <Route path="/test-payment" element={<TestPayment />} />
           <Route path="/link" element={<Link language={language} t={t} />} />
+
+          {/* Info pages - with BottomNav for Telegram Mini App navigation consistency */}
+          <Route
+            path="/pricing"
+            element={withAppLayout(<Pricing language={language} t={t} />)}
+          />
+          <Route
+            path="/offer"
+            element={withAppLayout(<Terms language={language} t={t} />)}
+          />
+          <Route
+            path="/terms"
+            element={withAppLayout(<Terms language={language} t={t} />)}
+          />
+          <Route
+            path="/contacts"
+            element={withAppLayout(<Contacts language={language} t={t} />)}
+          />
 
           {/* Onboarding route for Telegram Mini App */}
           <Route

@@ -90,8 +90,9 @@ function getNavItems(isTelegramMiniApp: boolean): NavItem[] {
 
 /**
  * Routes where BottomNav should be hidden
+ * Note: /contacts and /terms now show BottomNav for consistent navigation in Telegram Mini App
  */
-const HIDDEN_ROUTES = ['/admin', '/payment', '/terms', '/contacts'];
+const HIDDEN_ROUTES = ['/admin', '/payment'];
 
 /**
  * Check if current route matches nav item
