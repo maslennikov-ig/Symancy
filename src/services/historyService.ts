@@ -1,5 +1,6 @@
-import { supabase } from '../lib/supabaseClient';
+import { supabase, createSupabaseWithToken } from '../lib/supabaseClient';
 import { AnalysisResponse } from './analysisService';
+import { getStoredToken } from './authService';
 
 export interface HistoryItem {
   id: string;
@@ -26,8 +27,18 @@ export const saveAnalysis = async (userId: string, analysis: AnalysisResponse, f
 };
 
 export const getHistory = async (): Promise<HistoryItem[]> => {
+    // Check for Telegram JWT token first
+    const telegramToken = getStoredToken();
+
+    // Use appropriate client based on auth type
+    const client = telegramToken
+        ? createSupabaseWithToken(telegramToken)
+        : supabase;
+
     // RLS will ensure this query only returns data for the logged-in user.
-    const { data, error } = await supabase
+    // For Telegram users: RLS uses telegram_user_id from JWT claims
+    // For Supabase Auth users: RLS uses auth.uid()
+    const { data, error } = await client
         .from('analysis_history')
         .select('*')
         .order('created_at', { ascending: false });
