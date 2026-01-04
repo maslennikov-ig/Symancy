@@ -9,6 +9,7 @@ import { LoaderIcon } from '../../icons/LoaderIcon';
 import { ScrollArea } from '../../ui/scroll-area';
 import { Button } from '../../ui/button';
 import { AnalysisResponse } from '../../../services/analysisService';
+import { isTelegramWebApp } from '../../../hooks/useTelegramWebApp';
 
 interface ResultDisplayProps {
   analysis: AnalysisResponse;
@@ -50,16 +51,29 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme,
             files: [file],
         };
 
-        if (navigator.canShare && navigator.canShare(shareData)) {
+        // Check if we're in Telegram WebApp on desktop
+        // navigator.share() on Windows opens system dialog, not Telegram
+        const isDesktopWebApp = isTelegramWebApp() &&
+            (window.Telegram?.WebApp?.platform === 'tdesktop' ||
+             window.Telegram?.WebApp?.platform === 'macos' ||
+             window.Telegram?.WebApp?.platform === 'web');
+
+        if (!isDesktopWebApp && navigator.canShare && navigator.canShare(shareData)) {
+            // Mobile: use native share (works well on iOS/Android)
             await navigator.share(shareData);
         } else {
-            // Fallback for desktop or unsupported browsers
+            // Desktop WebApp or unsupported: download the image
             const link = document.createElement('a');
             link.href = URL.createObjectURL(imageBlob);
             link.download = 'coffee-analysis.png';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+
+            // Show success message for WebApp users
+            if (isTelegramWebApp()) {
+                window.Telegram?.WebApp?.showAlert?.(t('share.downloadSuccess') || 'Image saved! You can now share it.');
+            }
         }
     } catch (err) {
         console.error("Sharing failed:", err);
