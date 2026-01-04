@@ -6,7 +6,7 @@
  *
  * @module components/features/settings/TimezoneSelector
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { translations } from '../../../lib/i18n';
 
 // ============================================================================
@@ -138,6 +138,21 @@ export function TimezoneSelector({
   t,
 }: TimezoneSelectorProps): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
 
   const currentTz = COMMON_TIMEZONES.find((tz) => tz.code === currentTimezone);
   const displayValue = currentTz?.label || currentTimezone;
@@ -173,7 +188,7 @@ export function TimezoneSelector({
   );
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div ref={dropdownRef} style={{ position: 'relative' }}>
       <div
         role="button"
         aria-haspopup="listbox"

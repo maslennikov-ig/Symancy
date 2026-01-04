@@ -232,6 +232,14 @@ export async function updateTimezoneHandler(
     });
   }
 
+  // Validate timezone string length (prevent DoS with very long strings)
+  if (timezone.length > 50) {
+    return reply.status(400).send({
+      error: 'VALIDATION_ERROR',
+      message: 'Timezone string too long',
+    });
+  }
+
   // Validate timezone is valid IANA timezone
   if (!isValidTimezone(timezone)) {
     return reply.status(400).send({
@@ -355,27 +363,6 @@ export async function updateNotificationSettingsHandler(
 
   logger.debug({ userId, updates: body }, 'Updating notification settings');
 
-  // Fetch current settings first
-  const { data: user, error: fetchError } = await supabase
-    .from('unified_users')
-    .select('notification_settings')
-    .eq('id', userId)
-    .single();
-
-  if (fetchError) {
-    logger.error({ error: fetchError, userId }, 'Failed to fetch current notification settings');
-    return reply.status(500).send({
-      error: 'INTERNAL_ERROR',
-      message: 'Failed to fetch current settings',
-    });
-  }
-
-  // Merge current settings with defaults, then with updates
-  const currentSettings: NotificationSettings = {
-    ...DEFAULT_NOTIFICATION_SETTINGS,
-    ...(user?.notification_settings as Partial<NotificationSettings> | null),
-  };
-
   // Build update object with only the fields that were provided
   const updates: Partial<NotificationSettings> = {};
   if (body.enabled !== undefined) updates.enabled = body.enabled;
@@ -384,29 +371,62 @@ export async function updateNotificationSettingsHandler(
   if (body.morning_time !== undefined) updates.morning_time = body.morning_time;
   if (body.evening_time !== undefined) updates.evening_time = body.evening_time;
 
-  const newSettings: NotificationSettings = {
-    ...currentSettings,
-    ...updates,
-  };
+  // Retry loop to handle race conditions in read-modify-write
+  const MAX_RETRIES = 3;
+  let lastError: Error | null = null;
 
-  // Update notification_settings in unified_users
-  const { error: updateError } = await supabase
-    .from('unified_users')
-    .update({ notification_settings: newSettings })
-    .eq('id', userId);
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    // Fetch current settings
+    const { data: user, error: fetchError } = await supabase
+      .from('unified_users')
+      .select('notification_settings')
+      .eq('id', userId)
+      .single();
 
-  if (updateError) {
-    logger.error({ error: updateError, userId }, 'Failed to update notification settings');
-    return reply.status(500).send({
-      error: 'INTERNAL_ERROR',
-      message: 'Failed to update notification settings',
+    if (fetchError) {
+      logger.error({ error: fetchError, userId, attempt }, 'Failed to fetch current notification settings');
+      lastError = new Error(fetchError.message);
+      continue;
+    }
+
+    // Merge current settings with defaults, then with updates
+    const currentSettings: NotificationSettings = {
+      ...DEFAULT_NOTIFICATION_SETTINGS,
+      ...(user?.notification_settings as Partial<NotificationSettings> | null),
+    };
+
+    const newSettings: NotificationSettings = {
+      ...currentSettings,
+      ...updates,
+    };
+
+    // Update notification_settings in unified_users
+    const { error: updateError } = await supabase
+      .from('unified_users')
+      .update({ notification_settings: newSettings })
+      .eq('id', userId);
+
+    if (updateError) {
+      logger.warn({ error: updateError, userId, attempt }, 'Update conflict, retrying');
+      lastError = new Error(updateError.message);
+      // Brief delay before retry to reduce contention
+      await new Promise((resolve) => setTimeout(resolve, 50 * attempt));
+      continue;
+    }
+
+    // Success
+    logger.info({ userId, notification_settings: newSettings }, 'Notification settings updated');
+
+    return reply.send({
+      success: true,
+      notification_settings: newSettings,
     });
   }
 
-  logger.info({ userId, notification_settings: newSettings }, 'Notification settings updated');
-
-  return reply.send({
-    success: true,
-    notification_settings: newSettings,
+  // All retries exhausted
+  logger.error({ error: lastError, userId, attempts: MAX_RETRIES }, 'Failed to update notification settings after retries');
+  return reply.status(500).send({
+    error: 'INTERNAL_ERROR',
+    message: 'Failed to update notification settings',
   });
 }

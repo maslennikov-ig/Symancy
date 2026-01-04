@@ -63,9 +63,10 @@ interface RawUserRow {
  * Get current hour in a specific timezone (0-23)
  *
  * @param timezone - IANA timezone string (e.g., "Europe/Moscow", "America/New_York")
+ * @param userId - Optional user ID for better debugging context
  * @returns Current hour in that timezone
  */
-export function getCurrentHourInTimezone(timezone: string): number {
+export function getCurrentHourInTimezone(timezone: string, userId?: string): number {
   try {
     const formatter = new Intl.DateTimeFormat("en-US", {
       timeZone: timezone,
@@ -75,7 +76,7 @@ export function getCurrentHourInTimezone(timezone: string): number {
     return parseInt(formatter.format(new Date()), 10);
   } catch (error) {
     // Invalid timezone, fallback to Europe/Moscow
-    logger.warn({ timezone, error }, "Invalid timezone, using Europe/Moscow");
+    logger.warn({ timezone, userId, error }, "Invalid timezone, using Europe/Moscow fallback");
     const formatter = new Intl.DateTimeFormat("en-US", {
       timeZone: "Europe/Moscow",
       hour: "numeric",
@@ -122,11 +123,14 @@ export function getTodayInTimezone(timezone: string): string {
 // USER FINDING
 // =============================================================================
 
+// Batch size for pagination to avoid memory issues with large user bases
+const DISPATCH_BATCH_SIZE = 1000;
+
 /**
  * Find users whose local time matches their notification preference
  *
  * Logic:
- * 1. Query all Telegram-linked, non-banned users
+ * 1. Query Telegram-linked, non-banned users in batches (pagination)
  * 2. Filter in code: check if user's local hour matches their preferred time
  * 3. notification_settings.enabled AND morning_enabled/evening_enabled must be true
  *
@@ -141,77 +145,88 @@ export async function findUsersForInsightType(
   dispatchLogger.debug("Finding users for insight dispatch");
 
   const supabase = getSupabase();
-
-  // Query all eligible users
-  const { data: users, error } = await supabase
-    .from("unified_users")
-    .select("id, timezone, telegram_id, display_name, language_code, notification_settings")
-    .eq("is_telegram_linked", true)
-    .eq("is_banned", false)
-    .eq("onboarding_completed", true)
-    .not("telegram_id", "is", null);
-
-  if (error) {
-    dispatchLogger.error({ error }, "Failed to query users");
-    throw new Error(`Failed to query users: ${error.message}`);
-  }
-
-  if (!users || users.length === 0) {
-    dispatchLogger.debug("No eligible users found");
-    return [];
-  }
-
-  // Filter users whose local time matches their preference
   const matchingUsers: DispatchableUser[] = [];
+  let totalUsersProcessed = 0;
+  let offset = 0;
+  let hasMore = true;
 
-  for (const rawUser of users as RawUserRow[]) {
-    // Skip users without telegram_id
-    if (!rawUser.telegram_id) continue;
+  // Process users in batches to avoid memory issues
+  while (hasMore) {
+    const { data: users, error } = await supabase
+      .from("unified_users")
+      .select("id, timezone, telegram_id, display_name, language_code, notification_settings")
+      .eq("is_telegram_linked", true)
+      .eq("is_banned", false)
+      .eq("onboarding_completed", true)
+      .not("telegram_id", "is", null)
+      .range(offset, offset + DISPATCH_BATCH_SIZE - 1);
 
-    // Get timezone (default to Europe/Moscow)
-    const timezone = rawUser.timezone ?? "Europe/Moscow";
-
-    // Get notification settings (default all enabled)
-    const settings: NotificationSettings = rawUser.notification_settings ?? {
-      enabled: true,
-      morning_enabled: true,
-      evening_enabled: true,
-      morning_time: "08:00",
-      evening_time: "20:00",
-    };
-
-    // Check if notifications are enabled
-    if (settings.enabled === false) continue;
-
-    // Check if specific insight type is enabled
-    if (insightType === "morning" && settings.morning_enabled === false) continue;
-    if (insightType === "evening" && settings.evening_enabled === false) continue;
-
-    // Get preferred time for this insight type
-    const preferredTime =
-      insightType === "morning"
-        ? settings.morning_time ?? "08:00"
-        : settings.evening_time ?? "20:00";
-
-    const preferredHour = parseHour(preferredTime);
-
-    // Get current hour in user's timezone
-    const currentHour = getCurrentHourInTimezone(timezone);
-
-    // Check if current hour matches preferred hour
-    if (currentHour === preferredHour) {
-      matchingUsers.push({
-        id: rawUser.id,
-        timezone,
-        telegramId: rawUser.telegram_id,
-        displayName: rawUser.display_name,
-        languageCode: rawUser.language_code,
-      });
+    if (error) {
+      dispatchLogger.error({ error, offset }, "Failed to query users batch");
+      throw new Error(`Failed to query users: ${error.message}`);
     }
+
+    if (!users || users.length === 0) {
+      hasMore = false;
+      break;
+    }
+
+    totalUsersProcessed += users.length;
+
+    // Filter users in this batch
+    for (const rawUser of users as RawUserRow[]) {
+      // Skip users without telegram_id
+      if (!rawUser.telegram_id) continue;
+
+      // Get timezone (default to Europe/Moscow)
+      const timezone = rawUser.timezone ?? "Europe/Moscow";
+
+      // Get notification settings (default all enabled)
+      const settings: NotificationSettings = rawUser.notification_settings ?? {
+        enabled: true,
+        morning_enabled: true,
+        evening_enabled: true,
+        morning_time: "08:00",
+        evening_time: "20:00",
+      };
+
+      // Check if notifications are enabled
+      if (settings.enabled === false) continue;
+
+      // Check if specific insight type is enabled
+      if (insightType === "morning" && settings.morning_enabled === false) continue;
+      if (insightType === "evening" && settings.evening_enabled === false) continue;
+
+      // Get preferred time for this insight type
+      const preferredTime =
+        insightType === "morning"
+          ? settings.morning_time ?? "08:00"
+          : settings.evening_time ?? "20:00";
+
+      const preferredHour = parseHour(preferredTime);
+
+      // Get current hour in user's timezone
+      const currentHour = getCurrentHourInTimezone(timezone, rawUser.id);
+
+      // Check if current hour matches preferred hour
+      if (currentHour === preferredHour) {
+        matchingUsers.push({
+          id: rawUser.id,
+          timezone,
+          telegramId: rawUser.telegram_id,
+          displayName: rawUser.display_name,
+          languageCode: rawUser.language_code,
+        });
+      }
+    }
+
+    // Check if there are more batches
+    hasMore = users.length === DISPATCH_BATCH_SIZE;
+    offset += DISPATCH_BATCH_SIZE;
   }
 
   dispatchLogger.info(
-    { totalUsers: users.length, matchingUsers: matchingUsers.length },
+    { totalUsers: totalUsersProcessed, matchingUsers: matchingUsers.length },
     "Filtered users for insight dispatch"
   );
 

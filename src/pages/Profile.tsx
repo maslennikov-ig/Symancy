@@ -477,6 +477,7 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
 
   // Daily Insights settings state
   const [timezone, setTimezone] = useState<string>('Europe/Moscow');
+  const [isUpdating, setIsUpdating] = useState(false);
   const [notificationSettings, setNotificationSettings] = useState<{
     enabled: boolean;
     morning_enabled: boolean;
@@ -593,14 +594,21 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
 
   const handleTimezoneChange = useCallback(
     async (newTimezone: string) => {
+      if (isUpdating) return; // Prevent duplicate requests
+
       hapticFeedback.selection();
-      setTimezone(newTimezone);
+      setIsUpdating(true);
+      const previousTimezone = timezone;
+      setTimezone(newTimezone); // Optimistic update
 
       try {
         const token = getStoredToken();
-        if (!token) return;
+        if (!token) {
+          setIsUpdating(false);
+          return;
+        }
 
-        await fetch('/api/settings/timezone', {
+        const response = await fetch('/api/settings/timezone', {
           method: 'PATCH',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -608,23 +616,39 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
           },
           body: JSON.stringify({ timezone: newTimezone }),
         });
+
+        if (!response.ok) {
+          // Revert on error
+          setTimezone(previousTimezone);
+          console.error('Failed to update timezone');
+        }
       } catch (error) {
         console.error('Failed to update timezone:', error);
+        setTimezone(previousTimezone); // Revert on error
+      } finally {
+        setIsUpdating(false);
       }
     },
-    [hapticFeedback]
+    [hapticFeedback, timezone, isUpdating]
   );
 
   const handleNotificationSettingsChange = useCallback(
     async (updates: Partial<typeof notificationSettings>) => {
+      if (isUpdating) return; // Prevent duplicate requests
+
       hapticFeedback.selection();
-      setNotificationSettings((prev) => ({ ...prev, ...updates }));
+      setIsUpdating(true);
+      const previousSettings = { ...notificationSettings };
+      setNotificationSettings((prev) => ({ ...prev, ...updates })); // Optimistic update
 
       try {
         const token = getStoredToken();
-        if (!token) return;
+        if (!token) {
+          setIsUpdating(false);
+          return;
+        }
 
-        await fetch('/api/settings/notifications', {
+        const response = await fetch('/api/settings/notifications', {
           method: 'PATCH',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -632,11 +656,20 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
           },
           body: JSON.stringify(updates),
         });
+
+        if (!response.ok) {
+          // Revert on error
+          setNotificationSettings(previousSettings);
+          console.error('Failed to update notification settings');
+        }
       } catch (error) {
         console.error('Failed to update notification settings:', error);
+        setNotificationSettings(previousSettings); // Revert on error
+      } finally {
+        setIsUpdating(false);
       }
     },
-    [hapticFeedback]
+    [hapticFeedback, notificationSettings, isUpdating]
   );
 
   const handleNavigateToCredits = useCallback(() => {

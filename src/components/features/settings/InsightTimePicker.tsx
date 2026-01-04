@@ -6,7 +6,7 @@
  *
  * @module components/features/settings/InsightTimePicker
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Switch } from '@/components/ui/switch';
 
 // ============================================================================
@@ -128,6 +128,21 @@ export function InsightTimePicker({
   onTimeChange,
 }: InsightTimePickerProps): React.ReactElement {
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
+  const timePickerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!isTimePickerOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (timePickerRef.current && !timePickerRef.current.contains(event.target as Node)) {
+        setIsTimePickerOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isTimePickerOpen]);
 
   const handleTimeSelect = useCallback(
     (selectedTime: string) => {
@@ -191,7 +206,7 @@ export function InsightTimePicker({
       >
         {/* Time Picker Button (only when enabled) */}
         {enabled && (
-          <div style={{ position: 'relative' }}>
+          <div ref={timePickerRef} style={{ position: 'relative' }}>
             <button
               type="button"
               role="combobox"

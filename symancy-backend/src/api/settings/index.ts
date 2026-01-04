@@ -14,6 +14,36 @@ import {
 } from './notification-settings.js';
 
 /**
+ * JSON Schema for PATCH /settings/timezone request body
+ */
+const updateTimezoneSchema = {
+  body: {
+    type: 'object' as const,
+    required: ['timezone'],
+    properties: {
+      timezone: { type: 'string', maxLength: 50 },
+    },
+  },
+};
+
+/**
+ * JSON Schema for PATCH /settings/notifications request body
+ * All fields are optional for partial updates
+ */
+const updateNotificationSettingsSchema = {
+  body: {
+    type: 'object' as const,
+    properties: {
+      enabled: { type: 'boolean' },
+      morning_enabled: { type: 'boolean' },
+      evening_enabled: { type: 'boolean' },
+      morning_time: { type: 'string', pattern: '^([01]\\d|2[0-3]):00$' },
+      evening_time: { type: 'string', pattern: '^([01]\\d|2[0-3]):00$' },
+    },
+  },
+};
+
+/**
  * Register all settings routes
  *
  * Registers the following endpoints:
@@ -34,6 +64,6 @@ import {
  */
 export function registerSettingsRoutes(fastify: FastifyInstance): void {
   fastify.get('/settings/notifications', getNotificationSettingsHandler);
-  fastify.patch('/settings/timezone', updateTimezoneHandler);
-  fastify.patch('/settings/notifications', updateNotificationSettingsHandler);
+  fastify.patch('/settings/timezone', { schema: updateTimezoneSchema }, updateTimezoneHandler);
+  fastify.patch('/settings/notifications', { schema: updateNotificationSettingsSchema }, updateNotificationSettingsHandler);
 }
