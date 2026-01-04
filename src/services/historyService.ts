@@ -15,6 +15,8 @@ export interface HistoryItem {
   image_url?: string;
   /** Original persona (arina, cassandra, etc.) */
   persona?: string;
+  /** Source of the analysis: 'telegram' or 'web' */
+  source: 'telegram' | 'web';
 }
 
 /**
@@ -72,6 +74,8 @@ function transformDbToUi(dbItem: DbHistoryItem): HistoryItem {
     focus_area: mapAnalysisTypeToFocusArea(dbItem.analysis_type),
     image_url: dbItem.image_url || undefined,
     persona: dbItem.persona,
+    // Determine source: if telegram_user_id exists, it came from Telegram
+    source: dbItem.telegram_user_id ? 'telegram' : 'web',
   };
 }
 

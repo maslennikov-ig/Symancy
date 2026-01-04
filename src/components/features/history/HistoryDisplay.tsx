@@ -39,6 +39,10 @@ const HistoryDisplay: React.FC<HistoryDisplayProps> = ({ onSelectAnalysis, t, la
     return t(key);
   }
 
+  const getSourceIcon = (source: 'telegram' | 'web') => {
+    return source === 'telegram' ? '📱' : '🌐';
+  }
+
   // Loading state
   if (isLoading) {
     return (
@@ -86,8 +90,9 @@ const HistoryDisplay: React.FC<HistoryDisplayProps> = ({ onSelectAnalysis, t, la
         >
           <div className="flex justify-between items-start gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-primary">
-                {getFocusAreaTranslation(item.focus_area)}
+              <p className="text-sm font-medium text-primary flex items-center gap-1.5">
+                <span>{getSourceIcon(item.source)}</span>
+                <span>{getFocusAreaTranslation(item.focus_area)}</span>
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 {new Date(item.created_at).toLocaleDateString(language, {
