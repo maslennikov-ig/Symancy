@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.32
+
+_Released on 2026-01-04_
+
+### ✨ New Features
+
+- **symancy-backend/src/services/proactive/ProactiveMessageService.ts**: Add 3 source file(s), update 6 source file(s), +1 more
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.31
 
 _Released on 2026-01-04_

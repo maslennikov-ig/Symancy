@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.32] - 2026-01-04
+
+### Added
+- **symancy-backend/src/services/proactive/ProactiveMessageService.ts**: add 3 source file(s), update 6 source file(s), +1 more (9d405fd)
+
 ## [0.5.31] - 2026-01-04
 
 ### Fixed
