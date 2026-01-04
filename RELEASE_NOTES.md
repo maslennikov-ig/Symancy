@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.33
+
+_Released on 2026-01-04_
+
+### 🐛 Bug Fixes
+
+- **historyService**: Add Telegram JWT support for analysis history
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.32
 
 _Released on 2026-01-04_

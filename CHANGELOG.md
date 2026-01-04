@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.33] - 2026-01-04
+
+### Fixed
+- **historyService**: add Telegram JWT support for analysis history (4eb8ea2)
+
 ## [0.5.32] - 2026-01-04
 
 ### Added
