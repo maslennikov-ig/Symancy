@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.39
+
+_Released on 2026-01-04_
+
+### 🐛 Bug Fixes
+
+- **share**: On desktop WebApp download image instead of navigator.share() which opens Windows system dialog
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.38
 
 _Released on 2026-01-04_
