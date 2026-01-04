@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.37] - 2026-01-04
+
+### Other
+- **ci**: lower coverage threshold to 14% to account for untested link migration code (668325b)
+
 ## [0.5.36] - 2026-01-04
 
 ### Added

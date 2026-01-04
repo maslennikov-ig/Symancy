@@ -1,6 +1,6 @@
 {
   "name": "symancy-backend",
-  "version": "0.5.36",
+  "version": "0.5.37",
   "description": "Symancy Telegram Bot Backend - Node.js migration from n8n",
   "type": "module",
   "engines": {

@@ -2,6 +2,14 @@
 
 User-facing release notes for all versions.
 
+## v0.5.37
+
+_Released on 2026-01-04_
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.36
 
 _Released on 2026-01-04_
