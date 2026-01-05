@@ -10,6 +10,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { getSupabase } from '../../core/database.js';
 import { verifyToken } from '../../services/auth/JwtService.js';
 import { getLogger } from '../../core/logger.js';
+import { getEnv } from '../../config/env.js';
 
 const logger = getLogger().child({ module: 'settings' });
 
@@ -181,7 +182,7 @@ export async function getNotificationSettingsHandler(
   logger.debug({ userId, timezone: user.timezone }, 'Notification settings fetched');
 
   return reply.send({
-    timezone: user.timezone || 'Europe/Moscow',
+    timezone: user.timezone || getEnv().DEFAULT_TIMEZONE,
     notification_settings: settings,
   } satisfies NotificationSettingsResponse);
 }

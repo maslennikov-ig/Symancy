@@ -80,6 +80,17 @@ interface JoinedUnifiedUser {
   is_telegram_linked: boolean;
 }
 
+/**
+ * Daily insight row with joined unified_users data
+ * Type for Supabase query result with !inner join
+ * Note: Supabase returns joined data as array with !inner
+ */
+interface DailyInsightWithUserRaw {
+  id: string;
+  unified_user_id: string;
+  morning_advice: string | null;
+  unified_users: JoinedUnifiedUser[];
+}
 
 /**
  * Message header translations for insights
@@ -356,20 +367,18 @@ export async function processEveningInsight(job: Job): Promise<void> {
     let successCount = 0;
     let failedCount = 0;
 
-    for (const row of todaysInsights) {
-      // Supabase join returns unified_users as first element of array with !inner
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rawRow = row as any;
-      const user = rawRow.unified_users as JoinedUnifiedUser;
+    for (const row of todaysInsights as DailyInsightWithUserRaw[]) {
+      // Supabase !inner join returns unified_users as array, extract first element
+      const user = row.unified_users[0];
 
       if (!user || !user.is_telegram_linked || !user.telegram_id) {
         continue;
       }
 
       const insight = {
-        id: rawRow.id as string,
-        unified_user_id: rawRow.unified_user_id as string,
-        morning_advice: rawRow.morning_advice as string | null,
+        id: row.id,
+        unified_user_id: row.unified_user_id,
+        morning_advice: row.morning_advice,
         unified_users: user,
       };
 

@@ -14,8 +14,30 @@
 import { getSupabase } from "../../core/database.js";
 import { getLogger } from "../../core/logger.js";
 import { sendJob } from "../../core/queue.js";
+import { getEnv } from "../../config/env.js";
 
 const logger = getLogger().child({ module: "insight-dispatcher" });
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+/** Batch size for pagination to avoid memory issues with large user bases */
+const DISPATCH_BATCH_SIZE = 1000;
+
+/** Retry configuration for insight jobs */
+const INSIGHT_JOB_CONFIG = {
+  /** Maximum number of retry attempts for failed jobs */
+  retryLimit: 3,
+  /** Delay between retries in seconds */
+  retryDelay: 60,
+} as const;
+
+/** Default notification time preferences */
+const DEFAULT_NOTIFICATION_TIMES = {
+  morning: "08:00",
+  evening: "20:00",
+} as const;
 
 // =============================================================================
 // TYPES
@@ -75,10 +97,11 @@ export function getCurrentHourInTimezone(timezone: string, userId?: string): num
     });
     return parseInt(formatter.format(new Date()), 10);
   } catch (error) {
-    // Invalid timezone, fallback to Europe/Moscow
-    logger.warn({ timezone, userId, error }, "Invalid timezone, using Europe/Moscow fallback");
+    // Invalid timezone, fallback to configured default
+    const defaultTimezone = getEnv().DEFAULT_TIMEZONE;
+    logger.warn({ timezone, userId, error, defaultTimezone }, "Invalid timezone, using default fallback");
     const formatter = new Intl.DateTimeFormat("en-US", {
-      timeZone: "Europe/Moscow",
+      timeZone: defaultTimezone,
       hour: "numeric",
       hour12: false,
     });
@@ -122,9 +145,6 @@ export function getTodayInTimezone(timezone: string): string {
 // =============================================================================
 // USER FINDING
 // =============================================================================
-
-// Batch size for pagination to avoid memory issues with large user bases
-const DISPATCH_BATCH_SIZE = 1000;
 
 /**
  * Find users whose local time matches their notification preference
@@ -178,16 +198,16 @@ export async function findUsersForInsightType(
       // Skip users without telegram_id
       if (!rawUser.telegram_id) continue;
 
-      // Get timezone (default to Europe/Moscow)
-      const timezone = rawUser.timezone ?? "Europe/Moscow";
+      // Get timezone (default to configured default)
+      const timezone = rawUser.timezone ?? getEnv().DEFAULT_TIMEZONE;
 
       // Get notification settings (default all enabled)
       const settings: NotificationSettings = rawUser.notification_settings ?? {
         enabled: true,
         morning_enabled: true,
         evening_enabled: true,
-        morning_time: "08:00",
-        evening_time: "20:00",
+        morning_time: DEFAULT_NOTIFICATION_TIMES.morning,
+        evening_time: DEFAULT_NOTIFICATION_TIMES.evening,
       };
 
       // Check if notifications are enabled
@@ -200,8 +220,8 @@ export async function findUsersForInsightType(
       // Get preferred time for this insight type
       const preferredTime =
         insightType === "morning"
-          ? settings.morning_time ?? "08:00"
-          : settings.evening_time ?? "20:00";
+          ? settings.morning_time ?? DEFAULT_NOTIFICATION_TIMES.morning
+          : settings.evening_time ?? DEFAULT_NOTIFICATION_TIMES.evening;
 
       const preferredHour = parseHour(preferredTime);
 
@@ -273,10 +293,7 @@ export async function dispatchMorningInsights(): Promise<{
             displayName: user.displayName,
             languageCode: user.languageCode,
           },
-          {
-            retryLimit: 3,
-            retryDelay: 60, // 1 minute between retries
-          }
+          INSIGHT_JOB_CONFIG
         );
 
         if (jobId) {
@@ -343,10 +360,7 @@ export async function dispatchEveningInsights(): Promise<{
             displayName: user.displayName,
             languageCode: user.languageCode,
           },
-          {
-            retryLimit: 3,
-            retryDelay: 60,
-          }
+          INSIGHT_JOB_CONFIG
         );
 
         if (jobId) {

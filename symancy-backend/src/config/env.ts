@@ -63,6 +63,9 @@ const EnvSchema = z.object({
   DB_POOL_MAX: z.coerce.number().min(1).max(100).default(20),
   DB_POOL_IDLE_TIMEOUT_MS: z.coerce.number().min(1000).default(30000),
   DB_POOL_CONNECTION_TIMEOUT_MS: z.coerce.number().min(100).default(2000),
+
+  // Timezone Configuration
+  DEFAULT_TIMEZONE: z.string().default("Europe/Moscow"),
 }).refine(
   (data) => data.SUPABASE_JWT_SIGNING_KEY || data.SUPABASE_JWT_SECRET,
   {
