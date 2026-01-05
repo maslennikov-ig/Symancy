@@ -204,12 +204,12 @@ jobs:
           ssh ${SSH_USER}@${SSH_HOST} "pm2 kill 2>/dev/null; true"
 
           # Kill any process on port 3000 using multiple methods
-          # Method 1: fuser (more reliable on Linux)
+          # Method 1: fuser (most reliable on Linux)
           ssh ${SSH_USER}@${SSH_HOST} "fuser -k 3000/tcp 2>/dev/null; true"
           # Method 2: lsof fallback
           ssh ${SSH_USER}@${SSH_HOST} "lsof -ti:3000 | xargs -r kill -9 2>/dev/null; true"
-          # Method 3: pkill node processes for this directory
-          ssh ${SSH_USER}@${SSH_HOST} "pkill -f 'symancy-backend' 2>/dev/null; true"
+          # Method 3: kill node processes running the specific app.js (not pkill -f which kills SSH)
+          ssh ${SSH_USER}@${SSH_HOST} "pgrep -f 'node.*dist/app.js' | xargs -r kill -9 2>/dev/null; true"
 
           # Wait for processes to fully terminate
           sleep 5
