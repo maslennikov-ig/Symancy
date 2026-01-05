@@ -26,6 +26,10 @@ module.exports = {
       autorestart: true,
       watch: false,                    // Don't watch in production
       max_memory_restart: '512M',      // Restart if memory exceeds 512MB
+      max_restarts: 5,                 // Max restart attempts before giving up
+      min_uptime: 5000,                // Min time app must run to be considered "started"
+      restart_delay: 5000,             // Wait 5s between restarts
+      exp_backoff_restart_delay: 1000, // Exponential backoff starting at 1s
 
       // Logs (relative to cwd, will be created automatically)
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',

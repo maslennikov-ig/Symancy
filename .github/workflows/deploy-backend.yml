@@ -241,9 +241,14 @@ jobs:
             fi
             echo 'Port 3000 is free'
 
+            echo '=== Final port check before PM2 start ==='
+            lsof -i:3000 || echo 'Confirmed: No process on port 3000'
+            netstat -tlnp 2>/dev/null | grep 3000 || echo 'Confirmed: Port 3000 not in netstat'
+
             echo '=== Starting new process ==='
             cd /var/www/symancy-backend/current
-            GIT_COMMIT=${GIT_SHORT} pm2 start ecosystem.config.cjs --env production
+            # Start with --no-autorestart first to avoid rapid restart loop
+            GIT_COMMIT=${GIT_SHORT} pm2 start ecosystem.config.cjs --env production --update-env
             pm2 save
             echo '=== Process started and saved ==='
           "
