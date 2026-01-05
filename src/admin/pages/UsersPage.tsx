@@ -7,10 +7,12 @@ import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
 import { useAdminTranslations } from '../hooks/useAdminTranslations';
 import { formatRelativeTime, formatDateShort } from '../utils/formatters';
+import { sanitizeDisplayName } from '../utils/sanitize';
 import { PAGE_SIZES, TIME_THRESHOLDS } from '../utils/constants';
 import { logger } from '../utils/logger';
 import { exportToCsv } from '../utils/exportCsv';
 import { CreditsBadges, type UserCredits } from '../components/CreditBadge';
+import { UserActionsMenu } from '../components/UserActionsMenu';
 import {
   Table,
   TableBody,
@@ -36,6 +38,7 @@ interface UnifiedUser {
   id: string;
   telegram_id: string | null;
   display_name: string | null;
+  is_banned: boolean;
   last_active_at: string | null;
   created_at: string;
   unified_user_credits: UserCredits | null;
@@ -50,7 +53,7 @@ const PAGE_SIZE = PAGE_SIZES.USERS;
 function UsersTableSkeleton() {
   return (
     <div className="space-y-3">
-      {Array.from({ length: 10 }).map((_, i) => (
+      {Array.from({ length: PAGE_SIZE }).map((_, i) => (
         <div key={i} className="flex items-center gap-4 p-4">
           <Skeleton className="h-4 w-24" />
           <Skeleton className="h-4 w-32" />
@@ -116,6 +119,7 @@ export function UsersPage() {
             id,
             telegram_id,
             display_name,
+            is_banned,
             last_active_at,
             created_at,
             unified_user_credits (
@@ -189,6 +193,10 @@ export function UsersPage() {
         header: 'Cassandra Credits',
         accessor: (item) => item.unified_user_credits?.credits_cassandra ?? 0,
       },
+      {
+        header: 'Status',
+        accessor: (item) => item.is_banned ? 'Banned' : 'Active',
+      },
       { header: 'Last Active', accessor: 'last_active_at' },
       { header: 'Created At', accessor: 'created_at' },
     ]);
@@ -198,6 +206,39 @@ export function UsersPage() {
   // Handle row click
   const handleRowClick = (userId: string) => {
     navigate(`/admin/users/${userId}`);
+  };
+
+  // Handle ban/unban toggle
+  const handleToggleBan = async (userId: string, shouldBan: boolean) => {
+    const { error } = await supabase.rpc('admin_toggle_ban', {
+      p_user_id: userId,
+      p_is_banned: shouldBan,
+      p_reason: null,
+    });
+    if (error) {
+      logger.error('Error toggling ban', error);
+      toast.error(t('admin.users.actionFailed'));
+      return;
+    }
+    toast.success(
+      shouldBan ? t('admin.users.banSuccess') : t('admin.users.unbanSuccess')
+    );
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
+  // Handle delete user
+  const handleDeleteUser = async (userId: string) => {
+    const { error } = await supabase.rpc('admin_delete_user', {
+      p_user_id: userId,
+      p_reason: null,
+    });
+    if (error) {
+      logger.error('Error deleting user', error);
+      toast.error(t('admin.users.actionFailed'));
+      return;
+    }
+    toast.success(t('admin.users.deleteSuccess'));
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   // Handle sort change
@@ -321,8 +362,10 @@ export function UsersPage() {
                   <TableHead className="w-[150px]">{t('admin.users.columns.telegramId')}</TableHead>
                   <TableHead>{t('admin.users.columns.displayName')}</TableHead>
                   <TableHead className="w-[200px]">{t('admin.users.columns.credits')}</TableHead>
+                  <TableHead className="w-[100px]">{t('admin.users.columns.status')}</TableHead>
                   <TableHead className="w-[120px]">{t('admin.users.columns.lastActive')}</TableHead>
                   <TableHead className="w-[120px]">{t('admin.users.createdAt')}</TableHead>
+                  <TableHead className="w-[80px]">{t('admin.users.columns.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -346,18 +389,37 @@ export function UsersPage() {
                       )}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {userItem.display_name || (
+                      {sanitizeDisplayName(userItem.display_name) === 'No name' ? (
                         <span className="text-muted-foreground italic">No name</span>
+                      ) : (
+                        sanitizeDisplayName(userItem.display_name)
                       )}
                     </TableCell>
                     <TableCell>
                       <CreditsBadges credits={userItem.unified_user_credits} />
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={userItem.is_banned ? 'destructive' : 'default'}>
+                        {userItem.is_banned
+                          ? t('admin.users.status.banned')
+                          : t('admin.users.status.active')}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatRelativeTime(userItem.last_active_at)}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatDateShort(userItem.created_at)}
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <UserActionsMenu
+                        userId={userItem.id}
+                        displayName={userItem.display_name}
+                        isBanned={userItem.is_banned}
+                        onViewDetails={() => handleRowClick(userItem.id)}
+                        onBanToggle={handleToggleBan}
+                        onDelete={handleDeleteUser}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -390,7 +452,7 @@ export function UsersPage() {
                 onClick={() => setCurrentPage((p) => p + 1)}
                 disabled={!canGoNext || isLoading}
               >
-                Next
+                {t('admin.common.next')}
               </Button>
             </div>
           </div>

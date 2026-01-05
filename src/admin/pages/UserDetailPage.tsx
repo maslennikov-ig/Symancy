@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
@@ -6,6 +6,7 @@ import { AdminLayout } from '../layout/AdminLayout';
 import { useAdminAuth } from '../hooks/useAdminAuth';
 import { useAdminTranslations } from '../hooks/useAdminTranslations';
 import { formatRelativeTime, formatFullDate, truncateText } from '../utils/formatters';
+import { sanitizeDisplayName } from '../utils/sanitize';
 import { MAX_CREDIT_ADJUSTMENT, TIME_THRESHOLDS } from '../utils/constants';
 import { logger } from '../utils/logger';
 import { CreditsBadges, CreditBadge, type UserCredits } from '../components/CreditBadge';
@@ -17,6 +18,18 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Ban, ShieldOff, Trash2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -132,7 +145,25 @@ export function UserDetailPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  // Admin actions state
+  const [isBanProcessing, setIsBanProcessing] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
+  const [banDialogOpen, setBanDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Ref for success message timeout cleanup
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleRetry = () => setRefreshTrigger(prev => prev + 1);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Fetch all user data on mount
   useEffect(() => {
@@ -223,40 +254,37 @@ export function UserDetailPage() {
     };
   }, [authLoading, isAdmin, id, refreshTrigger]);
 
-  // Handle credit adjustment with optimistic updates
+  // Handle credit adjustment (no optimistic updates to avoid race conditions)
   const handleAdjustCredits = async () => {
     if (!id) return;
     if (basicDelta === 0 && proDelta === 0 && cassandraDelta === 0) {
-      setSaveError('Please specify at least one credit adjustment');
+      setSaveError(t('admin.userDetail.noAdjustmentError'));
       return;
     }
 
     // Input validation: check adjustment limits
     if (Math.abs(basicDelta) > MAX_CREDIT_ADJUSTMENT.basic) {
-      setSaveError('Basic credit adjustment must be between -' + MAX_CREDIT_ADJUSTMENT.basic + ' and +' + MAX_CREDIT_ADJUSTMENT.basic);
+      setSaveError(
+        t('admin.userDetail.creditAdjustmentError')
+          .replace(/{max}/g, String(MAX_CREDIT_ADJUSTMENT.basic))
+      );
       return;
     }
     if (Math.abs(proDelta) > MAX_CREDIT_ADJUSTMENT.pro) {
-      setSaveError('Pro credit adjustment must be between -' + MAX_CREDIT_ADJUSTMENT.pro + ' and +' + MAX_CREDIT_ADJUSTMENT.pro);
+      setSaveError(
+        t('admin.userDetail.creditAdjustmentError')
+          .replace(/{max}/g, String(MAX_CREDIT_ADJUSTMENT.pro))
+      );
       return;
     }
     if (Math.abs(cassandraDelta) > MAX_CREDIT_ADJUSTMENT.cassandra) {
-      setSaveError('Cassandra credit adjustment must be between -' + MAX_CREDIT_ADJUSTMENT.cassandra + ' and +' + MAX_CREDIT_ADJUSTMENT.cassandra);
+      setSaveError(
+        t('admin.userDetail.creditAdjustmentError')
+          .replace(/{max}/g, String(MAX_CREDIT_ADJUSTMENT.cassandra))
+      );
       return;
     }
 
-    // Store previous state for rollback
-    const previousCredits = credits;
-
-    // Calculate optimistic new values (ensure non-negative)
-    const optimisticCredits: UserCredits = {
-      credits_basic: Math.max(0, (credits?.credits_basic || 0) + basicDelta),
-      credits_pro: Math.max(0, (credits?.credits_pro || 0) + proDelta),
-      credits_cassandra: Math.max(0, (credits?.credits_cassandra || 0) + cassandraDelta),
-    };
-
-    // Optimistically update UI immediately
-    setCredits(optimisticCredits);
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
@@ -292,7 +320,7 @@ export function UserDetailPage() {
         throw new Error('Invalid RPC response: missing or invalid credits_cassandra');
       }
 
-      // Confirm with server response (replaces optimistic values with actual server values)
+      // Update credits with server response (source of truth)
       setCredits({
         credits_basic: result.credits_basic,
         credits_pro: result.credits_pro,
@@ -309,12 +337,15 @@ export function UserDetailPage() {
       toast.success('Credits adjusted', { description: 'User credits have been updated successfully.' });
 
       // Clear success message after configured duration
-      setTimeout(() => setSaveSuccess(false), TIME_THRESHOLDS.SUCCESS_MESSAGE_DURATION_MS);
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+      successTimeoutRef.current = setTimeout(() => {
+        setSaveSuccess(false);
+        successTimeoutRef.current = null;
+      }, TIME_THRESHOLDS.SUCCESS_MESSAGE_DURATION_MS);
 
     } catch (err) {
-      // Rollback to previous state on error
-      setCredits(previousCredits);
-
       logger.error('Error adjusting credits', err);
       const message = err instanceof Error ? err.message : 'Failed to adjust credits';
       setSaveError(message);
@@ -332,6 +363,49 @@ export function UserDetailPage() {
     setAdjustReason('');
     setIsEditingCredits(false);
     setSaveError(null);
+  };
+
+  // Handle ban/unban user
+  const handleToggleBan = async () => {
+    if (!id || !userData) return;
+    setIsBanProcessing(true);
+    try {
+      const { error } = await supabase.rpc('admin_toggle_ban', {
+        p_user_id: id,
+        p_is_banned: !userData.is_banned,
+        p_reason: null
+      });
+      if (error) throw error;
+      toast.success(userData.is_banned ? t('admin.users.unbanSuccess') : t('admin.users.banSuccess'));
+      setRefreshTrigger(prev => prev + 1);
+      setBanDialogOpen(false);
+    } catch (err) {
+      logger.error('Error toggling ban', err);
+      toast.error(t('admin.users.actionFailed'));
+    } finally {
+      setIsBanProcessing(false);
+    }
+  };
+
+  // Handle delete user
+  const handleDeleteUser = async () => {
+    if (!id) return;
+    setIsDeleteProcessing(true);
+    try {
+      const { error } = await supabase.rpc('admin_delete_user', {
+        p_user_id: id,
+        p_reason: null
+      });
+      if (error) throw error;
+      toast.success(t('admin.users.deleteSuccess'));
+      setDeleteDialogOpen(false);
+      navigate('/admin/users');
+    } catch (err) {
+      logger.error('Error deleting user', err);
+      toast.error(t('admin.users.actionFailed'));
+    } finally {
+      setIsDeleteProcessing(false);
+    }
   };
 
   // Auth loading state
@@ -376,7 +450,7 @@ export function UserDetailPage() {
           </Button>
           {userData && (
             <h1 className="text-2xl font-bold">
-              {userData.display_name || t('admin.userDetail.unnamed')}
+              {sanitizeDisplayName(userData.display_name, t('admin.userDetail.unnamed'))}
             </h1>
           )}
         </div>
@@ -433,7 +507,7 @@ export function UserDetailPage() {
 
                     <div className="flex items-center gap-2">
                       <Label className="text-muted-foreground w-32">{t('admin.userDetail.displayName')}:</Label>
-                      <span>{userData.display_name || '-'}</span>
+                      <span>{sanitizeDisplayName(userData.display_name, '-')}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -513,6 +587,13 @@ export function UserDetailPage() {
                       <div className="space-y-4">
                         <Label className="text-sm font-medium">{t('admin.userDetail.creditAdjustments')}:</Label>
 
+                        {isSaving && (
+                          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-sm bg-amber-50 dark:bg-amber-900/20 p-2 rounded">
+                            <span className="animate-pulse">*</span>
+                            {t('admin.userDetail.creditsSaving')}
+                          </div>
+                        )}
+
                         <div className="grid grid-cols-3 gap-3">
                           <div>
                             <Label htmlFor="basic-delta" className="text-xs text-muted-foreground">
@@ -589,6 +670,113 @@ export function UserDetailPage() {
                     )}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Admin Actions Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('admin.userDetail.adminActions')}</CardTitle>
+                <CardDescription>{t('admin.userDetail.adminActionsDesc')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Ban/Unban Button with Confirmation */}
+                  <AlertDialog
+                    open={banDialogOpen}
+                    onOpenChange={(open) => {
+                      if (!isBanProcessing) setBanDialogOpen(open);
+                    }}
+                  >
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant={userData?.is_banned ? 'outline' : 'secondary'}
+                        className="w-full justify-start gap-2"
+                        disabled={isLoading || isBanProcessing}
+                      >
+                        {userData?.is_banned ? (
+                          <>
+                            <ShieldOff className="h-4 w-4" />
+                            {t('admin.users.actions.unban')}
+                          </>
+                        ) : (
+                          <>
+                            <Ban className="h-4 w-4" />
+                            {t('admin.users.actions.ban')}
+                          </>
+                        )}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          {userData?.is_banned
+                            ? t('admin.users.confirmUnban.title')
+                            : t('admin.users.confirmBan.title')}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {userData?.is_banned
+                            ? t('admin.users.confirmUnban.description')
+                            : t('admin.users.confirmBan.description')}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t('admin.common.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleToggleBan}
+                          disabled={isBanProcessing}
+                        >
+                          {isBanProcessing
+                            ? t('admin.common.processing')
+                            : userData?.is_banned
+                              ? t('admin.users.confirmUnban.confirm')
+                              : t('admin.users.confirmBan.confirm')}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+
+                  <Separator />
+
+                  {/* Delete Button with Confirmation */}
+                  <AlertDialog
+                    open={deleteDialogOpen}
+                    onOpenChange={(open) => {
+                      if (!isDeleteProcessing) setDeleteDialogOpen(open);
+                    }}
+                  >
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        className="w-full justify-start gap-2"
+                        disabled={isLoading || isDeleteProcessing}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {t('admin.users.actions.delete')}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{t('admin.users.confirmDelete.title')}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {t('admin.users.confirmDelete.description')}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t('admin.common.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDeleteUser}
+                          disabled={isDeleteProcessing}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {isDeleteProcessing
+                            ? t('admin.common.processing')
+                            : t('admin.users.confirmDelete.confirm')}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </CardContent>
             </Card>
           </div>
