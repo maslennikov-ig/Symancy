@@ -200,11 +200,14 @@ jobs:
           # Create logs directory
           ssh ${SSH_USER}@${SSH_HOST} "mkdir -p ${RELEASE_DIR}/logs"
 
-          # Force stop and delete PM2 process
-          ssh ${SSH_USER}@${SSH_HOST} "pm2 stop symancy-backend 2>/dev/null; pm2 delete symancy-backend 2>/dev/null; true"
+          # Kill any stale process on port 3000 (force cleanup)
+          ssh ${SSH_USER}@${SSH_HOST} "lsof -ti:3000 | xargs -r kill -9 2>/dev/null; true"
+
+          # Force stop and delete ALL PM2 processes (clean slate)
+          ssh ${SSH_USER}@${SSH_HOST} "pm2 kill 2>/dev/null; true"
 
           # Wait for processes to fully terminate
-          sleep 2
+          sleep 3
 
           # Start fresh PM2 process
           GIT_SHORT="${GITHUB_SHA:0:7}"
@@ -246,12 +249,21 @@ jobs:
           if [ "$DEPLOYED_COMMIT" = "$EXPECTED_COMMIT" ]; then
             echo "Version verification passed!"
           else
-            echo "::warning::Version mismatch! Deployed: ${DEPLOYED_COMMIT}, Expected: ${EXPECTED_COMMIT}"
+            echo "::error::Version mismatch! Deployed: ${DEPLOYED_COMMIT}, Expected: ${EXPECTED_COMMIT}"
+            # Show PM2 logs for debugging
+            ssh ${SSH_USER}@${SSH_HOST} "pm2 logs symancy-backend --lines 50 --nostream" || true
+            exit 1
           fi
 
-          # Show uptime (should be very low for fresh deploy)
-          UPTIME=$(ssh ${SSH_USER}@${SSH_HOST} "curl -sf http://localhost:3000/version | jq -r '.uptime'" || echo "unknown")
+          # Verify uptime is low (should be < 60 seconds for fresh deploy)
+          UPTIME=$(ssh ${SSH_USER}@${SSH_HOST} "curl -sf http://localhost:3000/version | jq -r '.uptime'" || echo "0")
           echo "Process uptime: ${UPTIME} seconds"
+
+          # If uptime is more than 120 seconds, this is a stale process
+          if [ "$(echo "$UPTIME > 120" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+            echo "::error::Process uptime too high (${UPTIME}s) - stale process detected!"
+            exit 1
+          fi
 
   # Notify: Telegram
   notify:
