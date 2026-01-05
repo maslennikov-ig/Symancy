@@ -204,24 +204,39 @@ jobs:
           GIT_SHORT="${GITHUB_SHA:0:7}"
           ssh ${SSH_USER}@${SSH_HOST} "
             set -e
+            echo '=== Checking for PM2 systemd service ==='
+            # Stop PM2 systemd service if exists (prevents auto-resurrect)
+            sudo systemctl stop pm2-deploy 2>/dev/null || sudo systemctl stop pm2-root 2>/dev/null || true
+
             echo '=== Stopping ALL PM2 processes ==='
-            # Delete all PM2 processes first
             pm2 delete all 2>/dev/null || true
-            # Clear the dump file to prevent auto-resurrect
-            pm2 cleardump 2>/dev/null || true
-            # Kill PM2 daemon completely
             pm2 kill 2>/dev/null || true
+            # Remove PM2 dump file directly (prevents resurrect on daemon restart)
+            rm -f ~/.pm2/dump.pm2 ~/.pm2/dump.pm2.bak 2>/dev/null || true
             sleep 2
 
             echo '=== Killing any remaining processes on port 3000 ==='
             fuser -k 3000/tcp 2>/dev/null || true
             sleep 2
-            lsof -ti:3000 | xargs -r kill -9 2>/dev/null || true
+            # Kill ALL node processes just to be safe
+            sudo pkill -9 node 2>/dev/null || true
             sleep 3
 
+            # Double check port is free
+            for i in 1 2 3; do
+              if lsof -ti:3000 >/dev/null 2>&1; then
+                echo \"Attempt \$i: Port 3000 still in use, killing...\"
+                lsof -ti:3000 | xargs -r kill -9 2>/dev/null || true
+                sleep 2
+              else
+                break
+              fi
+            done
+
             if lsof -ti:3000 >/dev/null 2>&1; then
-              echo 'ERROR: Port 3000 still in use!'
+              echo 'ERROR: Port 3000 still in use after multiple attempts!'
               lsof -i:3000 || true
+              ps aux | grep node || true
               exit 1
             fi
             echo 'Port 3000 is free'
