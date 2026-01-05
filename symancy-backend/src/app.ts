@@ -245,13 +245,13 @@ async function startWorkers() {
   const chatWorkerId = await registerChatWorker();
   logger.info({ workerId: chatWorkerId }, "Chat reply worker registered");
 
-  // Setup engagement scheduler (pg-boss cron jobs)
-  await setupScheduler();
-  logger.info("Engagement scheduler configured");
-
-  // Register engagement workers
+  // Register engagement workers FIRST (creates queues in pg-boss)
   const engagementWorkerIds = await registerEngagementWorkers();
   logger.info({ count: engagementWorkerIds.length }, "Engagement workers registered");
+
+  // Setup engagement scheduler AFTER workers (schedules depend on queue existence)
+  await setupScheduler();
+  logger.info("Engagement scheduler configured");
 
   logger.info("All workers started");
 }
