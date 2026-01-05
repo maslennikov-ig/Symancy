@@ -104,6 +104,31 @@ export const QUEUE_DAILY_FORTUNE = "daily-fortune";
  */
 export const QUEUE_PHOTO_CLEANUP = "photo-cleanup";
 
+/**
+ * Queue name for timezone-aware insight dispatcher (hourly)
+ */
+export const QUEUE_INSIGHT_DISPATCHER = "insight-dispatcher";
+
+/**
+ * Queue name for morning insights (legacy batch)
+ */
+export const QUEUE_MORNING_INSIGHT = "morning-insight";
+
+/**
+ * Queue name for evening insights (legacy batch)
+ */
+export const QUEUE_EVENING_INSIGHT = "evening-insight";
+
+/**
+ * Queue name for single-user morning insight jobs
+ */
+export const QUEUE_MORNING_INSIGHT_SINGLE = "morning-insight-single";
+
+/**
+ * Queue name for single-user evening insight jobs
+ */
+export const QUEUE_EVENING_INSIGHT_SINGLE = "evening-insight-single";
+
 // =============================================================================
 // Rate Limits
 // =============================================================================
