@@ -13,16 +13,8 @@ import type {
 import { getSupabase } from "../core/database.js";
 import { readFile } from "fs/promises";
 import path from "path";
-import { fileURLToPath } from "url";
 import { CHAT_HISTORY_LIMIT } from "../config/constants.js";
 import { searchMemories } from "../services/memory.service.js";
-
-/**
- * Get project root directory
- */
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, "../..");
 
 /**
  * Cached prompts (loaded once at module init)
@@ -40,16 +32,17 @@ async function loadArinaPrompts(): Promise<void> {
     return; // Already loaded
   }
 
+  // Use process.cwd() to resolve from working directory (symlink-safe)
   const systemPromptPath = path.join(
-    projectRoot,
+    process.cwd(),
     "prompts/arina/system.txt"
   );
   const chatPromptPath = path.join(
-    projectRoot,
+    process.cwd(),
     "prompts/arina/chat.txt"
   );
   const invalidImagePromptPath = path.join(
-    projectRoot,
+    process.cwd(),
     "prompts/arina/invalid-image.txt"
   );
 

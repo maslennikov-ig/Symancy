@@ -12,11 +12,6 @@ import type {
 } from "../types/langchain.js";
 import { readFile } from "fs/promises";
 import path from "path";
-import { fileURLToPath } from "url";
-
-// Get __dirname equivalent in ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /**
  * Cached system prompt for vision analysis
@@ -33,10 +28,10 @@ async function loadVisionPrompt(): Promise<string> {
     return cachedVisionPrompt;
   }
 
-  // Path relative to project root
+  // Use process.cwd() to resolve from working directory (symlink-safe)
   const promptPath = path.join(
-    __dirname,
-    "../../prompts/vision/analyze.txt"
+    process.cwd(),
+    "prompts/vision/analyze.txt"
   );
 
   try {

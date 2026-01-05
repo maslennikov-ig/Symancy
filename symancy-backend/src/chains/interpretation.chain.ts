@@ -12,19 +12,11 @@ import type {
 } from "../types/langchain.js";
 import { readFile } from "fs/promises";
 import path from "path";
-import { fileURLToPath } from "url";
 import { getLogger } from "../core/logger.js";
 import { selectRandomLens } from "../config/interpretation-matrix.js";
 import { findMaxSimilarity } from "../utils/similarity.js";
 
 const logger = getLogger().child({ module: "interpretation-chain" });
-
-/**
- * Get project root directory
- */
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, "../..");
 
 /**
  * Fallback interpretations when LLM fails
@@ -65,12 +57,13 @@ async function loadArinaPrompts(): Promise<void> {
     return; // Already loaded
   }
 
+  // Use process.cwd() to resolve from working directory (symlink-safe)
   const systemPromptPath = path.join(
-    projectRoot,
+    process.cwd(),
     "prompts/arina/system.txt"
   );
   const interpretationPromptPath = path.join(
-    projectRoot,
+    process.cwd(),
     "prompts/arina/interpretation.txt"
   );
 
@@ -89,12 +82,13 @@ async function loadCassandraPrompts(): Promise<void> {
     return; // Already loaded
   }
 
+  // Use process.cwd() to resolve from working directory (symlink-safe)
   const systemPromptPath = path.join(
-    projectRoot,
+    process.cwd(),
     "prompts/cassandra/system.txt"
   );
   const interpretationPromptPath = path.join(
-    projectRoot,
+    process.cwd(),
     "prompts/cassandra/interpretation.txt"
   );
 

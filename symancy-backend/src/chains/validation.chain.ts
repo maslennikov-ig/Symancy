@@ -12,14 +12,9 @@ import type {
 } from "../types/langchain.js";
 import { readFile } from "fs/promises";
 import path from "path";
-import { fileURLToPath } from "url";
 import { getLogger } from "../core/logger.js";
 
 const logger = getLogger().child({ module: "validation-chain" });
-
-// Get __dirname equivalent in ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /**
  * Cached validation prompt
@@ -36,9 +31,10 @@ async function loadValidationPrompt(): Promise<string> {
     return cachedValidationPrompt;
   }
 
+  // Use process.cwd() to resolve from working directory (symlink-safe)
   const promptPath = path.join(
-    __dirname,
-    "../../prompts/vision/validate.txt"
+    process.cwd(),
+    "prompts/vision/validate.txt"
   );
 
   try {
