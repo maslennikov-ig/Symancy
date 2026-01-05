@@ -204,27 +204,37 @@ jobs:
           GIT_SHORT="${GITHUB_SHA:0:7}"
           ssh ${SSH_USER}@${SSH_HOST} "
             set -e
-            echo '=== Stopping old processes ==='
-            pm2 stop symancy-backend 2>/dev/null || true
-            pm2 delete symancy-backend 2>/dev/null || true
+            echo '=== Stopping ALL PM2 processes ==='
+            # Delete all PM2 processes first
+            pm2 delete all 2>/dev/null || true
+            # Clear the dump file to prevent auto-resurrect
+            pm2 cleardump 2>/dev/null || true
+            # Kill PM2 daemon completely
+            pm2 kill 2>/dev/null || true
+            sleep 2
+
+            echo '=== Killing any remaining processes on port 3000 ==='
             fuser -k 3000/tcp 2>/dev/null || true
             sleep 2
             lsof -ti:3000 | xargs -r kill -9 2>/dev/null || true
             sleep 3
+
             if lsof -ti:3000 >/dev/null 2>&1; then
               echo 'ERROR: Port 3000 still in use!'
               lsof -i:3000 || true
               exit 1
             fi
             echo 'Port 3000 is free'
+
             echo '=== Starting new process ==='
             cd /var/www/symancy-backend/current
             GIT_COMMIT=${GIT_SHORT} pm2 start ecosystem.config.cjs --env production
-            echo '=== Process started ==='
+            pm2 save
+            echo '=== Process started and saved ==='
           "
 
-          # Save PM2 process list and show status
-          ssh ${SSH_USER}@${SSH_HOST} "pm2 save && pm2 list"
+          # Show PM2 status
+          ssh ${SSH_USER}@${SSH_HOST} "pm2 list"
 
           # Cleanup old releases (keep last 5)
           ssh ${SSH_USER}@${SSH_HOST} "cd ${TARGET_ROOT}/releases && ls -t | tail -n +6 | xargs -r rm -rf"
