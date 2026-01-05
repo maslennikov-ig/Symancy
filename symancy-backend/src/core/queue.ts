@@ -3,7 +3,7 @@
  * Provides job queue functionality backed by PostgreSQL
  */
 import { PgBoss } from "pg-boss";
-import type { Job, WorkOptions, SendOptions } from "pg-boss";
+import type { Job, JobWithMetadata, WorkOptions, SendOptions } from "pg-boss";
 import { getEnv } from "../config/env.js";
 import { getLogger } from "./logger.js";
 import {
@@ -215,6 +215,61 @@ export async function registerWorker<T extends object = object>(
   );
 
   logger.info({ workerId }, "Worker registered");
+  return workerId;
+}
+
+/**
+ * Register worker for a queue with job metadata (retry info, state, etc.)
+ * Use this when you need access to retryCount, retryLimit, state, etc.
+ *
+ * @param queueName - Name of the queue to work on
+ * @param handler - Async function to handle jobs with metadata
+ * @param options - Worker options (teamSize, teamConcurrency, etc.)
+ */
+export async function registerWorkerWithMetadata<T extends object = object>(
+  queueName: string,
+  handler: (job: JobWithMetadata<T>) => Promise<void>,
+  options?: Omit<WorkOptions, "includeMetadata">
+): Promise<string> {
+  const boss = await getQueue();
+  const logger = getLogger().child({ module: "queue", queue: queueName });
+
+  const workerId = await boss.work<T>(
+    queueName,
+    { ...options, includeMetadata: true },
+    async (jobs) => {
+      // pg-boss passes an array of jobs
+      const jobArray = Array.isArray(jobs) ? jobs : [jobs];
+      for (const job of jobArray) {
+        logger.info(
+          { jobId: job.id, retryCount: job.retryCount, retryLimit: job.retryLimit },
+          "Processing job with metadata"
+        );
+        try {
+          await handler(job);
+          logger.info({ jobId: job.id }, "Job completed");
+        } catch (error) {
+          logger.error(
+            { jobId: job.id, retryCount: job.retryCount, retryLimit: job.retryLimit, error },
+            "Job failed"
+          );
+
+          // Check if error is retryable
+          if (isRetryableError(error)) {
+            throw error; // pg-boss will retry based on retryLimit
+          } else {
+            logger.warn(
+              { jobId: job.id, error },
+              "Non-retryable error, job will not be retried"
+            );
+            // Don't throw - job will be marked as completed
+          }
+        }
+      }
+    }
+  );
+
+  logger.info({ workerId }, "Worker with metadata registered");
   return workerId;
 }
 

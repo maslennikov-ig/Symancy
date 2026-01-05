@@ -16,11 +16,11 @@
  * 8. Increment daily message counter
  * 9. On error: refund credits, send error message
  */
-import type { Job } from "pg-boss";
+import type { JobWithMetadata } from "pg-boss";
 import { getBot } from "../../core/telegram.js";
 import { getSupabase } from "../../core/database.js";
 import { getLogger } from "../../core/logger.js";
-import { registerWorker } from "../../core/queue.js";
+import { registerWorkerWithMetadata } from "../../core/queue.js";
 import { generateChatResponseDirect } from "../../chains/chat.chain.js";
 import { consumeCredits, refundCredits } from "../credits/service.js";
 import { splitMessage } from "../../utils/message-splitter.js";
@@ -176,7 +176,7 @@ async function incrementDailyMessageCount(
  * @param job - pg-boss job with ChatReplyJobData payload
  * @throws Error on retryable failures (network, API errors)
  */
-export async function processChatReply(job: Job<ChatReplyJobData>): Promise<void> {
+export async function processChatReply(job: JobWithMetadata<ChatReplyJobData>): Promise<void> {
   const { telegramUserId, chatId, messageId, text } = job.data;
 
   const jobLogger = logger.child({
@@ -349,18 +349,28 @@ export async function processChatReply(job: Job<ChatReplyJobData>): Promise<void
       }
     }
 
-    // Send error message to user
-    try {
-      await bot.api.sendMessage(
-        chatId,
-        "😔 Произошла ошибка при обработке сообщения. Ваш кредит возвращён. Пожалуйста, попробуйте ещё раз.",
-        {
-          reply_parameters: { message_id: messageId },
-        }
+    // Only send error message to user on LAST retry attempt
+    // This prevents multiple error messages during pg-boss retry cycles
+    const isLastAttempt = job.retryCount >= (job.retryLimit || 0);
+
+    if (isLastAttempt) {
+      try {
+        await bot.api.sendMessage(
+          chatId,
+          "😔 Произошла ошибка при обработке сообщения. Ваш кредит возвращён. Пожалуйста, попробуйте ещё раз.",
+          {
+            reply_parameters: { message_id: messageId },
+          }
+        );
+        jobLogger.debug("Error message sent to user (last attempt)");
+      } catch (sendError) {
+        jobLogger.warn({ error: sendError }, "Failed to send error message to user");
+      }
+    } else {
+      jobLogger.debug(
+        { retryCount: job.retryCount, retryLimit: job.retryLimit },
+        "Skipping error message, will retry"
       );
-      jobLogger.debug("Error message sent to user");
-    } catch (sendError) {
-      jobLogger.warn({ error: sendError }, "Failed to send error message to user");
     }
 
     // Re-throw error to trigger pg-boss retry for transient errors
@@ -380,7 +390,7 @@ export async function processChatReply(job: Job<ChatReplyJobData>): Promise<void
 export async function registerChatWorker(): Promise<string> {
   logger.info("Registering chat reply worker");
 
-  const workerId = await registerWorker<ChatReplyJobData>(
+  const workerId = await registerWorkerWithMetadata<ChatReplyJobData>(
     QUEUE_CHAT_REPLY,
     processChatReply,
     {
