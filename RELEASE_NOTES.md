@@ -2,6 +2,28 @@
 
 User-facing release notes for all versions.
 
+## v0.5.45
+
+_Released on 2026-01-05_
+
+### ✨ New Features
+
+- **engagement**: Add timezone support for daily insights
+
+### 🔧 Improvements
+
+- **engagement**: Fix remaining low-priority code review issues
+
+### 🐛 Bug Fixes
+
+- **chat**: Send error message only on last retry attempt
+- **engagement**: Create engagement_log table and fix column references
+- **engagement**: Address code review issues for timezone support
+
+---
+
+_This release was automatically generated from 6 commits._
+
 ## v0.5.44
 
 _Released on 2026-01-04_

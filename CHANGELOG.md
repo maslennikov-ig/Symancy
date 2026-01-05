@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.45] - 2026-01-05
+
+### Added
+- **engagement**: add timezone support for daily insights (fce0a99)
+
+### Changed
+- **engagement**: fix remaining low-priority code review issues (a0739d2)
+
+### Fixed
+- **chat**: send error message only on last retry attempt (3673fd5)
+- **engagement**: create engagement_log table and fix column references (e1825ed)
+- **engagement**: address code review issues for timezone support (b64d6c0)
+
+### Other
+- **backend**: remove environment protection for auto-deploy (c831e67)
+
 ## [0.5.44] - 2026-01-04
 
 ### Fixed
