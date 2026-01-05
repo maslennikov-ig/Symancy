@@ -216,27 +216,30 @@ jobs:
             sleep 2
 
             echo '=== Killing any remaining processes on port 3000 ==='
-            fuser -k 3000/tcp 2>/dev/null || true
+            # Use sudo for fuser to kill processes owned by any user
+            sudo fuser -k 3000/tcp 2>/dev/null || true
             sleep 2
-            # Kill ALL node processes just to be safe
+            # Kill ALL node processes (including those by other users)
             sudo pkill -9 node 2>/dev/null || true
+            sudo pkill -9 -f 'dist/app.js' 2>/dev/null || true
             sleep 3
 
-            # Double check port is free
+            # Double check with sudo lsof
             for i in 1 2 3; do
-              if lsof -ti:3000 >/dev/null 2>&1; then
-                echo \"Attempt \$i: Port 3000 still in use, killing...\"
-                lsof -ti:3000 | xargs -r kill -9 2>/dev/null || true
+              if sudo lsof -ti:3000 >/dev/null 2>&1; then
+                echo \"Attempt \$i: Port 3000 still in use by PID(s): \$(sudo lsof -ti:3000)\"
+                sudo lsof -ti:3000 | xargs -r sudo kill -9 2>/dev/null || true
                 sleep 2
               else
                 break
               fi
             done
 
-            if lsof -ti:3000 >/dev/null 2>&1; then
-              echo 'ERROR: Port 3000 still in use after multiple attempts!'
-              lsof -i:3000 || true
-              ps aux | grep node || true
+            # Final check with netstat (can see all users)
+            if netstat -tlnp 2>/dev/null | grep -q ':3000 '; then
+              echo 'ERROR: Port 3000 still in use (netstat)!'
+              netstat -tlnp 2>/dev/null | grep ':3000 ' || true
+              sudo lsof -i:3000 || true
               exit 1
             fi
             echo 'Port 3000 is free'
