@@ -200,14 +200,28 @@ jobs:
           # Create logs directory
           ssh ${SSH_USER}@${SSH_HOST} "mkdir -p ${RELEASE_DIR}/logs"
 
-          # Kill any stale process on port 3000 (force cleanup)
-          ssh ${SSH_USER}@${SSH_HOST} "lsof -ti:3000 | xargs -r kill -9 2>/dev/null; true"
-
-          # Force stop and delete ALL PM2 processes (clean slate)
+          # Force stop and delete ALL PM2 processes first
           ssh ${SSH_USER}@${SSH_HOST} "pm2 kill 2>/dev/null; true"
 
+          # Kill any process on port 3000 using multiple methods
+          # Method 1: fuser (more reliable on Linux)
+          ssh ${SSH_USER}@${SSH_HOST} "fuser -k 3000/tcp 2>/dev/null; true"
+          # Method 2: lsof fallback
+          ssh ${SSH_USER}@${SSH_HOST} "lsof -ti:3000 | xargs -r kill -9 2>/dev/null; true"
+          # Method 3: pkill node processes for this directory
+          ssh ${SSH_USER}@${SSH_HOST} "pkill -f 'symancy-backend' 2>/dev/null; true"
+
           # Wait for processes to fully terminate
-          sleep 3
+          sleep 5
+
+          # Verify port is free
+          PORT_CHECK=$(ssh ${SSH_USER}@${SSH_HOST} "lsof -ti:3000 2>/dev/null || true")
+          if [ -n "$PORT_CHECK" ]; then
+            echo "::error::Port 3000 still in use after cleanup! PIDs: ${PORT_CHECK}"
+            ssh ${SSH_USER}@${SSH_HOST} "ps aux | grep -E '($PORT_CHECK)'" || true
+            exit 1
+          fi
+          echo "Port 3000 is free"
 
           # Start fresh PM2 process
           GIT_SHORT="${GITHUB_SHA:0:7}"
