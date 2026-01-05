@@ -473,7 +473,7 @@ export class ProactiveMessageService {
     const supabase = getSupabase();
 
     const { error } = await supabase.from("engagement_log").insert({
-      telegram_user_id: telegramId,
+      telegram_id: telegramId,
       message_type: messageType,
     });
 
@@ -498,7 +498,7 @@ export class ProactiveMessageService {
 
     const { data: sentToday, error } = await supabase
       .from("engagement_log")
-      .select("telegram_user_id")
+      .select("telegram_id")
       .eq("message_type", messageType)
       .gte("sent_at", `${today}T00:00:00Z`);
 
@@ -508,7 +508,7 @@ export class ProactiveMessageService {
     }
 
     const sentTodayUserIds = new Set(
-      sentToday?.map((log) => log.telegram_user_id) || []
+      sentToday?.map((log) => log.telegram_id) || []
     );
 
     return users.filter((user) => !sentTodayUserIds.has(user.telegram_id));

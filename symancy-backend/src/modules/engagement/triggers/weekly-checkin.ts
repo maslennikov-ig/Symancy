@@ -50,7 +50,7 @@ export async function findWeeklyCheckInUsers(): Promise<WeeklyCheckInUser[]> {
 
   const { data: sentToday, error: logError } = await supabase
     .from("engagement_log")
-    .select("telegram_user_id")
+    .select("telegram_id")
     .eq("message_type", "weekly-checkin")
     .gte("sent_at", `${today}T00:00:00Z`);
 
@@ -59,7 +59,7 @@ export async function findWeeklyCheckInUsers(): Promise<WeeklyCheckInUser[]> {
   }
 
   const sentTodayUserIds = new Set(
-    sentToday?.map((log) => log.telegram_user_id) || []
+    sentToday?.map((log) => log.telegram_id) || []
   );
 
   const filteredUsers = users
