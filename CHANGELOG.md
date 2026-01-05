@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.46] - 2026-01-05
+
+### Added
+- **admin**: add 3 source file(s), update 4 source file(s) (126ef8d)
+
+### Fixed
+- **backend**: add missing queue constants for insight dispatcher (976570a)
+- **backend**: register engagement workers before scheduler (7fc3ea9)
+- **deploy**: use sudo to kill processes owned by root (6528cf0)
+- **deploy**: add PM2 restart backoff and port debugging (0f0ad27)
+- **deploy**: delete PM2 dump file directly and stop systemd service (978ea3f)
+- **deploy**: clear PM2 dump to prevent auto-resurrect of old process (edf6eec)
+- **deploy**: combine PM2 commands into single SSH session (afa64a0)
+- **deploy**: avoid pkill -f killing SSH session (53e1ec5)
+- **deploy**: use multiple methods to kill stale processes (f41a24c)
+- **deploy**: kill stale processes and enforce version verification (057beea)
+- **chains**: use process.cwd() for symlink-safe prompt paths (119765f)
+
 ## [0.5.45] - 2026-01-05
 
 ### Added

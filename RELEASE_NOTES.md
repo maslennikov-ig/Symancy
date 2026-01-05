@@ -2,6 +2,32 @@
 
 User-facing release notes for all versions.
 
+## v0.5.46
+
+_Released on 2026-01-05_
+
+### ✨ New Features
+
+- **admin**: Add 3 source file(s), update 4 source file(s)
+
+### 🐛 Bug Fixes
+
+- **backend**: Add missing queue constants for insight dispatcher
+- **backend**: Register engagement workers before scheduler
+- **deploy**: Use sudo to kill processes owned by root
+- **deploy**: Add PM2 restart backoff and port debugging
+- **deploy**: Delete PM2 dump file directly and stop systemd service
+- **deploy**: Clear PM2 dump to prevent auto-resurrect of old process
+- **deploy**: Combine PM2 commands into single SSH session
+- **deploy**: Avoid pkill -f killing SSH session
+- **deploy**: Use multiple methods to kill stale processes
+- **deploy**: Kill stale processes and enforce version verification
+- **chains**: Use process.cwd() for symlink-safe prompt paths
+
+---
+
+_This release was automatically generated from 12 commits._
+
 ## v0.5.45
 
 _Released on 2026-01-05_
