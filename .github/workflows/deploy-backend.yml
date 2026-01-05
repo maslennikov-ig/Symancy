@@ -152,7 +152,7 @@ jobs:
       always() &&
       needs.build.result == 'success' &&
       (needs.test.result == 'success' || needs.test.result == 'skipped')
-    environment: production
+    # Removed environment: production to allow auto-deploy like frontend
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
