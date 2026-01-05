@@ -200,32 +200,28 @@ jobs:
           # Create logs directory
           ssh ${SSH_USER}@${SSH_HOST} "mkdir -p ${RELEASE_DIR}/logs"
 
-          # Force stop and delete ALL PM2 processes first
-          ssh ${SSH_USER}@${SSH_HOST} "pm2 kill 2>/dev/null; true"
-
-          # Kill any process on port 3000 using multiple methods
-          # Method 1: fuser (most reliable on Linux)
-          ssh ${SSH_USER}@${SSH_HOST} "fuser -k 3000/tcp 2>/dev/null; true"
-          # Method 2: lsof fallback
-          ssh ${SSH_USER}@${SSH_HOST} "lsof -ti:3000 | xargs -r kill -9 2>/dev/null; true"
-          # Method 3: kill node processes running the specific app.js (not pkill -f which kills SSH)
-          ssh ${SSH_USER}@${SSH_HOST} "pgrep -f 'node.*dist/app.js' | xargs -r kill -9 2>/dev/null; true"
-
-          # Wait for processes to fully terminate
-          sleep 5
-
-          # Verify port is free
-          PORT_CHECK=$(ssh ${SSH_USER}@${SSH_HOST} "lsof -ti:3000 2>/dev/null || true")
-          if [ -n "$PORT_CHECK" ]; then
-            echo "::error::Port 3000 still in use after cleanup! PIDs: ${PORT_CHECK}"
-            ssh ${SSH_USER}@${SSH_HOST} "ps aux | grep -E '($PORT_CHECK)'" || true
-            exit 1
-          fi
-          echo "Port 3000 is free"
-
-          # Start fresh PM2 process
+          # Stop old process and start new one (combined into single SSH call to avoid connection issues)
           GIT_SHORT="${GITHUB_SHA:0:7}"
-          ssh ${SSH_USER}@${SSH_HOST} "cd ${TARGET_ROOT}/current && GIT_COMMIT=${GIT_SHORT} pm2 start ecosystem.config.cjs --env production"
+          ssh ${SSH_USER}@${SSH_HOST} "
+            set -e
+            echo '=== Stopping old processes ==='
+            pm2 stop symancy-backend 2>/dev/null || true
+            pm2 delete symancy-backend 2>/dev/null || true
+            fuser -k 3000/tcp 2>/dev/null || true
+            sleep 2
+            lsof -ti:3000 | xargs -r kill -9 2>/dev/null || true
+            sleep 3
+            if lsof -ti:3000 >/dev/null 2>&1; then
+              echo 'ERROR: Port 3000 still in use!'
+              lsof -i:3000 || true
+              exit 1
+            fi
+            echo 'Port 3000 is free'
+            echo '=== Starting new process ==='
+            cd /var/www/symancy-backend/current
+            GIT_COMMIT=${GIT_SHORT} pm2 start ecosystem.config.cjs --env production
+            echo '=== Process started ==='
+          "
 
           # Save PM2 process list and show status
           ssh ${SSH_USER}@${SSH_HOST} "pm2 save && pm2 list"
