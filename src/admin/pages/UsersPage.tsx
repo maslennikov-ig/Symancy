@@ -37,11 +37,20 @@ import {
 interface UnifiedUser {
   id: string;
   telegram_id: string | null;
+  auth_id: string | null;
   display_name: string | null;
+  email: string | null;
   is_banned: boolean;
   last_active_at: string | null;
   created_at: string;
   unified_user_credits: UserCredits | null;
+}
+
+// Helper to determine user type
+function getUserType(user: UnifiedUser): 'linked' | 'telegram' | 'web' {
+  if (user.telegram_id && user.auth_id) return 'linked';
+  if (user.telegram_id) return 'telegram';
+  return 'web';
 }
 
 type SortField = 'last_active_at' | 'created_at';
@@ -118,7 +127,9 @@ export function UsersPage() {
           .select(`
             id,
             telegram_id,
+            auth_id,
             display_name,
+            email,
             is_banned,
             last_active_at,
             created_at,
@@ -137,8 +148,12 @@ export function UsersPage() {
           // Check if search term is numeric (telegram_id search)
           if (/^\d+$/.test(term)) {
             query = query.eq('telegram_id', term);
+          } else if (term.includes('@')) {
+            // Search by email
+            query = query.ilike('email', `%${term}%`);
           } else {
-            query = query.ilike('display_name', `%${term}%`);
+            // Search by display_name or email
+            query = query.or(`display_name.ilike.%${term}%,email.ilike.%${term}%`);
           }
         }
 
@@ -376,17 +391,19 @@ export function UsersPage() {
             <Table>
               <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow>
-                  <TableHead className="w-[150px]">{t('admin.users.columns.telegramId')}</TableHead>
+                  <TableHead className="w-[120px]">ID / Type</TableHead>
                   <TableHead>{t('admin.users.columns.displayName')}</TableHead>
-                  <TableHead className="w-[200px]">{t('admin.users.columns.credits')}</TableHead>
-                  <TableHead className="w-[100px]">{t('admin.users.columns.status')}</TableHead>
-                  <TableHead className="w-[120px]">{t('admin.users.columns.lastActive')}</TableHead>
-                  <TableHead className="w-[120px]">{t('admin.users.createdAt')}</TableHead>
+                  <TableHead className="w-[200px]">Email</TableHead>
+                  <TableHead className="w-[180px]">{t('admin.users.columns.credits')}</TableHead>
+                  <TableHead className="w-[80px]">{t('admin.users.columns.status')}</TableHead>
+                  <TableHead className="w-[100px]">{t('admin.users.columns.lastActive')}</TableHead>
                   <TableHead className="w-[80px]">{t('admin.users.columns.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((userItem) => (
+                {users.map((userItem) => {
+                  const userType = getUserType(userItem);
+                  return (
                   <TableRow
                     key={userItem.id}
                     onClick={() => handleRowClick(userItem.id)}
@@ -397,19 +414,32 @@ export function UsersPage() {
                     className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
                   >
                     <TableCell>
-                      {userItem.telegram_id ? (
-                        <code className="text-sm bg-muted px-2 py-1 rounded">
-                          {userItem.telegram_id}
-                        </code>
-                      ) : (
-                        <Badge variant="outline">Web User</Badge>
-                      )}
+                      <div className="flex flex-col gap-1">
+                        {userItem.telegram_id && (
+                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                            {userItem.telegram_id}
+                          </code>
+                        )}
+                        <Badge
+                          variant={userType === 'linked' ? 'default' : 'outline'}
+                          className="w-fit text-xs"
+                        >
+                          {userType === 'linked' ? '🔗 Linked' : userType === 'telegram' ? '📱 TG' : '🌐 Web'}
+                        </Badge>
+                      </div>
                     </TableCell>
                     <TableCell className="font-medium">
                       {sanitizeDisplayName(userItem.display_name) === 'No name' ? (
                         <span className="text-muted-foreground italic">No name</span>
                       ) : (
                         sanitizeDisplayName(userItem.display_name)
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {userItem.email ? (
+                        <span className="text-muted-foreground">{userItem.email}</span>
+                      ) : (
+                        <span className="text-muted-foreground/50 italic">—</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -422,16 +452,14 @@ export function UsersPage() {
                           : t('admin.users.status.active')}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground text-sm">
                       {formatRelativeTime(userItem.last_active_at)}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDateShort(userItem.created_at)}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <UserActionsMenu
                         userId={userItem.id}
                         displayName={userItem.display_name}
+                        email={userItem.email}
                         isBanned={userItem.is_banned}
                         onViewDetails={() => handleRowClick(userItem.id)}
                         onBanToggle={handleToggleBan}
@@ -440,7 +468,8 @@ export function UsersPage() {
                       />
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           )}

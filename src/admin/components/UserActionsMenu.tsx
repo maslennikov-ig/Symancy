@@ -26,6 +26,7 @@ import { logger } from '../utils/logger';
 interface UserActionsMenuProps {
   userId: string;
   displayName: string | null;
+  email?: string | null;  // Optional: pass from table to avoid extra RPC call
   isBanned: boolean;
   onViewDetails: () => void;
   onBanToggle: (userId: string, shouldBan: boolean) => Promise<void>;
@@ -36,6 +37,7 @@ interface UserActionsMenuProps {
 export function UserActionsMenu({
   userId,
   displayName,
+  email: emailProp,
   isBanned,
   onViewDetails,
   onBanToggle,
@@ -50,15 +52,18 @@ export function UserActionsMenu({
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Admin status for this user (loaded on menu open)
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  // Use emailProp if provided to avoid extra RPC call
   const [isUserAdmin, setIsUserAdmin] = useState(false);
   const [adminStatusLoading, setAdminStatusLoading] = useState(false);
 
+  // Use email from prop (already loaded in table) or fall back to RPC result
+  const effectiveEmail = emailProp ?? null;
+
   const userName = sanitizeDisplayName(displayName, userId.slice(0, 8) + '...');
 
-  // Load admin status when menu opens
+  // Load admin status when menu opens (only if user has email/can be admin)
   useEffect(() => {
-    if (!menuOpen || !onAdminToggle) return;
+    if (!menuOpen || !onAdminToggle || !effectiveEmail) return;
 
     let cancelled = false;
     setAdminStatusLoading(true);
@@ -75,7 +80,6 @@ export function UserActionsMenu({
         }
 
         if (!cancelled && data && data.length > 0) {
-          setUserEmail(data[0].email);
           setIsUserAdmin(data[0].is_admin);
         }
       } catch (err) {
@@ -89,7 +93,7 @@ export function UserActionsMenu({
 
     loadAdminStatus();
     return () => { cancelled = true; };
-  }, [menuOpen, userId, onAdminToggle]);
+  }, [menuOpen, userId, onAdminToggle, effectiveEmail]);
 
   const handleBanToggle = async () => {
     setIsLoading(true);
@@ -112,10 +116,10 @@ export function UserActionsMenu({
   };
 
   const handleAdminToggle = async () => {
-    if (!onAdminToggle || !userEmail) return;
+    if (!onAdminToggle || !effectiveEmail) return;
     setIsLoading(true);
     try {
-      await onAdminToggle(userId, userEmail, !isUserAdmin);
+      await onAdminToggle(userId, effectiveEmail, !isUserAdmin);
       setIsUserAdmin(!isUserAdmin);
     } finally {
       setIsLoading(false);
@@ -142,8 +146,8 @@ export function UserActionsMenu({
             {t('admin.users.actions.viewDetails')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          {/* Admin toggle - only show for web users with email */}
-          {onAdminToggle && userEmail && !adminStatusLoading && (
+          {/* Admin toggle - only show for users with email (web or linked) */}
+          {onAdminToggle && effectiveEmail && !adminStatusLoading && (
             <DropdownMenuItem onClick={() => setAdminDialogOpen(true)}>
               {isUserAdmin ? (
                 <>
@@ -269,7 +273,7 @@ export function UserActionsMenu({
                 ? t('admin.users.confirmRevokeAdmin.description')
                 : t('admin.users.confirmGrantAdmin.description')}
               <br />
-              <span className="font-medium">{userEmail}</span>
+              <span className="font-medium">{effectiveEmail}</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
