@@ -2,6 +2,20 @@
 
 User-facing release notes for all versions.
 
+## v0.5.50
+
+_Released on 2026-01-06_
+
+### 🐛 Bug Fixes
+
+- **symancy-backend/tests/unit/modules/credits.test.ts**: Update 3 source file(s), update 1 test(s)
+- **profile**: Check auth_id before showing Email link button
+- **link**: Use atomic PostgreSQL function to prevent unique constraint violation
+
+---
+
+_This release was automatically generated from 5 commits._
+
 ## v0.5.49
 
 _Released on 2026-01-06_

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.5.50] - 2026-01-06
+
+### Fixed
+- **symancy-backend/tests/unit/modules/credits.test.ts**: update 3 source file(s), update 1 test(s) (eeafa31)
+- **profile**: check auth_id before showing Email link button (315f3ff)
+- **link**: use atomic PostgreSQL function to prevent unique constraint violation (7c76212)
+
+### Other
+- **test**: adjust coverage threshold after test refactor (5ea34a9)
+- **photo-handler**: update tests to match refactored keyboard-first flow (aeeeba7)
+
 ## [0.5.49] - 2026-01-06
 
 ### Added
