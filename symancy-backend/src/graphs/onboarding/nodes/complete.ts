@@ -5,7 +5,7 @@
 import type { OnboardingState } from "../state.js";
 import { getBotApi } from "../../../core/telegram.js";
 import { getSupabase } from "../../../core/database.js";
-import { grantBonusCredit } from "../../../modules/credits/service.js";
+import { grantInitialCredits } from "../../../modules/credits/service.js";
 import { getLogger } from "../../../core/logger.js";
 
 const logger = getLogger().child({ module: "onboarding:complete" });
@@ -31,11 +31,15 @@ export async function complete(
   }
 
   try {
-    // Grant bonus credit
-    const creditGranted = await grantBonusCredit(telegramUserId);
+    // Grant initial credits (actual credits, not just a flag)
+    const grantResult = await grantInitialCredits(telegramUserId);
 
-    if (!creditGranted) {
-      logger.warn({ telegramUserId }, "Failed to grant bonus credit, but continuing");
+    if (!grantResult.success) {
+      logger.warn({ telegramUserId, error: grantResult.error }, "Failed to grant initial credits, but continuing");
+    } else if (grantResult.alreadyGranted) {
+      logger.info({ telegramUserId, balance: grantResult.balance }, "Credits already granted (idempotent)");
+    } else {
+      logger.info({ telegramUserId, balance: grantResult.balance }, "Initial credits granted successfully");
     }
 
     // Mark onboarding as complete
@@ -70,7 +74,7 @@ export async function complete(
 
     return {
       completed: true,
-      bonusCreditGranted: creditGranted,
+      bonusCreditGranted: grantResult.success,
     };
   } catch (error) {
     logger.error({ telegramUserId, error }, "Failed in complete node");

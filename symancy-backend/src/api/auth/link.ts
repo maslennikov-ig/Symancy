@@ -15,6 +15,7 @@ import { getSupabase } from '../../core/database.js';
 import { getLogger } from '../../core/logger.js';
 import type { UnifiedUser } from '../../types/omnichannel.js';
 import { extractBearerToken } from '../../utils/auth.js';
+import { invalidateLinkStatusCache } from '../../modules/credits/service.js';
 
 const logger = getLogger().child({ module: 'link' });
 
@@ -243,6 +244,11 @@ export async function linkHandler(
       'Account updated successfully (same user)'
     );
 
+    // Invalidate link status cache for this Telegram user
+    if (telegramUser.telegram_id) {
+      invalidateLinkStatusCache(telegramUser.telegram_id);
+    }
+
     return reply.send({
       success: true,
       user: mergedUser as UnifiedUser,
@@ -324,6 +330,11 @@ export async function linkHandler(
     },
     'Accounts linked successfully'
   );
+
+  // Invalidate link status cache for this Telegram user
+  if (telegramUser.telegram_id) {
+    invalidateLinkStatusCache(telegramUser.telegram_id);
+  }
 
   return reply.send({
     success: true,
