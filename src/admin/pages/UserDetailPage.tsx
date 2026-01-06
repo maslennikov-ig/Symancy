@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Ban, ShieldOff, Trash2 } from 'lucide-react';
+import { Ban, Shield, ShieldOff, Trash2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -49,6 +49,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface UnifiedUser {
   id: string;
   telegram_id: string | null;
+  auth_id: string | null;
+  email: string | null;
   display_name: string | null;
   language_code: string;
   created_at: string;
@@ -56,6 +58,13 @@ interface UnifiedUser {
   is_banned: boolean;
   onboarding_completed: boolean;
   primary_interface: string;
+}
+
+// Helper to determine user type
+function getUserType(user: UnifiedUser): 'linked' | 'telegram' | 'web' {
+  if (user.telegram_id && user.auth_id) return 'linked';
+  if (user.telegram_id) return 'telegram';
+  return 'web';
 }
 
 interface Message {
@@ -149,8 +158,14 @@ export function UserDetailPage() {
   // Admin actions state
   const [isBanProcessing, setIsBanProcessing] = useState(false);
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
+  const [isAdminToggleProcessing, setIsAdminToggleProcessing] = useState(false);
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [adminDialogOpen, setAdminDialogOpen] = useState(false);
+
+  // Admin status for this user
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
+  const [adminStatusLoading, setAdminStatusLoading] = useState(false);
 
   // Ref for success message timeout cleanup
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -254,6 +269,40 @@ export function UserDetailPage() {
       cancelled = true;
     };
   }, [authLoading, isAdmin, id, refreshTrigger]);
+
+  // Load admin status when user data is available and user has email
+  useEffect(() => {
+    if (!userData?.email || !id) return;
+
+    let cancelled = false;
+    setAdminStatusLoading(true);
+
+    async function loadAdminStatus() {
+      try {
+        const { data, error } = await supabase.rpc('admin_get_user_admin_status', {
+          p_unified_user_id: id,
+        });
+
+        if (error) {
+          logger.error('Error loading admin status', error);
+          return;
+        }
+
+        if (!cancelled && data && data.length > 0) {
+          setIsUserAdmin(data[0].is_admin);
+        }
+      } catch (err) {
+        logger.error('Error loading admin status', err);
+      } finally {
+        if (!cancelled) {
+          setAdminStatusLoading(false);
+        }
+      }
+    }
+
+    loadAdminStatus();
+    return () => { cancelled = true; };
+  }, [userData?.email, id]);
 
   // Handle credit adjustment (no optimistic updates to avoid race conditions)
   const handleAdjustCredits = async () => {
@@ -464,6 +513,31 @@ export function UserDetailPage() {
     }
   };
 
+  // Handle admin toggle (grant/revoke)
+  const handleAdminToggle = async () => {
+    if (!id || !userData?.email) return;
+    setIsAdminToggleProcessing(true);
+    try {
+      const rpcName = isUserAdmin ? 'admin_remove_admin_email' : 'admin_add_admin_email';
+      const { error } = await supabase.rpc(rpcName, {
+        p_email: userData.email,
+      });
+      if (error) throw error;
+      toast.success(
+        isUserAdmin
+          ? t('admin.users.revokeAdminSuccess')
+          : t('admin.users.grantAdminSuccess')
+      );
+      setIsUserAdmin(!isUserAdmin);
+      setAdminDialogOpen(false);
+    } catch (err) {
+      logger.error('Error toggling admin', err);
+      toast.error(t('admin.users.actionFailed'));
+    } finally {
+      setIsAdminToggleProcessing(false);
+    }
+  };
+
   // Auth loading state
   if (authLoading) {
     return (
@@ -548,16 +622,49 @@ export function UserDetailPage() {
                   <UserInfoSkeleton />
                 ) : userData ? (
                   <div className="space-y-4">
+                    {/* User Type */}
                     <div className="flex items-center gap-2">
-                      <Label className="text-muted-foreground w-32">Telegram ID:</Label>
-                      {userData.telegram_id ? (
+                      <Label className="text-muted-foreground w-32">{t('admin.userDetail.userType')}:</Label>
+                      {(() => {
+                        const userType = getUserType(userData);
+                        if (userType === 'linked') {
+                          return <Badge variant="default" className="bg-purple-600">🔗 {t('admin.users.linked')}</Badge>;
+                        } else if (userType === 'telegram') {
+                          return <Badge variant="secondary">📱 {t('admin.users.telegram')}</Badge>;
+                        } else {
+                          return <Badge variant="outline">🌐 {t('admin.users.web')}</Badge>;
+                        }
+                      })()}
+                      {/* Admin badge */}
+                      {userData.email && !adminStatusLoading && isUserAdmin && (
+                        <Badge variant="destructive" className="ml-2">
+                          <Shield className="h-3 w-3 mr-1" />
+                          Admin
+                        </Badge>
+                      )}
+                    </div>
+
+                    <Separator />
+
+                    {/* Email - for web/linked users */}
+                    {userData.email && (
+                      <div className="flex items-center gap-2">
+                        <Label className="text-muted-foreground w-32">Email:</Label>
+                        <code className="text-sm bg-muted px-2 py-1 rounded">
+                          {userData.email}
+                        </code>
+                      </div>
+                    )}
+
+                    {/* Telegram ID */}
+                    {userData.telegram_id && (
+                      <div className="flex items-center gap-2">
+                        <Label className="text-muted-foreground w-32">Telegram ID:</Label>
                         <code className="text-sm bg-muted px-2 py-1 rounded">
                           {userData.telegram_id}
                         </code>
-                      ) : (
-                        <Badge variant="outline">{t('admin.userDetail.webUser')}</Badge>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
                     <Separator />
 
@@ -762,6 +869,68 @@ export function UserDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
+                  {/* Admin Grant/Revoke Button - only for users with email */}
+                  {userData?.email && !adminStatusLoading && (
+                    <AlertDialog
+                      open={adminDialogOpen}
+                      onOpenChange={(open) => {
+                        if (!isAdminToggleProcessing) setAdminDialogOpen(open);
+                      }}
+                    >
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant={isUserAdmin ? 'destructive' : 'default'}
+                          className="w-full justify-start gap-2"
+                          disabled={isLoading || isAdminToggleProcessing}
+                        >
+                          {isUserAdmin ? (
+                            <>
+                              <ShieldOff className="h-4 w-4" />
+                              {t('admin.users.actions.revokeAdmin')}
+                            </>
+                          ) : (
+                            <>
+                              <Shield className="h-4 w-4" />
+                              {t('admin.users.actions.grantAdmin')}
+                            </>
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            {isUserAdmin
+                              ? t('admin.users.confirmRevokeAdmin.title')
+                              : t('admin.users.confirmGrantAdmin.title')}
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {isUserAdmin
+                              ? t('admin.users.confirmRevokeAdmin.description')
+                              : t('admin.users.confirmGrantAdmin.description')}
+                            <br />
+                            <span className="font-medium">{userData.email}</span>
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>{t('admin.common.cancel')}</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleAdminToggle}
+                            disabled={isAdminToggleProcessing}
+                            className={isUserAdmin ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+                          >
+                            {isAdminToggleProcessing
+                              ? t('admin.common.processing')
+                              : isUserAdmin
+                                ? t('admin.users.confirmRevokeAdmin.confirm')
+                                : t('admin.users.confirmGrantAdmin.confirm')}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+
+                  {userData?.email && !adminStatusLoading && <Separator />}
+
                   {/* Ban/Unban Button with Confirmation */}
                   <AlertDialog
                     open={banDialogOpen}
