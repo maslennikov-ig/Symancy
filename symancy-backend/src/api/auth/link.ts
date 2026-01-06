@@ -209,23 +209,71 @@ export async function linkHandler(
     });
   }
 
-  // Link accounts: Add telegram_id to web user's unified_users record
-  // We keep the web user's record and add the Telegram ID to it
-  const { data: mergedUser, error: updateError } = await supabase
-    .from('unified_users')
-    .update({
-      telegram_id: telegramUser.telegram_id,
-      is_telegram_linked: true,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', webUser.id)
-    .select()
-    .single();
+  // If Telegram user and web user are the same record, just update
+  if (telegramUser.id === webUser.id) {
+    // Same user, just ensure telegram_id is set
+    const { data: mergedUser, error: updateError } = await supabase
+      .from('unified_users')
+      .update({
+        telegram_id: telegramUser.telegram_id,
+        is_telegram_linked: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', webUser.id)
+      .select()
+      .single();
 
-  if (updateError) {
+    if (updateError) {
+      logger.error(
+        { error: updateError, webUserId: webUser.id, telegramId: telegramUser.telegram_id },
+        'Failed to update account'
+      );
+      return reply.status(500).send({
+        error: 'INTERNAL_ERROR',
+        message: 'Failed to link accounts',
+      });
+    }
+
+    logger.info(
+      {
+        userId: webUser.id,
+        telegramId: telegramUser.telegram_id,
+        authId: webUser.auth_id,
+      },
+      'Account updated successfully (same user)'
+    );
+
+    return reply.send({
+      success: true,
+      user: mergedUser as UnifiedUser,
+    });
+  }
+
+  // Different users - use atomic function to merge accounts
+  // This handles the unique constraint on telegram_id by deleting telegram user first
+  logger.info(
+    {
+      telegramUserId: telegramUser.id,
+      webUserId: webUser.id,
+      telegramId: telegramUser.telegram_id,
+    },
+    'Merging separate Telegram and web user records atomically'
+  );
+
+  const { data: linkResult, error: linkError } = await supabase.rpc('link_accounts', {
+    p_web_user_id: webUser.id,
+    p_telegram_user_id: telegramUser.id,
+  });
+
+  if (linkError) {
     logger.error(
-      { error: updateError, webUserId: webUser.id, telegramId: telegramUser.telegram_id },
-      'Failed to link accounts'
+      {
+        error: linkError,
+        webUserId: webUser.id,
+        telegramUserId: telegramUser.id,
+        telegramId: telegramUser.telegram_id,
+      },
+      'Failed to link accounts atomically'
     );
     return reply.status(500).send({
       error: 'INTERNAL_ERROR',
@@ -233,135 +281,39 @@ export async function linkHandler(
     });
   }
 
-  // If Telegram user had a separate unified_users record, we should merge data and delete it
-  // This handles the case where the Telegram user existed independently before linking
-  if (telegramUser.id !== webUser.id) {
+  // Log merge results
+  if (linkResult && linkResult.length > 0) {
+    const result = linkResult[0];
     logger.info(
       {
-        telegramUserId: telegramUser.id,
-        webUserId: webUser.id,
-        telegramId: telegramUser.telegram_id,
+        mergedUserId: result.merged_user_id,
+        telegramId: result.telegram_id,
+        creditsMerged: result.credits_merged,
+        historyMigrated: result.history_migrated,
+        conversationsMigrated: result.conversations_migrated,
       },
-      'Merging separate Telegram and web user records'
+      'Accounts merged atomically'
     );
+  }
 
-    // Merge credits atomically using PostgreSQL function
-    // Note: user_credits.user_id maps to auth.users.id, which is unified_users.auth_id
-    if (telegramUser.auth_id && webUser.auth_id) {
-      const { data: mergeResult, error: mergeError } = await supabase.rpc(
-        'merge_user_credits',
-        {
-          source_user_id: telegramUser.auth_id,
-          target_user_id: webUser.auth_id,
-        }
-      );
+  // Fetch the updated user record
+  const { data: mergedUser, error: fetchError } = await supabase
+    .from('unified_users')
+    .select()
+    .eq('id', webUser.id)
+    .single();
 
-      if (mergeError) {
-        logger.error(
-          {
-            error: mergeError,
-            sourceUserId: telegramUser.id,
-            sourceAuthId: telegramUser.auth_id,
-            targetUserId: webUser.id,
-            targetAuthId: webUser.auth_id,
-          },
-          'Failed to merge credits (non-fatal, continuing)'
-        );
-        // Non-fatal: continue with account linking even if credits merge fails
-      } else if (mergeResult && mergeResult.length > 0) {
-        const merged = mergeResult[0];
-        logger.info(
-          {
-            sourceUserId: telegramUser.id,
-            targetUserId: webUser.id,
-            mergedCredits: {
-              basic: merged.merged_basic,
-              pro: merged.merged_pro,
-              cassandra: merged.merged_cassandra,
-            },
-            sourceDeleted: merged.source_deleted,
-          },
-          'Credits merged atomically'
-        );
-      } else {
-        logger.info(
-          { sourceUserId: telegramUser.id, targetUserId: webUser.id },
-          'No credits to merge (one or both users have no credit records)'
-        );
-      }
-    } else {
-      logger.info(
-        {
-          sourceUserId: telegramUser.id,
-          sourceAuthId: telegramUser.auth_id,
-          targetUserId: webUser.id,
-          targetAuthId: webUser.auth_id,
-        },
-        'Skipping credit merge: one or both users have no auth_id'
-      );
-    }
-
-    // Migrate analysis_history records to the merged user
-    // analysis_history has both telegram_user_id and unified_user_id
-    // We need to update unified_user_id to point to the merged account
-    const { data: migratedHistory, error: historyError } = await supabase
-      .from('analysis_history')
-      .update({ unified_user_id: webUser.id })
-      .eq('unified_user_id', telegramUser.id)
-      .select('id');
-
-    if (historyError) {
-      logger.error(
-        { error: historyError, sourceUserId: telegramUser.id, targetUserId: webUser.id },
-        'Failed to migrate analysis_history (non-fatal, continuing)'
-      );
-    } else {
-      logger.info(
-        {
-          sourceUserId: telegramUser.id,
-          targetUserId: webUser.id,
-          migratedRecords: migratedHistory?.length || 0,
-        },
-        'Migrated analysis_history records to merged account'
-      );
-    }
-
-    // Migrate conversations to the merged user
-    const { data: migratedConvos, error: convosError } = await supabase
-      .from('conversations')
-      .update({ unified_user_id: webUser.id })
-      .eq('unified_user_id', telegramUser.id)
-      .select('id');
-
-    if (convosError) {
-      logger.error(
-        { error: convosError, sourceUserId: telegramUser.id, targetUserId: webUser.id },
-        'Failed to migrate conversations (non-fatal, continuing)'
-      );
-    } else {
-      logger.info(
-        {
-          sourceUserId: telegramUser.id,
-          targetUserId: webUser.id,
-          migratedRecords: migratedConvos?.length || 0,
-        },
-        'Migrated conversations to merged account'
-      );
-    }
-
-    // Delete the separate Telegram user record (cascades to related data)
-    const { error: deleteError } = await supabase
-      .from('unified_users')
-      .delete()
-      .eq('id', telegramUser.id);
-
-    if (deleteError) {
-      logger.error(
-        { error: deleteError, telegramUserId: telegramUser.id },
-        'Failed to delete separate Telegram user record (non-fatal)'
-      );
-      // Non-fatal: the main linking is done, cleanup failure is acceptable
-    }
+  if (fetchError) {
+    logger.error({ error: fetchError, webUserId: webUser.id }, 'Failed to fetch merged user');
+    // Return success anyway since linking succeeded
+    return reply.send({
+      success: true,
+      user: {
+        ...webUser,
+        telegram_id: telegramUser.telegram_id,
+        is_telegram_linked: true,
+      } as UnifiedUser,
+    });
   }
 
   logger.info(
