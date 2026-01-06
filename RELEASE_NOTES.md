@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.5.49
+
+_Released on 2026-01-06_
+
+### ✨ New Features
+
+- **photo-analysis**: Add topic selection for Basic vs Pro readings
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.5.48
 
 _Released on 2026-01-06_
