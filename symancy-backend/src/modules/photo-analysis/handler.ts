@@ -1,57 +1,14 @@
 /**
  * Photo message handler for coffee fortune telling bot
- * Validates photo requests, checks credits, and queues analysis jobs
+ * Validates photo requests and shows topic selection keyboard
  */
 import type { BotContext } from "../router/middleware.js";
-import type { PhotoAnalysisJobData } from "../../types/telegram.js";
 import { getLogger } from "../../core/logger.js";
-import { sendJob } from "../../core/queue.js";
 import { isMaintenanceMode } from "../config/service.js";
-import {
-  QUEUE_ANALYZE_PHOTO,
-  TELEGRAM_PHOTO_SIZE_LIMIT,
-  MAX_CAPTION_LENGTH,
-} from "../../config/constants.js";
-import { arinaStrategy } from "./personas/arina.strategy.js";
-import { cassandraStrategy } from "./personas/cassandra.strategy.js";
-import type { PersonaStrategy } from "./personas/arina.strategy.js";
+import { TELEGRAM_PHOTO_SIZE_LIMIT } from "../../config/constants.js";
+import { createTopicKeyboard, getTopicSelectionMessage } from "./keyboards.js";
 
 const logger = getLogger().child({ module: "photo-handler" });
-
-/**
- * Persona strategy map for loading messages and credit costs
- */
-const PERSONA_STRATEGIES: Record<"arina" | "cassandra", PersonaStrategy> = {
-  arina: arinaStrategy,
-  cassandra: cassandraStrategy,
-};
-
-/**
- * Determine persona from message caption
- * @param caption - Message caption text (if any)
- * @returns Selected persona name
- */
-function determinePersona(caption?: string): "arina" | "cassandra" {
-  // Early return for missing or too long captions
-  if (!caption || caption.length > MAX_CAPTION_LENGTH) {
-    return "arina";
-  }
-
-  // Trim and lowercase for safe comparison
-  const sanitized = caption.trim().toLowerCase();
-
-  // Check for Cassandra/premium keywords
-  if (
-    sanitized.includes("cassandra") ||
-    sanitized.includes("кассандра") ||
-    sanitized.includes("premium") ||
-    sanitized.includes("премиум")
-  ) {
-    return "cassandra";
-  }
-
-  return "arina";
-}
 
 
 /**
@@ -62,10 +19,9 @@ function determinePersona(caption?: string): "arina" | "cassandra" {
  * 1. Validate context and photo
  * 2. Check maintenance mode
  * 3. Validate photo size
- * 4. Check user credits
- * 5. Determine persona
- * 6. Send loading message
- * 7. Enqueue background job
+ * 4. Show topic selection keyboard
+ *
+ * Note: Job enqueueing happens in topic-handler.ts after user selects a topic
  *
  * @param ctx - Extended grammY context with user profile and state
  */
@@ -77,7 +33,6 @@ export async function handlePhotoMessage(ctx: BotContext): Promise<void> {
   }
 
   const telegramUserId = ctx.from.id;
-  const chatId = ctx.chat.id;
 
   logger.info({ telegramUserId }, "Received photo message");
 
@@ -124,56 +79,22 @@ export async function handlePhotoMessage(ctx: BotContext): Promise<void> {
     logger.warn({ telegramUserId, fileId: photo.file_id }, "Photo size unknown, proceeding anyway");
   }
 
-  // Determine persona from caption (if provided)
-  const caption = ctx.message.caption;
-  const persona = determinePersona(caption);
-
-  // Get strategy for selected persona
-  const strategy = PERSONA_STRATEGIES[persona];
-
-  // Note: Credit check moved to worker for atomic credit consumption
-  // This prevents race conditions where multiple requests can bypass credit check
-
   // Get user language: profile > Telegram client > fallback to Russian
   const userLanguage = ctx.profile?.language_code || ctx.from.language_code || "ru";
 
-  // Get loading message for selected persona using strategy
-  const loadingText = strategy.getLoadingMessage(userLanguage);
+  // Create topic selection keyboard with photo fileId embedded
+  const keyboard = createTopicKeyboard(photo.file_id, userLanguage);
+  const promptMessage = getTopicSelectionMessage(userLanguage);
 
-  // Send loading message (quick response <100ms)
-  const loadingMessage = await ctx.reply(loadingText);
-
-  // Prepare job data for background worker
-  const jobData: PhotoAnalysisJobData = {
-    telegramUserId,
-    chatId,
-    messageId: loadingMessage.message_id,
-    fileId: photo.file_id,
-    persona,
-    language: userLanguage,
-    userName: ctx.profile?.name || ctx.from.username || ctx.from.first_name || undefined,
-  };
-
-  // Enqueue job to pg-boss
-  const jobId = await sendJob(QUEUE_ANALYZE_PHOTO, jobData);
-
-  if (!jobId) {
-    logger.error({ telegramUserId }, "Failed to enqueue photo analysis job");
-    await ctx.api.editMessageText(
-      chatId,
-      loadingMessage.message_id,
-      "❌ Не удалось обработать запрос. Попробуйте ещё раз."
-    );
-    return;
-  }
+  // Send topic selection prompt with keyboard
+  await ctx.reply(promptMessage, { reply_markup: keyboard });
 
   logger.info(
     {
-      jobId,
       telegramUserId,
-      persona,
+      fileId: photo.file_id,
       fileSize: photo.file_size,
     },
-    "Photo analysis job queued"
+    "Topic selection keyboard shown"
   );
 }

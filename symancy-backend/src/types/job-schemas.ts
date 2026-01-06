@@ -5,6 +5,28 @@
 import { z } from "zod";
 
 /**
+ * Reading topics for Basic vs Pro differentiation
+ */
+export const ReadingTopicEnum = z.enum([
+  "love",
+  "career",
+  "money",
+  "health",
+  "family",
+  "spiritual",
+  "all",
+]);
+
+export type ReadingTopic = z.infer<typeof ReadingTopicEnum>;
+
+/**
+ * Credit type for consumption
+ */
+export const CreditTypeEnum = z.enum(["basic", "pro"]);
+
+export type CreditType = z.infer<typeof CreditTypeEnum>;
+
+/**
  * Photo analysis job schema
  * Validates job data for photo analysis queue
  */
@@ -16,6 +38,10 @@ export const PhotoAnalysisJobSchema = z.object({
   persona: z.enum(["arina", "cassandra"]),
   language: z.string().min(2).max(10),
   userName: z.string().optional(),
+  /** Reading topic: single topic for basic, "all" for pro */
+  topic: ReadingTopicEnum.default("all"),
+  /** Credit type to consume: basic for single topic, pro for "all" */
+  creditType: CreditTypeEnum.default("basic"),
 });
 
 export type PhotoAnalysisJobData = z.infer<typeof PhotoAnalysisJobSchema>;

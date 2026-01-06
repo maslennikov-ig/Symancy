@@ -697,6 +697,7 @@ async function processPendingPhoto(
     loadingMessageId = loadingMessage.message_id;
 
     // Prepare job data (MEDIUM #9: use saved persona)
+    // Note: onboarding uses free credit, defaults to "all" topic analysis
     const jobData: PhotoAnalysisJobData = {
       telegramUserId,
       chatId,
@@ -705,6 +706,8 @@ async function processPendingPhoto(
       persona: selectedPersona,
       language: "ru",
       userName: profile?.name || undefined,
+      topic: "all", // Free onboarding reading covers all topics
+      creditType: "basic", // Uses basic credit slot
     };
 
     // Queue the job

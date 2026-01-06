@@ -8,6 +8,7 @@ import { getEnv } from "../../config/env.js";
 import { loadProfile, loadUserState, checkBanned, type BotContext } from "./middleware.js";
 import { rateLimitMiddleware } from "./rate-limit.js";
 import { handlePhotoMessage } from "../photo-analysis/handler.js";
+import { handleTopicCallback } from "../photo-analysis/topic-handler.js";
 import { handleTextMessage } from "../chat/handler.js";
 import {
   handleCassandraCommand,
@@ -346,7 +347,13 @@ export function setupRouter(): void {
         return;
       }
 
-      // TODO: Implement other callback query handling (Phase 4)
+      // Route topic selection callbacks (photo analysis)
+      if (ctx.callbackQuery.data.startsWith("topic:")) {
+        await handleTopicCallback(botCtx);
+        return;
+      }
+
+      // Unknown callback - acknowledge to remove loading state
       await ctx.answerCallbackQuery({ text: "Обрабатывается..." });
     } catch (error) {
       logger.error({ error, telegramUserId: ctx.from.id }, "Error handling callback query");

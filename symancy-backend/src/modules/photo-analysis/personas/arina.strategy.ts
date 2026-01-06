@@ -8,7 +8,7 @@ import type {
   InterpretationResult,
   VisionAnalysisResult,
 } from "../../../types/langchain.js";
-import { MODEL_ARINA } from "../../../config/constants.js";
+import { MODEL_ARINA, type ReadingTopic } from "../../../config/constants.js";
 
 /**
  * Options for interpretation
@@ -16,6 +16,7 @@ import { MODEL_ARINA } from "../../../config/constants.js";
 export interface InterpretOptions {
   language?: string; // default 'ru'
   userName?: string; // optional user name
+  topic?: ReadingTopic; // reading topic for focused analysis
 }
 
 /**
@@ -112,14 +113,15 @@ export const arinaStrategy: PersonaStrategy = {
     visionResult: VisionAnalysisResult,
     options: InterpretOptions
   ): Promise<InterpretationResult> {
-    const { language = "ru", userName = "дорогой друг" } = options;
+    const { language = "ru", userName = "дорогой друг", topic = "all" } = options;
 
-    // Call interpretation chain with Arina persona
+    // Call interpretation chain with Arina persona and topic
     const result = await generateInterpretation({
       visionResult,
       persona: "arina",
       language,
       userName,
+      topic,
     });
 
     return result;

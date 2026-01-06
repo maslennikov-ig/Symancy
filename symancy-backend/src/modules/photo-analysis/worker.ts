@@ -55,6 +55,11 @@ const PERSONA_STRATEGIES: Record<"arina" | "cassandra", PersonaStrategy> = {
 };
 
 /**
+ * Valid topic values for defense-in-depth validation
+ */
+const VALID_TOPICS = new Set(["love", "career", "money", "health", "family", "spiritual", "all"]);
+
+/**
  * Process photo analysis job
  *
  * Main worker function that handles the complete photo analysis pipeline:
@@ -68,7 +73,13 @@ const PERSONA_STRATEGIES: Record<"arina" | "cassandra", PersonaStrategy> = {
  * @throws Error on retryable failures (network, API errors)
  */
 export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Promise<void> {
-  const { telegramUserId, chatId, messageId, fileId, persona, language, userName } = job.data;
+  const { telegramUserId, chatId, messageId, fileId, persona, language, userName, topic: rawTopic = "all", creditType = "basic" } = job.data;
+
+  // Validate topic (defense-in-depth, Zod schema should catch invalid values at queue entry)
+  const topic = VALID_TOPICS.has(rawTopic) ? rawTopic : "all";
+  if (rawTopic !== topic) {
+    logger.warn({ rawTopic, validatedTopic: topic }, "Invalid topic in job data, falling back to 'all'");
+  }
 
   const jobLogger = logger.child({
     jobId: job.id,
@@ -76,6 +87,7 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
     chatId,
     fileId,
     persona,
+    topic,
   });
 
   jobLogger.info("Starting photo analysis");
@@ -102,8 +114,9 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
       .from("analysis_history")
       .insert({
         telegram_user_id: telegramUserId,
-        analysis_type: "basic",
+        analysis_type: creditType === "pro" ? "pro" : "basic",
         persona,
+        topic,
         status: "processing",
       })
       .select("id")
@@ -345,7 +358,7 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
     jobLogger.info({ creditCost }, "Credits consumed");
 
     // Step 5: Generate interpretation with persona using strategy (with retry)
-    jobLogger.debug({ persona }, "Generating interpretation");
+    jobLogger.debug({ persona, topic }, "Generating interpretation");
     await bot.api.sendChatAction(chatId, "typing");
 
     const interpretation = await withRetry(
@@ -353,6 +366,7 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
         strategy.interpret(visionResult, {
           language: language || "ru",
           userName,
+          topic,
         }),
       {
         maxAttempts: 3,

@@ -1,30 +1,62 @@
 # Symancy Tariffs & Credits System
 
-> **Last Updated**: 2025-12-28
+> **Last Updated**: 2026-01-06
 > **Status**: Active
 > **Related Files**:
 > - `symancy-backend/src/modules/credits/service.ts` - Credit operations
 > - `symancy-backend/src/modules/onboarding/handler.ts` - Free tier grant
+> - `symancy-backend/src/config/constants.ts` - READING_TOPICS, TOPIC_FOCUS_INSTRUCTIONS
+> - `symancy-backend/src/modules/photo-analysis/keyboards.ts` - Topic selection UI
 > - `specs/002-pre-mvp-payments/spec.md` - Original payment spec
 
 ## Overview
 
 Symancy uses a **pay-per-use credit system** (no subscriptions). Users purchase credits which are consumed for coffee reading analyses.
 
+## Basic vs Pro Differentiation
+
+The key difference between Basic and Pro tiers is **topic selection**:
+
+| Tier | Topic Selection | Analysis Depth |
+|------|-----------------|----------------|
+| **Basic** (1 credit) | User selects **ONE topic** | Deep focused analysis on selected area |
+| **Pro** (1 credit) | Automatic **ALL 6 topics** | Comprehensive analysis across all life areas |
+
+### Reading Topics
+
+After sending a photo, users see a topic selection keyboard:
+
+| Topic | Emoji | Description |
+|-------|-------|-------------|
+| `love` | ❤️ | Love and relationships |
+| `career` | 💼 | Career and work |
+| `money` | 💰 | Finances and material wellbeing |
+| `health` | 🏥 | Health and energy |
+| `family` | 👨‍👩‍👧 | Family and loved ones |
+| `spiritual` | 🌟 | Spiritual development |
+| `all` | 💎 | All topics (PRO) |
+
+**User Flow**:
+1. User sends photo of coffee grounds
+2. Bot shows topic selection keyboard (6 topics + "All topics PRO")
+3. User selects topic
+4. If single topic → consume 1 basic credit → focused analysis
+5. If "all" → consume 1 pro credit → comprehensive analysis
+
 ## Credit Costs
 
 | Persona | Credits per Analysis | Description |
 |---------|---------------------|-------------|
-| **Arina** | 1 credit | Friendly fortune teller, basic analysis |
-| **Cassandra** | 3 credits | Mystical premium persona, deeper insights |
+| **Arina** | 1 credit | Friendly fortune teller, basic/pro analysis |
+| **Cassandra** | 3 credits | Mystical premium persona, always full analysis |
 
 ## Tariff Tiers
 
 | Tariff | Price (RUB) | Credits | Product Type | Description |
 |--------|-------------|---------|--------------|-------------|
-| Базовый "Новичок" | 100₽ | 1 basic | `basic` | 1 basic reading, 5-10 min wait |
-| Пакет "Любитель" | 300₽ | 5 basic | `pack5` | 5 readings, <2 min wait |
-| Разовый "Внутренний мудрец" | 500₽ | 1 pro | `pro` | 1 PRO reading (6+ blocks), minimal wait |
+| Базовый "Новичок" | 100₽ | 1 basic | `basic` | 1 single-topic reading |
+| Пакет "Любитель" | 300₽ | 5 basic | `pack5` | 5 single-topic readings |
+| Разовый "Внутренний мудрец" | 500₽ | 1 pro | `pro` | 1 full analysis (all 6 topics) |
 | Предсказание "Кассандра" | 1000₽ | 1 cassandra | `cassandra` | Esoteric prediction by Cassandra |
 
 ## Free Tier

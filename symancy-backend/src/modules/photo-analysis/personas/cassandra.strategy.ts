@@ -71,13 +71,16 @@ export const cassandraStrategy: PersonaStrategy = {
     options: InterpretOptions
   ): Promise<InterpretationResult> {
     const { language = "ru", userName = "друг" } = options;
+    // Note: Cassandra ignores topic and always does full "all" reading
 
-    // Call interpretation chain with Cassandra persona
+    // Call interpretation chain with Cassandra persona and topic
+    // Note: Cassandra always does "all" topics by design (premium full reading)
     const result = await generateInterpretation({
       visionResult,
       persona: "cassandra",
       language,
       userName,
+      topic: "all", // Cassandra always gives full reading
     });
 
     return result;

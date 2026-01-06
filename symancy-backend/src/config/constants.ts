@@ -158,6 +158,102 @@ export const CONFIG_CACHE_TTL_SECONDS = 60;
 export const CHAT_HISTORY_LIMIT = 20;
 
 // =============================================================================
+// Reading Topics (Basic vs Pro differentiation)
+// =============================================================================
+
+/**
+ * Available reading topics for fortune telling
+ * Basic tier: user selects ONE topic
+ * Pro tier: user gets ALL topics analyzed
+ */
+export const READING_TOPICS = [
+  { key: "love", emoji: "❤️", label_ru: "Любовь", label_en: "Love", label_zh: "爱情" },
+  { key: "career", emoji: "💼", label_ru: "Карьера", label_en: "Career", label_zh: "事业" },
+  { key: "money", emoji: "💰", label_ru: "Финансы", label_en: "Money", label_zh: "财运" },
+  { key: "health", emoji: "🏥", label_ru: "Здоровье", label_en: "Health", label_zh: "健康" },
+  { key: "family", emoji: "👨‍👩‍👧", label_ru: "Семья", label_en: "Family", label_zh: "家庭" },
+  { key: "spiritual", emoji: "🌟", label_ru: "Духовное", label_en: "Spiritual", label_zh: "心灵" },
+] as const;
+
+/**
+ * Reading topic type (single topic or all)
+ */
+export type ReadingTopic = typeof READING_TOPICS[number]["key"] | "all";
+
+/**
+ * Topic focus instructions for interpretation prompt
+ * Maps topic key to specific focus guidance
+ */
+export const TOPIC_FOCUS_INSTRUCTIONS: Record<ReadingTopic, Record<string, string>> = {
+  love: {
+    ru: "Сфокусируйся на любви и отношениях. Что говорит гуща о романтической жизни, партнёрстве, эмоциональных связях?",
+    en: "Focus on love and relationships. What does the grounds say about romantic life, partnership, emotional connections?",
+    zh: "专注于爱情和关系。咖啡渣对浪漫生活、伴侣关系、情感联系有什么启示?",
+  },
+  career: {
+    ru: "Сфокусируйся на карьере и работе. Что видно про профессиональный путь, проекты, коллег, достижения?",
+    en: "Focus on career and work. What's visible about professional path, projects, colleagues, achievements?",
+    zh: "专注于事业和工作。关于职业道路、项目、同事、成就有什么启示?",
+  },
+  money: {
+    ru: "Сфокусируйся на финансах и материальном благополучии. Деньги, инвестиции, возможности заработка.",
+    en: "Focus on finances and material wellbeing. Money, investments, earning opportunities.",
+    zh: "专注于财务和物质福祉。金钱、投资、赚钱机会。",
+  },
+  health: {
+    ru: "Сфокусируйся на здоровье и энергии. Физическое и эмоциональное состояние, на что обратить внимание.",
+    en: "Focus on health and energy. Physical and emotional state, what to pay attention to.",
+    zh: "专注于健康和精力。身体和情绪状态，需要注意什么。",
+  },
+  family: {
+    ru: "Сфокусируйся на семье и близких. Родители, дети, родственники, домашний очаг.",
+    en: "Focus on family and loved ones. Parents, children, relatives, home life.",
+    zh: "专注于家庭和亲人。父母、孩子、亲戚、家庭生活。",
+  },
+  spiritual: {
+    ru: "Сфокусируйся на духовном развитии и внутреннем росте. Саморазвитие, смысл, предназначение.",
+    en: "Focus on spiritual development and inner growth. Self-development, meaning, purpose.",
+    zh: "专注于精神发展和内心成长。自我发展、意义、使命。",
+  },
+  all: {
+    ru: "Дай полный анализ по всем сферам жизни: любовь, карьера, финансы, здоровье, семья, духовное развитие. Раздели на секции.",
+    en: "Give a complete analysis of all life areas: love, career, finances, health, family, spiritual growth. Divide into sections.",
+    zh: "对生活的各个方面进行全面分析:爱情、事业、财务、健康、家庭、精神成长。分章节阐述。",
+  },
+};
+
+/**
+ * Get topic label for language
+ */
+export function getTopicLabel(
+  topicKey: string,
+  language: string = "ru"
+): string {
+  const topic = READING_TOPICS.find((t) => t.key === topicKey);
+  if (!topic) return topicKey;
+
+  switch (language) {
+    case "en":
+      return `${topic.emoji} ${topic.label_en}`;
+    case "zh":
+      return `${topic.emoji} ${topic.label_zh}`;
+    default:
+      return `${topic.emoji} ${topic.label_ru}`;
+  }
+}
+
+/**
+ * Get topic focus instruction for interpretation
+ */
+export function getTopicFocusInstruction(
+  topic: ReadingTopic,
+  language: string = "ru"
+): string {
+  const instructions = TOPIC_FOCUS_INSTRUCTIONS[topic];
+  return instructions[language] || instructions["ru"] || "";
+}
+
+// =============================================================================
 // Credit Costs
 // =============================================================================
 

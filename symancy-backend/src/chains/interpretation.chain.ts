@@ -15,6 +15,7 @@ import path from "path";
 import { getLogger } from "../core/logger.js";
 import { selectRandomLens } from "../config/interpretation-matrix.js";
 import { findMaxSimilarity } from "../utils/similarity.js";
+import { getTopicFocusInstruction, type ReadingTopic } from "../config/constants.js";
 
 const logger = getLogger().child({ module: "interpretation-chain" });
 
@@ -38,6 +39,15 @@ However, remember: coffee grounds always hold your dreams and hopes.
 Try again in a few minutes, and I will try to reveal destiny's message for you.
 
 ✨ Your luck is on your side.
+`;
+
+const FALLBACK_INTERPRETATION_ZH = `
+☕ 很抱歉，我现在无法完全解读您杯中的图像。
+
+但请记住：咖啡渣总是承载着您的梦想和希望。
+请几分钟后再试一次，我会努力为您揭示命运的讯息。
+
+✨ 好运与您同在。
 `;
 
 /**
@@ -151,6 +161,8 @@ export async function generateInterpretation(
     userName?: string;
     userContext?: string;
     recentInterpretations?: string[];
+    /** Reading topic for focused analysis */
+    topic?: ReadingTopic;
   }
 ): Promise<InterpretationResult> {
   const {
@@ -160,6 +172,7 @@ export async function generateInterpretation(
     userName = "дорогой друг",
     userContext,
     recentInterpretations = [],
+    topic = "all",
   } = input;
 
   // Validate persona
@@ -203,7 +216,11 @@ export async function generateInterpretation(
   // Select a random lens from the interpretation matrix
   const lens = selectRandomLens([], userContext);
 
-  logger.info({ lensId: lens.id, lensName: lens.name }, "Selected interpretation lens");
+  logger.info({ lensId: lens.id, lensName: lens.name, topic }, "Selected interpretation lens");
+
+  // Get topic focus instruction
+  const topicFocus = getTopicFocusInstruction(topic, language);
+  logger.debug({ topic, language, topicFocusLength: topicFocus.length }, "Topic focus instruction retrieved");
 
   // Replace placeholders in interpretation prompt
   const interpretationText = replacePlaceholders(interpretationPrompt, {
@@ -213,6 +230,7 @@ export async function generateInterpretation(
     USER_CONTEXT: userContext || "Не указан",
     LENS_NAME: lens.name,
     LENS_INSTRUCTION: lens.instruction,
+    TOPIC_FOCUS: topicFocus,
   });
 
   // Create messages for LangChain
@@ -283,7 +301,9 @@ export async function generateInterpretation(
 
     // Select fallback based on language
     const fallback =
-      language === "en" ? FALLBACK_INTERPRETATION_EN : FALLBACK_INTERPRETATION_RU;
+      language === "zh" ? FALLBACK_INTERPRETATION_ZH :
+      language === "en" ? FALLBACK_INTERPRETATION_EN :
+      FALLBACK_INTERPRETATION_RU;
 
     return {
       text: fallback,
