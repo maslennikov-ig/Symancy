@@ -1,14 +1,16 @@
 /**
  * Integration tests for photo-analysis handler
- * Tests photo message handling, validation, persona detection, and job queuing
+ * Tests photo message handling, validation, and topic selection keyboard
+ *
+ * NOTE: Photo handler now shows topic selection keyboard instead of queuing job directly.
+ * Persona detection and job queuing tests are in topic-handler.test.ts
  *
  * Test Coverage:
- * - TC-US1-001: Basic Photo Analysis (Arina)
+ * - TC-US1-001: Basic Photo Analysis - Topic Selection Keyboard
  * - TC-US1-003: Photo Too Large
- * - TC-US1-005: Persona Detection
- * - TC-US4-005: Case Insensitive Keywords
  * - Maintenance Mode handling
  * - Invalid Context scenarios
+ * - Topic Selection Keyboard display
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { BotContext } from "../../../src/modules/router/middleware.js";
@@ -80,132 +82,67 @@ describe("handlePhotoMessage - Integration Tests", () => {
     vi.mocked(isMaintenanceMode).mockResolvedValue(false);
   });
 
-  describe("TC-US1-001: Basic Photo Analysis (Arina)", () => {
-    it("should send loading message immediately", async () => {
+  describe("TC-US1-001: Basic Photo Analysis - Topic Selection", () => {
+    it("should show topic selection prompt with keyboard", async () => {
       const ctx = createPhotoContext();
 
       await handlePhotoMessage(ctx);
 
-      // Verify loading message was sent
+      // Verify topic selection prompt was sent with keyboard
       expect(ctx.reply).toHaveBeenCalledTimes(1);
-      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining("☕️"));
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining("☕️"),
+        expect.objectContaining({
+          reply_markup: expect.any(Object),
+        })
+      );
     });
 
-    it("should queue job with correct data", async () => {
+    it("should NOT queue job directly - job is queued after topic selection", async () => {
       const ctx = createPhotoContext();
 
       await handlePhotoMessage(ctx);
 
-      // Verify job was sent to queue
-      expect(sendJob).toHaveBeenCalledTimes(1);
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          telegramUserId: 123456789,
-          chatId: 123456789,
-          messageId: 42, // Loading message ID
-          fileId: "large", // Largest photo selected
-          persona: "arina",
-          language: "ru",
-        })
-      );
+      // Job is queued by topic-handler after user selects topic
+      expect(sendJob).not.toHaveBeenCalled();
     });
 
-    it("should use Arina persona by default (no caption)", async () => {
-      const ctx = createPhotoContext({
-        message: {
-          message_id: 999,
-          date: Date.now() / 1000,
-          chat: { id: 123456789, type: "private" },
-          photo: [{ file_id: "test", file_unique_id: "test_unique", width: 100, height: 100, file_size: 50000 }],
-          caption: undefined, // No caption provided
-        },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          persona: "arina",
-        })
-      );
-    });
-
-    it("should use Arina loading message for Russian language", async () => {
+    it("should show Russian topic selection message for Russian language", async () => {
       const ctx = createPhotoContext({
         from: { id: 123, language_code: "ru", is_bot: false },
       });
 
       await handlePhotoMessage(ctx);
 
-      expect(ctx.reply).toHaveBeenCalledWith("☕️ Смотрю в гущу...");
+      expect(ctx.reply).toHaveBeenCalledWith(
+        "☕️ Фото получено! О чём хотите узнать?",
+        expect.any(Object)
+      );
     });
 
-    it("should use Arina loading message for English language", async () => {
+    it("should show English topic selection message for English language", async () => {
       const ctx = createPhotoContext({
         from: { id: 123, language_code: "en", is_bot: false },
       });
 
       await handlePhotoMessage(ctx);
 
-      expect(ctx.reply).toHaveBeenCalledWith("☕️ Reading the grounds...");
+      expect(ctx.reply).toHaveBeenCalledWith(
+        "☕️ Photo received! What would you like to know about?",
+        expect.any(Object)
+      );
     });
 
-    it("should use Arina loading message for Chinese language", async () => {
+    it("should show Chinese topic selection message for Chinese language", async () => {
       const ctx = createPhotoContext({
         from: { id: 123, language_code: "zh", is_bot: false },
       });
 
       await handlePhotoMessage(ctx);
 
-      expect(ctx.reply).toHaveBeenCalledWith("☕️ 正在解读咖啡渣...");
-    });
-
-    it("should include userName in job data when available", async () => {
-      const ctx = createPhotoContext({
-        profile: { name: "Мария Иванова" },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          userName: "Мария Иванова",
-        })
-      );
-    });
-
-    it("should fallback to Telegram username if profile name is missing", async () => {
-      const ctx = createPhotoContext({
-        profile: undefined,
-        from: { id: 123, username: "maria_ivanova", is_bot: false },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          userName: "maria_ivanova",
-        })
-      );
-    });
-
-    it("should fallback to first_name if username is missing", async () => {
-      const ctx = createPhotoContext({
-        profile: undefined,
-        from: { id: 123, first_name: "Мария", is_bot: false },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          userName: "Мария",
-        })
+      expect(ctx.reply).toHaveBeenCalledWith(
+        "☕️ 照片已收到！您想了解什么？",
+        expect.any(Object)
       );
     });
   });
@@ -306,9 +243,12 @@ describe("handlePhotoMessage - Integration Tests", () => {
 
       await handlePhotoMessage(ctx);
 
-      // Should proceed and queue job
-      expect(sendJob).toHaveBeenCalledTimes(1);
-      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining("☕️"));
+      // Should proceed and show topic selection keyboard
+      expect(ctx.reply).toHaveBeenCalledTimes(1);
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining("☕️"),
+        expect.objectContaining({ reply_markup: expect.any(Object) })
+      );
     });
 
     it("should accept photos at exactly 10MB limit", async () => {
@@ -331,248 +271,17 @@ describe("handlePhotoMessage - Integration Tests", () => {
 
       await handlePhotoMessage(ctx);
 
-      // Should accept and queue job
-      expect(sendJob).toHaveBeenCalledTimes(1);
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          fileId: "max_size",
-        })
+      // Should accept and show topic selection keyboard
+      expect(ctx.reply).toHaveBeenCalledTimes(1);
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining("☕️"),
+        expect.objectContaining({ reply_markup: expect.any(Object) })
       );
     });
   });
 
-  describe("TC-US1-005: Persona Detection", () => {
-    it("should detect 'cassandra' keyword in caption (lowercase)", async () => {
-      const ctx = createPhotoContext({
-        message: {
-          message_id: 999,
-          date: Date.now() / 1000,
-          chat: { id: 123456789, type: "private" },
-          photo: [{ file_id: "test", file_unique_id: "test_unique", width: 100, height: 100, file_size: 50000 }],
-          caption: "cassandra please analyze this",
-        },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          persona: "cassandra",
-        })
-      );
-    });
-
-    it("should detect 'кассандра' (Russian) keyword", async () => {
-      const ctx = createPhotoContext({
-        message: {
-          message_id: 999,
-          date: Date.now() / 1000,
-          chat: { id: 123456789, type: "private" },
-          photo: [{ file_id: "test", file_unique_id: "test_unique", width: 100, height: 100, file_size: 50000 }],
-          caption: "кассандра посмотри пожалуйста",
-        },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          persona: "cassandra",
-        })
-      );
-    });
-
-    it("should detect 'premium' keyword", async () => {
-      const ctx = createPhotoContext({
-        message: {
-          message_id: 999,
-          date: Date.now() / 1000,
-          chat: { id: 123456789, type: "private" },
-          photo: [{ file_id: "test", file_unique_id: "test_unique", width: 100, height: 100, file_size: 50000 }],
-          caption: "premium analysis please",
-        },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          persona: "cassandra",
-        })
-      );
-    });
-
-    it("should detect 'премиум' (Russian) keyword", async () => {
-      const ctx = createPhotoContext({
-        message: {
-          message_id: 999,
-          date: Date.now() / 1000,
-          chat: { id: 123456789, type: "private" },
-          photo: [{ file_id: "test", file_unique_id: "test_unique", width: 100, height: 100, file_size: 50000 }],
-          caption: "премиум анализ",
-        },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          persona: "cassandra",
-        })
-      );
-    });
-
-    it("should be case-insensitive for keywords", async () => {
-      const ctx = createPhotoContext({
-        message: {
-          message_id: 999,
-          date: Date.now() / 1000,
-          chat: { id: 123456789, type: "private" },
-          photo: [{ file_id: "test", file_unique_id: "test_unique", width: 100, height: 100, file_size: 50000 }],
-          caption: "CaSsAnDrA analyze",
-        },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          persona: "cassandra",
-        })
-      );
-    });
-
-    it("should use Cassandra loading message when persona is detected", async () => {
-      const ctx = createPhotoContext({
-        from: { id: 123, language_code: "ru", is_bot: false },
-        message: {
-          message_id: 999,
-          date: Date.now() / 1000,
-          chat: { id: 123456789, type: "private" },
-          photo: [{ file_id: "test", file_unique_id: "test_unique", width: 100, height: 100, file_size: 50000 }],
-          caption: "cassandra",
-        },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      // Cassandra should have different loading message (🔮 instead of ☕️)
-      expect(ctx.reply).toHaveBeenCalledWith("🔮 Всматриваюсь в знаки судьбы...");
-    });
-  });
-
-  describe("TC-US4-005: Case Insensitive Keywords", () => {
-    it("should trigger Cassandra with 'CASSANDRA' (uppercase)", async () => {
-      const ctx = createPhotoContext({
-        message: {
-          message_id: 999,
-          date: Date.now() / 1000,
-          chat: { id: 123456789, type: "private" },
-          photo: [{ file_id: "test", file_unique_id: "test_unique", width: 100, height: 100, file_size: 50000 }],
-          caption: "CASSANDRA",
-        },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          persona: "cassandra",
-        })
-      );
-    });
-
-    it("should trigger Cassandra with 'CasSanDrA' (mixed case)", async () => {
-      const ctx = createPhotoContext({
-        message: {
-          message_id: 999,
-          date: Date.now() / 1000,
-          chat: { id: 123456789, type: "private" },
-          photo: [{ file_id: "test", file_unique_id: "test_unique", width: 100, height: 100, file_size: 50000 }],
-          caption: "CasSanDrA",
-        },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          persona: "cassandra",
-        })
-      );
-    });
-
-    it("should trigger Cassandra with 'ПРЕМИУМ' (uppercase Russian)", async () => {
-      const ctx = createPhotoContext({
-        message: {
-          message_id: 999,
-          date: Date.now() / 1000,
-          chat: { id: 123456789, type: "private" },
-          photo: [{ file_id: "test", file_unique_id: "test_unique", width: 100, height: 100, file_size: 50000 }],
-          caption: "ПРЕМИУМ",
-        },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          persona: "cassandra",
-        })
-      );
-    });
-
-    it("should detect keyword in middle of caption", async () => {
-      const ctx = createPhotoContext({
-        message: {
-          message_id: 999,
-          date: Date.now() / 1000,
-          chat: { id: 123456789, type: "private" },
-          photo: [{ file_id: "test", file_unique_id: "test_unique", width: 100, height: 100, file_size: 50000 }],
-          caption: "hey cassandra can you read this?",
-        },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          persona: "cassandra",
-        })
-      );
-    });
-
-    it("should trim whitespace before detecting keywords", async () => {
-      const ctx = createPhotoContext({
-        message: {
-          message_id: 999,
-          date: Date.now() / 1000,
-          chat: { id: 123456789, type: "private" },
-          photo: [{ file_id: "test", file_unique_id: "test_unique", width: 100, height: 100, file_size: 50000 }],
-          caption: "   cassandra   ",
-        },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          persona: "cassandra",
-        })
-      );
-    });
-  });
+  // NOTE: Persona detection tests moved to topic-handler.test.ts
+  // Photo handler now shows topic selection keyboard instead of queuing job directly
 
   describe("Maintenance Mode", () => {
     it("should respond with maintenance message when enabled", async () => {
@@ -680,132 +389,60 @@ describe("handlePhotoMessage - Integration Tests", () => {
     });
   });
 
-  describe("Photo Selection", () => {
-    it("should select largest photo for best quality", async () => {
+  describe("Topic Selection Keyboard", () => {
+    it("should show topic selection keyboard with correct message", async () => {
+      const ctx = createPhotoContext();
+
+      await handlePhotoMessage(ctx);
+
+      // Should show topic selection prompt
+      expect(ctx.reply).toHaveBeenCalledTimes(1);
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining("☕️"),
+        expect.objectContaining({
+          reply_markup: expect.any(Object),
+        })
+      );
+    });
+
+    it("should include photo fileId in keyboard callback data", async () => {
       const ctx = createPhotoContext({
         message: {
           message_id: 999,
           date: Date.now() / 1000,
           chat: { id: 123456789, type: "private" },
           photo: [
-            { file_id: "small_100", file_unique_id: "s100", width: 100, height: 100, file_size: 5000 },
-            { file_id: "medium_320", file_unique_id: "m320", width: 320, height: 320, file_size: 25000 },
-            { file_id: "large_800", file_unique_id: "l800", width: 800, height: 800, file_size: 100000 },
+            { file_id: "test_file_id", file_unique_id: "test", width: 800, height: 800, file_size: 100000 },
           ],
         },
       });
 
       await handlePhotoMessage(ctx);
 
-      // Should use the largest photo (last in array)
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
+      // Keyboard should be passed to reply
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.any(String),
         expect.objectContaining({
-          fileId: "large_800",
+          reply_markup: expect.objectContaining({
+            inline_keyboard: expect.arrayContaining([
+              expect.arrayContaining([
+                expect.objectContaining({
+                  callback_data: expect.stringContaining("test_file_id"),
+                }),
+              ]),
+            ]),
+          }),
         })
       );
     });
 
-    it("should handle single photo in array", async () => {
-      const ctx = createPhotoContext({
-        message: {
-          message_id: 999,
-          date: Date.now() / 1000,
-          chat: { id: 123456789, type: "private" },
-          photo: [
-            { file_id: "only_one", file_unique_id: "only", width: 640, height: 480, file_size: 80000 },
-          ],
-        },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          fileId: "only_one",
-        })
-      );
-    });
-  });
-
-  describe("Job Queue Error Handling", () => {
-    it("should handle failed job enqueue", async () => {
-      vi.mocked(sendJob).mockResolvedValue(null); // Simulate failure
-
+    it("should NOT call sendJob directly (job is queued by topic-handler)", async () => {
       const ctx = createPhotoContext();
 
       await handlePhotoMessage(ctx);
 
-      // Should edit loading message with error
-      expect(ctx.api.editMessageText).toHaveBeenCalledWith(
-        123456789,
-        42,
-        "❌ Не удалось обработать запрос. Попробуйте ещё раз."
-      );
-    });
-
-    it("should send loading message before job queue failure", async () => {
-      vi.mocked(sendJob).mockResolvedValue(null);
-
-      const ctx = createPhotoContext();
-
-      await handlePhotoMessage(ctx);
-
-      // Loading message should be sent first
-      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining("☕️"));
-
-      // Then error message via editMessageText
-      expect(ctx.api.editMessageText).toHaveBeenCalled();
-    });
-  });
-
-  describe("Caption Length Validation", () => {
-    it("should default to Arina for caption exceeding MAX_CAPTION_LENGTH", async () => {
-      const longCaption = "a".repeat(1001); // Exceeds MAX_CAPTION_LENGTH (1000)
-
-      const ctx = createPhotoContext({
-        message: {
-          message_id: 999,
-          date: Date.now() / 1000,
-          chat: { id: 123456789, type: "private" },
-          photo: [{ file_id: "test", file_unique_id: "test_unique", width: 100, height: 100, file_size: 50000 }],
-          caption: longCaption,
-        },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      // Should default to arina due to caption length
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          persona: "arina",
-        })
-      );
-    });
-
-    it("should process normal length caption with keywords", async () => {
-      const normalCaption = "cassandra please analyze";
-
-      const ctx = createPhotoContext({
-        message: {
-          message_id: 999,
-          date: Date.now() / 1000,
-          chat: { id: 123456789, type: "private" },
-          photo: [{ file_id: "test", file_unique_id: "test_unique", width: 100, height: 100, file_size: 50000 }],
-          caption: normalCaption,
-        },
-      });
-
-      await handlePhotoMessage(ctx);
-
-      expect(sendJob).toHaveBeenCalledWith(
-        QUEUE_ANALYZE_PHOTO,
-        expect.objectContaining({
-          persona: "cassandra",
-        })
-      );
+      // sendJob is now called by topic-handler, not photo-handler
+      expect(sendJob).not.toHaveBeenCalled();
     });
   });
 });
