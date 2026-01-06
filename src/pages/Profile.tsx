@@ -1140,8 +1140,8 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
             </div>
           )}
 
-          {/* Email linking for Telegram users (not web users) */}
-          {isTelegramUser && (
+          {/* Email linking for Telegram users without linked email */}
+          {isTelegramUser && !unifiedUser?.auth_id && (
             <div
               style={{
                 display: 'flex',
@@ -1197,6 +1197,54 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
                 <PlusIcon />
                 <span>Link</span>
               </button>
+            </div>
+          )}
+
+          {/* Email linked status for Telegram users with linked email */}
+          {isTelegramUser && unifiedUser?.auth_id && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 0',
+                borderTop: '1px solid var(--tg-theme-hint-color, hsl(var(--border)))',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '20px' }}>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <polyline points="22,6 12,13 2,6" />
+                  </svg>
+                </span>
+                <span
+                  style={{
+                    color: 'var(--tg-theme-text-color, hsl(var(--foreground)))',
+                    fontSize: '15px',
+                  }}
+                >
+                  Email
+                </span>
+              </div>
+              <span
+                style={{
+                  color: 'var(--tg-theme-button-color, hsl(var(--primary)))',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <CheckIcon />
+              </span>
             </div>
           )}
         </CardContent>
