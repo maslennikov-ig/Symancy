@@ -57,6 +57,13 @@ type RoleFilter = 'all' | 'user' | 'assistant' | 'system';
 type ContentTypeFilter = 'all' | 'text' | 'image' | 'analysis' | 'audio' | 'document';
 type ChannelFilter = 'all' | 'telegram' | 'web';
 
+// User option for combobox
+interface UserOption {
+  id: string;
+  display_name: string | null;
+  telegram_id: string | null;
+}
+
 const PAGE_SIZE = PAGE_SIZES.MESSAGES;
 
 // Helper: Get role badge color
@@ -197,6 +204,15 @@ export function MessagesPage() {
   const [contentTypeFilter, setContentTypeFilter] = useState<ContentTypeFilter>('all');
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all');
 
+  // User filter
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [debouncedUserSearch, setDebouncedUserSearch] = useState('');
+  const [userOptions, setUserOptions] = useState<UserOption[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUserLabel, setSelectedUserLabel] = useState<string>('');
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -212,10 +228,66 @@ export function MessagesPage() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  // Debounce user search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedUserSearch(userSearchTerm);
+    }, TIME_THRESHOLDS.SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [userSearchTerm]);
+
+  // Fetch users for autocomplete
+  useEffect(() => {
+    if (!isUserDropdownOpen || debouncedUserSearch.length < 1) {
+      setUserOptions([]);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingUsers(true);
+
+    async function fetchUsers() {
+      try {
+        const term = debouncedUserSearch.trim();
+        let query = supabase
+          .from('unified_users')
+          .select('id, display_name, telegram_id')
+          .limit(10);
+
+        // Check if search term is numeric (telegram_id search)
+        if (/^\d+$/.test(term)) {
+          query = query.eq('telegram_id', term);
+        } else {
+          query = query.ilike('display_name', `%${term}%`);
+        }
+
+        const { data, error: queryError } = await query;
+
+        if (queryError) {
+          logger.error('Error fetching users for filter', queryError);
+          return;
+        }
+
+        if (!cancelled) {
+          setUserOptions((data as UserOption[]) || []);
+        }
+      } catch (err) {
+        logger.error('Error fetching users for filter', err);
+      } finally {
+        if (!cancelled) {
+          setIsLoadingUsers(false);
+        }
+      }
+    }
+
+    fetchUsers();
+    return () => { cancelled = true; };
+  }, [debouncedUserSearch, isUserDropdownOpen]);
+
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [roleFilter, contentTypeFilter, channelFilter]);
+  }, [roleFilter, contentTypeFilter, channelFilter, selectedUserId]);
 
   // Toggle row expansion
   const toggleRowExpansion = (messageId: string) => {
@@ -290,6 +362,11 @@ export function MessagesPage() {
           query = query.eq('channel', channelFilter);
         }
 
+        // Apply user filter
+        if (selectedUserId) {
+          query = query.eq('conversations.unified_user_id', selectedUserId);
+        }
+
         const { data, count, error: queryError } = await query;
 
         if (queryError) {
@@ -319,7 +396,7 @@ export function MessagesPage() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, isAdmin, currentPage, debouncedSearch, roleFilter, contentTypeFilter, channelFilter, refreshTrigger]);
+  }, [authLoading, isAdmin, currentPage, debouncedSearch, roleFilter, contentTypeFilter, channelFilter, selectedUserId, refreshTrigger]);
 
   // Handle manual refresh
   const handleRefresh = () => setRefreshTrigger((prev) => prev + 1);
@@ -447,6 +524,77 @@ export function MessagesPage() {
                   <SelectItem value="web">Web</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* User filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">{t('admin.messages.user')}:</span>
+              <div className="relative">
+                {selectedUserId ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="py-1.5 px-3">
+                      {selectedUserLabel}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      onClick={() => {
+                        setSelectedUserId(null);
+                        setSelectedUserLabel('');
+                        setUserSearchTerm('');
+                      }}
+                    >
+                      ×
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <Input
+                      placeholder={t('admin.messages.searchUser')}
+                      value={userSearchTerm}
+                      onChange={(e) => setUserSearchTerm(e.target.value)}
+                      onFocus={() => setIsUserDropdownOpen(true)}
+                      onBlur={() => setTimeout(() => setIsUserDropdownOpen(false), 200)}
+                      className="w-[200px]"
+                    />
+                    {isUserDropdownOpen && (userOptions.length > 0 || isLoadingUsers) && (
+                      <div className="absolute top-full left-0 w-full mt-1 bg-popover border rounded-md shadow-md z-50 max-h-[200px] overflow-y-auto">
+                        {isLoadingUsers ? (
+                          <div className="p-2 text-sm text-muted-foreground">
+                            {t('admin.common.loading')}
+                          </div>
+                        ) : (
+                          userOptions.map((userOption) => (
+                            <button
+                              key={userOption.id}
+                              type="button"
+                              className="w-full text-left px-3 py-2 hover:bg-accent text-sm cursor-pointer"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                const label = userOption.display_name || `TG: ${userOption.telegram_id}` || userOption.id.slice(0, 8);
+                                setSelectedUserId(userOption.id);
+                                setSelectedUserLabel(label);
+                                setUserSearchTerm('');
+                                setIsUserDropdownOpen(false);
+                              }}
+                            >
+                              <div className="font-medium">
+                                {userOption.display_name || t('admin.userDetail.unnamed')}
+                              </div>
+                              {userOption.telegram_id && (
+                                <div className="text-xs text-muted-foreground">
+                                  TG: {userOption.telegram_id}
+                                </div>
+                              )}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

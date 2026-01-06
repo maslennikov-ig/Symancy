@@ -136,9 +136,10 @@ export function UserDetailPage() {
 
   // Credit adjustment state
   const [isEditingCredits, setIsEditingCredits] = useState(false);
-  const [basicDelta, setBasicDelta] = useState(0);
-  const [proDelta, setProDelta] = useState(0);
-  const [cassandraDelta, setCassandraDelta] = useState(0);
+  const [adjustmentMode, setAdjustmentMode] = useState<'adjust' | 'set'>('set'); // 'set' is default now
+  const [basicValue, setBasicValue] = useState(0);
+  const [proValue, setProValue] = useState(0);
+  const [cassandraValue, setCassandraValue] = useState(0);
   const [adjustReason, setAdjustReason] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -257,6 +258,28 @@ export function UserDetailPage() {
   // Handle credit adjustment (no optimistic updates to avoid race conditions)
   const handleAdjustCredits = async () => {
     if (!id) return;
+
+    // Calculate deltas based on mode
+    let basicDelta: number;
+    let proDelta: number;
+    let cassandraDelta: number;
+
+    if (adjustmentMode === 'set') {
+      // In 'set' mode, calculate delta from current values
+      const currentBasic = credits?.credits_basic ?? 0;
+      const currentPro = credits?.credits_pro ?? 0;
+      const currentCassandra = credits?.credits_cassandra ?? 0;
+
+      basicDelta = basicValue - currentBasic;
+      proDelta = proValue - currentPro;
+      cassandraDelta = cassandraValue - currentCassandra;
+    } else {
+      // In 'adjust' mode, values ARE deltas
+      basicDelta = basicValue;
+      proDelta = proValue;
+      cassandraDelta = cassandraValue;
+    }
+
     if (basicDelta === 0 && proDelta === 0 && cassandraDelta === 0) {
       setSaveError(t('admin.userDetail.noAdjustmentError'));
       return;
@@ -295,7 +318,7 @@ export function UserDetailPage() {
         p_basic_delta: basicDelta,
         p_pro_delta: proDelta,
         p_cassandra_delta: cassandraDelta,
-        p_reason: adjustReason || 'admin_adjustment',
+        p_reason: adjustReason || (adjustmentMode === 'set' ? 'admin_set_balance' : 'admin_adjustment'),
       });
 
       // RPC error validation
@@ -328,13 +351,13 @@ export function UserDetailPage() {
       });
 
       // Reset form
-      setBasicDelta(0);
-      setProDelta(0);
-      setCassandraDelta(0);
+      setBasicValue(0);
+      setProValue(0);
+      setCassandraValue(0);
       setAdjustReason('');
       setIsEditingCredits(false);
       setSaveSuccess(true);
-      toast.success('Credits adjusted', { description: 'User credits have been updated successfully.' });
+      toast.success(t('admin.userDetail.creditsSuccess'));
 
       // Clear success message after configured duration
       if (successTimeoutRef.current) {
@@ -357,11 +380,44 @@ export function UserDetailPage() {
 
   // Cancel editing
   const handleCancelEdit = () => {
-    setBasicDelta(0);
-    setProDelta(0);
-    setCassandraDelta(0);
+    setBasicValue(0);
+    setProValue(0);
+    setCassandraValue(0);
     setAdjustReason('');
     setIsEditingCredits(false);
+    setSaveError(null);
+  };
+
+  // Start editing credits - initialize values based on mode
+  const handleStartEdit = () => {
+    if (adjustmentMode === 'set') {
+      // In 'set' mode, start with current balance
+      setBasicValue(credits?.credits_basic ?? 0);
+      setProValue(credits?.credits_pro ?? 0);
+      setCassandraValue(credits?.credits_cassandra ?? 0);
+    } else {
+      // In 'adjust' mode, start with 0 delta
+      setBasicValue(0);
+      setProValue(0);
+      setCassandraValue(0);
+    }
+    setAdjustReason('');
+    setSaveError(null);
+    setIsEditingCredits(true);
+  };
+
+  // Handle mode change
+  const handleModeChange = (mode: 'adjust' | 'set') => {
+    setAdjustmentMode(mode);
+    if (mode === 'set') {
+      setBasicValue(credits?.credits_basic ?? 0);
+      setProValue(credits?.credits_pro ?? 0);
+      setCassandraValue(credits?.credits_cassandra ?? 0);
+    } else {
+      setBasicValue(0);
+      setProValue(0);
+      setCassandraValue(0);
+    }
     setSaveError(null);
   };
 
@@ -579,13 +635,35 @@ export function UserDetailPage() {
                     {!isEditingCredits ? (
                       <Button
                         variant="outline"
-                        onClick={() => setIsEditingCredits(true)}
+                        onClick={handleStartEdit}
                       >
                         {t('admin.userDetail.adjustCredits')}
                       </Button>
                     ) : (
                       <div className="space-y-4">
-                        <Label className="text-sm font-medium">{t('admin.userDetail.creditAdjustments')}:</Label>
+                        {/* Mode selector */}
+                        <div className="flex gap-2">
+                          <Button
+                            variant={adjustmentMode === 'set' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => handleModeChange('set')}
+                          >
+                            {t('admin.userDetail.setBalance')}
+                          </Button>
+                          <Button
+                            variant={adjustmentMode === 'adjust' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => handleModeChange('adjust')}
+                          >
+                            {t('admin.userDetail.adjustBalance')}
+                          </Button>
+                        </div>
+
+                        <Label className="text-sm font-medium">
+                          {adjustmentMode === 'set'
+                            ? t('admin.userDetail.setBalanceLabel')
+                            : t('admin.userDetail.creditAdjustments')}:
+                        </Label>
 
                         {isSaving && (
                           <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-sm bg-amber-50 dark:bg-amber-900/20 p-2 rounded">
@@ -596,38 +674,41 @@ export function UserDetailPage() {
 
                         <div className="grid grid-cols-3 gap-3">
                           <div>
-                            <Label htmlFor="basic-delta" className="text-xs text-muted-foreground">
-                              Basic
+                            <Label htmlFor="basic-value" className="text-xs text-muted-foreground">
+                              Basic {adjustmentMode === 'adjust' && '(+/-)'}
                             </Label>
                             <Input
-                              id="basic-delta"
+                              id="basic-value"
                               type="number"
-                              value={basicDelta}
-                              onChange={(e) => setBasicDelta(parseInt(e.target.value) || 0)}
+                              min={adjustmentMode === 'set' ? 0 : undefined}
+                              value={basicValue}
+                              onChange={(e) => setBasicValue(parseInt(e.target.value) || 0)}
                               className="mt-1"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="pro-delta" className="text-xs text-muted-foreground">
-                              Pro
+                            <Label htmlFor="pro-value" className="text-xs text-muted-foreground">
+                              Pro {adjustmentMode === 'adjust' && '(+/-)'}
                             </Label>
                             <Input
-                              id="pro-delta"
+                              id="pro-value"
                               type="number"
-                              value={proDelta}
-                              onChange={(e) => setProDelta(parseInt(e.target.value) || 0)}
+                              min={adjustmentMode === 'set' ? 0 : undefined}
+                              value={proValue}
+                              onChange={(e) => setProValue(parseInt(e.target.value) || 0)}
                               className="mt-1"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="cassandra-delta" className="text-xs text-muted-foreground">
-                              Cassandra
+                            <Label htmlFor="cassandra-value" className="text-xs text-muted-foreground">
+                              Cassandra {adjustmentMode === 'adjust' && '(+/-)'}
                             </Label>
                             <Input
-                              id="cassandra-delta"
+                              id="cassandra-value"
                               type="number"
-                              value={cassandraDelta}
-                              onChange={(e) => setCassandraDelta(parseInt(e.target.value) || 0)}
+                              min={adjustmentMode === 'set' ? 0 : undefined}
+                              value={cassandraValue}
+                              onChange={(e) => setCassandraValue(parseInt(e.target.value) || 0)}
                               className="mt-1"
                             />
                           </div>

@@ -241,6 +241,23 @@ export function UsersPage() {
     setRefreshTrigger((prev) => prev + 1);
   };
 
+  // Handle admin toggle (grant/revoke)
+  const handleAdminToggle = async (userId: string, email: string, shouldGrant: boolean) => {
+    const rpcName = shouldGrant ? 'admin_add_admin_email' : 'admin_remove_admin_email';
+    const { error } = await supabase.rpc(rpcName, {
+      p_email: email,
+    });
+    if (error) {
+      logger.error('Error toggling admin', error);
+      toast.error(t('admin.users.actionFailed'));
+      return;
+    }
+    toast.success(
+      shouldGrant ? t('admin.users.grantAdminSuccess') : t('admin.users.revokeAdminSuccess')
+    );
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
   // Handle sort change
   const handleSortChange = (value: string) => {
     const [field, order] = value.split('-') as [SortField, SortOrder];
@@ -419,6 +436,7 @@ export function UsersPage() {
                         onViewDetails={() => handleRowClick(userItem.id)}
                         onBanToggle={handleToggleBan}
                         onDelete={handleDeleteUser}
+                        onAdminToggle={handleAdminToggle}
                       />
                     </TableCell>
                   </TableRow>
