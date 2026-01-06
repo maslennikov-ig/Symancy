@@ -13,6 +13,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { getSupabase } from '../../core/database.js';
 import { verifyToken } from '../../services/auth/JwtService.js';
 import { getLogger } from '../../core/logger.js';
+import { EVENING_HOUR_THRESHOLD } from '../../config/insight-constants.js';
 
 const logger = getLogger().child({ module: 'insights' });
 
@@ -151,8 +152,8 @@ export async function todayInsightHandler(
 
   const typedInsight = insight as DailyInsightRow;
 
-  // After 20:00 - show evening insight if available
-  if (currentHour >= 20 && typedInsight.evening_insight) {
+  // After EVENING_HOUR_THRESHOLD - show evening insight if available
+  if (currentHour >= EVENING_HOUR_THRESHOLD && typedInsight.evening_insight) {
     logger.debug({ userId, today, type: 'evening' }, 'Returning evening insight');
     return reply.send({
       hasInsight: true,

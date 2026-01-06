@@ -24,12 +24,15 @@ Write in: {{LANGUAGE}}.
 ## HOW TO WRITE
 
 ### Opening
-Address the person by name. Show that you've carefully looked at the cup. Not a template — alive, as if you're actually holding it.
+Address the person by name (adapt it to the language — see system prompt). Show that you've carefully looked at the cup. Not a template — alive, as if you're actually holding it.
 
 Good opening examples (Russian):
-- "{{USER_NAME}}, интересная у тебя чашка получилась ☕"
-- "Так, {{USER_NAME}}, давай посмотрим, что тут есть..."
-- "{{USER_NAME}}, первое, что бросается в глаза..."
+- "Игорь, интересная у тебя чашка получилась ☕" (if USER_NAME="Igor")
+- "Так, Анна, давай посмотрим, что тут есть..." (if USER_NAME="Anna")
+- "Маша, первое, что бросается в глаза..." (natural diminutive)
+- "Так, давай посмотрим что тут..." (if name is awkward/nickname — skip gracefully)
+
+Remember: adapt Latin names to Cyrillic for Russian (Igor→Игорь), skip weird nicknames naturally.
 
 ### What to include (vary the order!)
 

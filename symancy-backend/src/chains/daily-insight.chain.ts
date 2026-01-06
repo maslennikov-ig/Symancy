@@ -10,6 +10,13 @@ import { searchMemories } from "../services/memory.service.js";
 import { readFile } from "fs/promises";
 import path from "path";
 import { getLogger } from "../core/logger.js";
+import {
+  SHORT_TEXT_LENGTH,
+  TRUNCATE_MIN_RATIO,
+  MAX_RECENT_MESSAGES,
+  MAX_MEMORIES,
+  INSIGHT_MAX_TOKENS,
+} from "../config/insight-constants.js";
 
 const chainLogger = getLogger().child({ module: "daily-insight-chain" });
 
@@ -111,15 +118,15 @@ interface DbAnalysis {
  * @param maxLen - Maximum length
  * @returns Truncated text with ellipsis if needed
  */
-function truncateNicely(text: string, maxLen: number): string {
+export function truncateNicely(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text;
 
   // Try to find last space before maxLen
   const truncated = text.slice(0, maxLen);
   const lastSpace = truncated.lastIndexOf(' ');
 
-  // Don't cut too short (at least 70% of maxLen)
-  if (lastSpace > maxLen * 0.7) {
+  // Don't cut too short (at least TRUNCATE_MIN_RATIO of maxLen)
+  if (lastSpace > maxLen * TRUNCATE_MIN_RATIO) {
     return truncated.slice(0, lastSpace) + '...';
   }
 
@@ -171,7 +178,7 @@ function replacePlaceholders(
  */
 async function loadRecentMessages(
   userId: string,
-  limit: number = 10
+  limit: number = MAX_RECENT_MESSAGES
 ): Promise<{ messages: DbMessage[]; ids: string[] }> {
   const supabase = getSupabase();
 
@@ -291,9 +298,9 @@ export async function generateMorningAdvice(
 
   // Load context data in parallel
   const [messagesData, analysisData, memories] = await Promise.all([
-    loadRecentMessages(context.userId, 10),
+    loadRecentMessages(context.userId, MAX_RECENT_MESSAGES),
     loadLastAnalysis(context.telegramId),
-    searchMemories(context.telegramId, "personal preferences interests", 5).catch(() => []),
+    searchMemories(context.telegramId, "personal preferences interests", MAX_MEMORIES).catch(() => []),
   ]);
 
   // Format context for prompt
@@ -313,7 +320,7 @@ export async function generateMorningAdvice(
   });
 
   // Create model and invoke
-  const model = await createArinaModel({ maxTokens: 500 });
+  const model = await createArinaModel({ maxTokens: INSIGHT_MAX_TOKENS });
   const response = await model.invoke([
     new SystemMessage(systemPrompt),
     new HumanMessage(filledPrompt),
@@ -324,7 +331,7 @@ export async function generateMorningAdvice(
 
   return {
     text,
-    shortText: truncateNicely(text, 100),
+    shortText: truncateNicely(text, SHORT_TEXT_LENGTH),
     tokensUsed,
     contextData: {
       message_ids: messagesData.ids,
@@ -353,7 +360,7 @@ export async function generateEveningInsight(
   }
 
   // Load today's messages
-  const messagesData = await loadRecentMessages(context.userId, 10);
+  const messagesData = await loadRecentMessages(context.userId, MAX_RECENT_MESSAGES);
 
   // Format context for prompt
   const userContextText = formatUserContext(context);
@@ -367,7 +374,7 @@ export async function generateEveningInsight(
   });
 
   // Create model and invoke
-  const model = await createArinaModel({ maxTokens: 500 });
+  const model = await createArinaModel({ maxTokens: INSIGHT_MAX_TOKENS });
   const response = await model.invoke([
     new SystemMessage(systemPrompt),
     new HumanMessage(filledPrompt),
@@ -378,7 +385,7 @@ export async function generateEveningInsight(
 
   return {
     text,
-    shortText: truncateNicely(text, 100),
+    shortText: truncateNicely(text, SHORT_TEXT_LENGTH),
     tokensUsed,
     contextData: {
       message_ids: messagesData.ids,

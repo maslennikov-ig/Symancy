@@ -144,8 +144,7 @@ Follow command-specific instructions. See `docs/Agents Ecosystem/AGENT-ORCHESTRA
 - Quality gates: `docs/Agents Ecosystem/QUALITY-GATES-SPECIFICATION.md`
 - Report templates: `docs/Agents Ecosystem/REPORT-TEMPLATE-STANDARD.md`
 - **i18n Guide**: `docs/I18N_GUIDE.md` - Translation patterns for 3 languages
-- **Admin Panel Spec**: `docs/ADMIN_PANEL_SPEC.md` - Future admin panel implementation
-- **Admin Config**: `src/config/admin-configurable.ts` - Settings for future admin panel
+- **Admin Panel Spec**: `docs/ADMIN_PANEL_SPEC.md` - Admin panel implementation
 - **Server access**: `.claude/local.md` (gitignored, IP: `91.132.59.194`, user: `deploy`)
 
 ## Active Technologies
@@ -165,7 +164,7 @@ Follow command-specific instructions. See `docs/Agents Ecosystem/AGENT-ORCHESTRA
 ## Project Structure
 - **Frontend**: `src/` directory (React 19 + Vite)
   - `src/components/` - UI components organized by feature
-  - `src/config/` - Configuration files (chat.ts, admin-configurable.ts)
+  - `src/config/` - Configuration files (chat.ts)
   - `src/lib/` - Utilities (i18n.ts, supabaseClient.ts)
   - `src/pages/` - Route pages
   - `src/services/` - API services

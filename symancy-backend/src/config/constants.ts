@@ -181,9 +181,9 @@ export const CREDIT_COST_CASSANDRA = 3;
 export const MODEL_ARINA = "xiaomi/mimo-v2-flash:free";
 
 /**
- * Model for Cassandra persona (alternative)
+ * Model for Cassandra persona (premium, more creative)
  */
-export const MODEL_CASSANDRA = "xiaomi/mimo-v2-flash:free";
+export const MODEL_CASSANDRA = "moonshotai/kimi-k2";
 
 /**
  * Model for general chat

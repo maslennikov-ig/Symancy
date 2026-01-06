@@ -86,7 +86,8 @@ function createChatOpenAIInstance(
  * Create Arina persona model
  * Used for Arina-style interpretations with warm, archetypal tone
  *
- * Loads model from dynamic config (interpretation_model) with fallback to constant.
+ * Loads model from per-persona config (arina_model, arina_temperature, arina_max_tokens)
+ * with fallback to constants for resilience.
  *
  * Optimized parameters for interpretation variety:
  * - High temperature (0.9) for creative diversity
@@ -95,14 +96,16 @@ function createChatOpenAIInstance(
  * - Max tokens (1200) for controlled length
  */
 export async function createArinaModel(options?: ModelOptions): Promise<ChatOpenAI> {
-  const modelName = await getConfig("interpretation_model", MODEL_ARINA);
-  const temperature = await getConfig("interpretation_temperature", 0.9);
-  const maxTokens = await getConfig("interpretation_max_tokens", 1200);
+  const modelName = await getConfig("arina_model", MODEL_ARINA);
+  const temperature = await getConfig("arina_temperature", 0.9);
+  const maxTokens = await getConfig("arina_max_tokens", 1200);
+  const frequencyPenalty = await getConfig("arina_frequency_penalty", 0.6);
+  const presencePenalty = await getConfig("arina_presence_penalty", 0.5);
 
   return createChatOpenAIInstance(modelName, {
     temperature,
-    frequencyPenalty: 0.6,
-    presencePenalty: 0.5,
+    frequencyPenalty,
+    presencePenalty,
     maxTokens,
     ...options,
   });
@@ -110,17 +113,29 @@ export async function createArinaModel(options?: ModelOptions): Promise<ChatOpen
 
 /**
  * Create Cassandra persona model
- * Used for Cassandra-style interpretations with analytical, direct tone
+ * Used for Cassandra-style interpretations with mystical, creative tone
  *
- * Loads model from dynamic config with fallback to constant.
+ * Loads model from per-persona config with fallback to constants for resilience.
+ *
+ * Optimized parameters for creative mystical responses:
+ * - Higher temperature (1.1) for more creative, unpredictable outputs
+ * - Frequency penalty (0.4) to reduce token repetition
+ * - Presence penalty (0.3) to encourage exploring new topics
+ * - Max tokens (1500) for elaborate mystical descriptions
  */
 export async function createCassandraModel(options?: ModelOptions): Promise<ChatOpenAI> {
-  const modelName = await getConfig("interpretation_model", MODEL_CASSANDRA);
-  const temperature = await getConfig("interpretation_temperature", 0.7);
+  const modelName = await getConfig("cassandra_model", MODEL_CASSANDRA);
+  const temperature = await getConfig("cassandra_temperature", 1.1);
+  const maxTokens = await getConfig("cassandra_max_tokens", 1500);
+  const frequencyPenalty = await getConfig("cassandra_frequency_penalty", 0.4);
+  const presencePenalty = await getConfig("cassandra_presence_penalty", 0.3);
 
   return createChatOpenAIInstance(modelName, {
+    temperature,
+    frequencyPenalty,
+    presencePenalty,
+    maxTokens,
     ...options,
-    temperature: options?.temperature ?? temperature,
   });
 }
 

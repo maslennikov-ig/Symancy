@@ -2,7 +2,7 @@
 
 > Актуальная архитектура проекта Coffee Psychologist (Symancy)
 
-**Last Updated:** 2025-12-27
+**Last Updated:** 2026-01-06
 
 ---
 
@@ -89,8 +89,7 @@ src/
 │       └── [Other icons]
 │
 ├── config/                 # Configuration
-│   ├── chat.ts             # Chat settings (avatars, delays)
-│   └── admin-configurable.ts  # Settings for future admin panel
+│   └── chat.ts             # Chat settings (avatars, delays)
 │
 ├── contexts/               # React contexts
 │   └── AuthContext.tsx     # Authentication state
@@ -349,13 +348,240 @@ symancy-backend/
 └── package.json
 ```
 
-**Status**: In development (spec-003)
+**Status**: Production (v0.5.47+)
+
+---
+
+## Daily Insights System
+
+### Overview
+
+The Daily Insights system sends personalized morning advice and evening reflections to users via Telegram. It uses AI-generated content based on user context (memories, chat history, previous analyses).
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      INSIGHT GENERATION                         │
+│                                                                 │
+│  ┌───────────────┐   ┌───────────────┐   ┌───────────────────┐ │
+│  │  pg-boss      │   │  Dispatcher   │   │  Daily Insight    │ │
+│  │  Scheduler    │──▶│  (hourly)     │──▶│  Chain            │ │
+│  │  (cron)       │   │               │   │  (LangChain)      │ │
+│  └───────────────┘   └───────────────┘   └───────────────────┘ │
+│         │                   │                     │             │
+│         ▼                   ▼                     ▼             │
+│  ┌───────────────┐   ┌───────────────┐   ┌───────────────────┐ │
+│  │ insight-      │   │ morning/      │   │ generateMorning   │ │
+│  │ dispatcher    │   │ evening-      │   │ Advice()          │ │
+│  │ queue         │   │ insight-single│   │ generateEvening   │ │
+│  │               │   │ queues        │   │ Insight()         │ │
+│  └───────────────┘   └───────────────┘   └───────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     USER CONTEXT LOADING                        │
+│                                                                 │
+│  ┌───────────────┐   ┌───────────────┐   ┌───────────────────┐ │
+│  │ Recent        │   │ User          │   │ Last              │ │
+│  │ Messages (10) │   │ Memories (5)  │   │ Analysis          │ │
+│  └───────────────┘   └───────────────┘   └───────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    DELIVERY & STORAGE                           │
+│                                                                 │
+│  ┌───────────────┐   ┌───────────────┐   ┌───────────────────┐ │
+│  │ daily_        │   │ Proactive     │   │ Telegram          │ │
+│  │ insights      │──▶│ Message       │──▶│ Bot API           │ │
+│  │ (DB)          │   │ Service       │   │                   │ │
+│  └───────────────┘   └───────────────┘   └───────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Key Components
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `daily-insight.chain.ts` | `src/chains/` | LangChain-based insight generation |
+| `worker.ts` | `src/modules/engagement/` | pg-boss job handlers |
+| `dispatcher.ts` | `src/modules/engagement/` | Timezone-aware job dispatching |
+| `insight-constants.ts` | `src/config/` | Configurable thresholds and limits |
+| `static-insights.ts` | `src/modules/engagement/triggers/` | Fallback messages |
+
+### Configuration (insight-constants.ts)
+
+```typescript
+SHORT_TEXT_LENGTH = 100        // Preview text length
+BATCH_RATE_LIMIT_DELAY_MS = 200 // Rate limiting between users
+MAX_RECENT_MESSAGES = 10       // Context messages to load
+MAX_MEMORIES = 5               // Memories to include in prompt
+INSIGHT_MAX_TOKENS = 500       // LLM response limit
+EVENING_HOUR_THRESHOLD = 20    // Hour (0-23) for evening insight
+MORNING_INSIGHT_HOUR = 8       // Default morning delivery
+EVENING_INSIGHT_HOUR = 20      // Default evening delivery
+```
+
+### Fallback Strategy
+
+```
+AI Generation → generateWithRetry (3 attempts, exponential backoff)
+       │
+       ├─ Success → Send personalized insight
+       │
+       └─ Failure → getStaticMorningInsight() / getStaticEveningInsight()
+                    (Pre-written generic messages by language)
+```
+
+---
+
+## Memory System
+
+### Overview
+
+The memory system stores and retrieves user memories using vector search (pgvector). Memories are extracted from conversations and used for context enrichment.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      MEMORY EXTRACTION                          │
+│                                                                 │
+│  ┌───────────────┐   ┌───────────────┐   ┌───────────────────┐ │
+│  │ User Message  │──▶│ Memory        │──▶│ Embedding         │ │
+│  │               │   │ Extraction    │   │ (BGE-M3)          │ │
+│  │               │   │ Chain         │   │                   │ │
+│  └───────────────┘   └───────────────┘   └───────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      MEMORY STORAGE                             │
+│                                                                 │
+│  user_memories table (Supabase + pgvector)                     │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ id | telegram_user_id | content | category | embedding  │   │
+│  │    |                  |         |          | (vector)   │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      MEMORY RETRIEVAL                           │
+│                                                                 │
+│  searchMemories(userId, query, limit)                          │
+│       │                                                         │
+│       ├─ Generate query embedding                               │
+│       ├─ RPC: search_user_memories (cosine distance)           │
+│       └─ Return top-k matches with similarity scores           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Memory Categories
+
+| Category | Priority | Examples |
+|----------|----------|----------|
+| `personal_info` | 1 (highest) | Name, age, location |
+| `health` | 2 | Medical conditions, allergies |
+| `work` | 3 | Job, career details |
+| `preferences` | 4 | Communication style, likes |
+| `interests` | 5 | Hobbies, activities |
+| `events` | 6 | Scheduled events, plans |
+| `other` | 7 (lowest) | Miscellaneous |
+
+### Memory Consolidation
+
+The `consolidateMemories(telegramUserId)` function merges similar memories:
+
+1. Fetch all memories with embeddings
+2. Compare pairwise using cosine similarity
+3. If similarity > 0.85:
+   - Keep newer memory
+   - Append older content with `[Previous info]:` prefix
+   - Use more specific category (lower priority number)
+   - Delete older memory
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/services/memory.service.ts` | Memory CRUD + search + consolidation |
+| `src/core/embeddings/index.ts` | BGE-M3 embedding generation |
+| `src/chains/memory-extraction.chain.ts` | LLM-based memory extraction |
+
+---
+
+## Metrics Collection
+
+### Overview
+
+System metrics are collected for monitoring insight generation, memory operations, and API performance.
+
+### Schema (system_metrics table)
+
+```sql
+CREATE TABLE system_metrics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  metric_type TEXT NOT NULL,      -- 'insight', 'memory', 'api', 'embedding', 'queue'
+  metric_name TEXT NOT NULL,      -- 'generation_latency_ms', 'tokens_used', etc.
+  metric_value NUMERIC NOT NULL,
+  tags JSONB,                     -- { user_id, job_type, language, timezone }
+  recorded_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+### Metric Types
+
+| Type | Metrics Tracked |
+|------|-----------------|
+| `insight` | generation_latency_ms, total_processing_time_ms, tokens_used, success_count, error_count, fallback_used_count |
+| `memory` | search_latency_ms, add_latency_ms, results_count |
+| `api` | request_latency_ms, response_size_bytes |
+| `embedding` | generation_latency_ms, dimensions |
+| `queue` | job_processing_time_ms, jobs_dispatched, jobs_failed |
+
+### Usage in Code
+
+```typescript
+import { recordMetric, startTimer, recordDuration } from './services/metrics.service.js';
+
+// Timing measurement
+const timer = startTimer();
+await generateMorningAdvice(context);
+await recordDuration('insight', 'generation_latency_ms', timer, {
+  user_id: userId,
+  job_type: 'morning',
+  language: 'ru'
+});
+
+// Batch recording
+await recordMetricBatch([
+  { type: 'insight', name: 'tokens_used', value: 500, tags: { job_type: 'morning' } },
+  { type: 'insight', name: 'success_count', value: 1, tags: { job_type: 'morning' } },
+]);
+```
+
+### Memory Usage Tracking
+
+The `memory_usage` table tracks how often memories are used in context:
+
+```sql
+CREATE TABLE memory_usage (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  memory_id UUID REFERENCES user_memories(id) ON DELETE CASCADE,
+  used_in_context_type TEXT,  -- 'chat', 'morning_insight', 'evening_insight'
+  context_id TEXT,            -- Optional reference to specific context
+  used_at TIMESTAMPTZ DEFAULT now()
+);
+```
 
 ---
 
 ## Database Schema (Supabase)
 
-### Tables
+### Legacy Tables
 | Table | Purpose |
 |-------|---------|
 | `profiles` | User profiles (from auth.users) |
@@ -363,12 +589,28 @@ symancy-backend/
 | `user_credits` | Credit balances |
 | `analysis_history` | Saved analyses |
 
-### Future Tables (spec-003)
+### Omnichannel Tables
+| Table | Purpose |
+|-------|---------|
+| `unified_users` | Unified user records (Telegram + Web) |
+| `conversations` | Chat conversations |
+| `messages` | Chat messages |
+| `message_deliveries` | Delivery tracking |
+| `link_tokens` | Account linking tokens |
+| `unified_user_credits` | Omnichannel credit balances |
+
+### Daily Insights Tables
+| Table | Purpose |
+|-------|---------|
+| `daily_insights` | Daily morning/evening insights per user |
+| `user_memories` | Vector-indexed user memories |
+| `memory_usage` | Memory usage tracking |
+| `system_metrics` | Application metrics |
+
+### Future Tables
 | Table | Purpose |
 |-------|---------|
 | `system_config` | Admin-editable settings |
-| `chat_messages` | Bot conversation history |
-| `user_states` | Bot state machine |
 | `scheduled_messages` | Proactive engagement |
 
 ---

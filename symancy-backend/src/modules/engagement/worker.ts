@@ -36,6 +36,7 @@ import {
 import {
   createWeeklyCheckInMessage,
 } from "./triggers/weekly-checkin.js";
+import { BATCH_RATE_LIMIT_DELAY_MS } from "../../config/insight-constants.js";
 import { cleanupExpiredPhotos } from "./triggers/photo-cleanup.js";
 import {
   generateMorningAdvice,
@@ -51,6 +52,13 @@ import {
   dispatchEveningInsights,
   getTodayInTimezone,
 } from "./dispatcher.js";
+import {
+  recordMetric,
+  recordMetricBatch,
+  startTimer,
+  recordDuration,
+  type MetricTags,
+} from "../../services/metrics.service.js";
 
 const logger = getLogger().child({ module: "engagement-worker" });
 
@@ -299,7 +307,7 @@ export async function processMorningInsight(job: Job): Promise<void> {
         successCount++;
 
         // Rate limiting
-        await sleep(200);
+        await sleep(BATCH_RATE_LIMIT_DELAY_MS);
       } catch (error) {
         failedCount++;
         jobLogger.error({ error, userId: user.id }, "Failed to process user");
@@ -453,7 +461,7 @@ export async function processEveningInsight(job: Job): Promise<void> {
         );
 
         successCount++;
-        await sleep(200);
+        await sleep(BATCH_RATE_LIMIT_DELAY_MS);
       } catch (error) {
         failedCount++;
         jobLogger.error({ error, insightId: insight.id }, "Failed to process user");
@@ -549,6 +557,17 @@ export async function processMorningInsightSingle(
 
   jobLogger.info("Processing single user morning insight");
 
+  // Start total processing timer
+  const totalTimer = startTimer();
+
+  // Common metric tags
+  const metricTags: MetricTags = {
+    user_id: userId,
+    job_type: "morning",
+    language: languageCode,
+    timezone,
+  };
+
   try {
     const supabase = getSupabase();
     const proactiveService = getProactiveMessageService();
@@ -576,6 +595,7 @@ export async function processMorningInsightSingle(
     // Generate personalized advice with retry and fallback
     let insight;
     let usedFallback = false;
+    const generationTimer = startTimer();
 
     try {
       insight = await generateWithRetry(() =>
@@ -594,6 +614,9 @@ export async function processMorningInsightSingle(
       insight = getStaticMorningInsight(languageCode);
       usedFallback = true;
     }
+
+    // Record generation latency
+    await recordDuration("insight", "generation_latency_ms", generationTimer, metricTags);
 
     jobLogger.debug({
       insightType: "morning",
@@ -634,8 +657,22 @@ export async function processMorningInsightSingle(
       message
     );
 
+    // Record metrics batch for successful processing
+    await recordMetricBatch([
+      { type: "insight", name: "tokens_used", value: insight.tokensUsed, tags: metricTags },
+      { type: "insight", name: "success_count", value: 1, tags: metricTags },
+      ...(usedFallback ? [{ type: "insight" as const, name: "fallback_used_count" as const, value: 1, tags: metricTags }] : []),
+    ]);
+
+    // Record total processing time
+    await recordDuration("insight", "total_processing_time_ms", totalTimer, metricTags);
+
     jobLogger.info("Morning insight sent successfully");
   } catch (error) {
+    // Record error metric
+    await recordMetric("insight", "error_count", 1, metricTags);
+    await recordDuration("insight", "total_processing_time_ms", totalTimer, metricTags);
+
     jobLogger.error({ error }, "Failed to process morning insight");
     throw error; // Trigger pg-boss retry
   }
@@ -662,6 +699,17 @@ export async function processEveningInsightSingle(
   });
 
   jobLogger.info("Processing single user evening insight");
+
+  // Start total processing timer
+  const totalTimer = startTimer();
+
+  // Common metric tags
+  const metricTags: MetricTags = {
+    user_id: userId,
+    job_type: "evening",
+    language: languageCode,
+    timezone,
+  };
 
   try {
     const supabase = getSupabase();
@@ -703,6 +751,7 @@ export async function processEveningInsightSingle(
     // Generate evening insight with retry and fallback
     let eveningInsight;
     let usedFallback = false;
+    const generationTimer = startTimer();
 
     try {
       eveningInsight = await generateWithRetry(() =>
@@ -724,6 +773,9 @@ export async function processEveningInsightSingle(
       eveningInsight = getStaticEveningInsight(languageCode);
       usedFallback = true;
     }
+
+    // Record generation latency
+    await recordDuration("insight", "generation_latency_ms", generationTimer, metricTags);
 
     jobLogger.debug({
       insightType: "evening",
@@ -761,8 +813,22 @@ export async function processEveningInsightSingle(
       message
     );
 
+    // Record metrics batch for successful processing
+    await recordMetricBatch([
+      { type: "insight", name: "tokens_used", value: eveningInsight.tokensUsed, tags: metricTags },
+      { type: "insight", name: "success_count", value: 1, tags: metricTags },
+      ...(usedFallback ? [{ type: "insight" as const, name: "fallback_used_count" as const, value: 1, tags: metricTags }] : []),
+    ]);
+
+    // Record total processing time
+    await recordDuration("insight", "total_processing_time_ms", totalTimer, metricTags);
+
     jobLogger.info("Evening insight sent successfully");
   } catch (error) {
+    // Record error metric
+    await recordMetric("insight", "error_count", 1, metricTags);
+    await recordDuration("insight", "total_processing_time_ms", totalTimer, metricTags);
+
     jobLogger.error({ error }, "Failed to process evening insight");
     throw error; // Trigger pg-boss retry
   }

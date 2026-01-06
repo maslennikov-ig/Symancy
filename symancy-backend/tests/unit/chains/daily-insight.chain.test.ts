@@ -3,7 +3,7 @@
  * @module chains/__tests__/daily-insight.chain.test
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { generateWithRetry } from '../../../src/chains/daily-insight.chain.js';
+import { generateWithRetry, truncateNicely } from '../../../src/chains/daily-insight.chain.js';
 
 // Mock the logger module
 vi.mock('../../../src/core/logger.js', () => ({
@@ -256,6 +256,164 @@ describe('DailyInsightChain', () => {
       expect(delays[0]).toBe(500);  // 500 * 2^0
       expect(delays[1]).toBe(1000); // 500 * 2^1
       expect(fn).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe('truncateNicely', () => {
+    it('should return unchanged text when shorter than maxLen', () => {
+      const text = 'Short text';
+      const result = truncateNicely(text, 20);
+
+      expect(result).toBe('Short text');
+      expect(result).not.toContain('...');
+    });
+
+    it('should return unchanged text when exactly equal to maxLen', () => {
+      const text = 'Exactly twenty chars';
+      const result = truncateNicely(text, 20);
+
+      expect(result).toBe('Exactly twenty chars');
+      expect(result).not.toContain('...');
+    });
+
+    it('should cut at word boundary when space exists in valid range', () => {
+      const text = 'This is a long sentence that needs to be truncated properly';
+      const result = truncateNicely(text, 30);
+
+      // Should cut at a word boundary (last space before maxLen)
+      expect(result).toContain('...');
+      expect(result.length).toBeLessThan(30 + 3); // maxLen + '...'
+      expect(result).not.toMatch(/\s\.\.\.$/); // Should not end with space before ...
+      expect(result).toMatch(/\S\.\.\./); // Should end with non-space before ...
+    });
+
+    it('should add ellipsis when text is truncated', () => {
+      const text = 'This text is definitely too long for the maximum length';
+      const result = truncateNicely(text, 20);
+
+      expect(result).toContain('...');
+      expect(result.endsWith('...')).toBe(true);
+    });
+
+    it('should not cut too short when space is before 70% threshold', () => {
+      // Text with early space (before 70% of maxLen)
+      // maxLen = 50, 70% = 35
+      // Space at position 10 (before 35), should use hard cut instead
+      const text = 'Short word' + 'x'.repeat(60); // Space at position 10, then many chars
+      const result = truncateNicely(text, 50);
+
+      // Should use hard cut at maxLen instead of cutting at position 10
+      expect(result.length).toBe(50 + 3); // maxLen + '...'
+      expect(result).toBe(text.slice(0, 50) + '...');
+    });
+
+    it('should handle text with no spaces (fallback to hard cut)', () => {
+      const text = 'x'.repeat(100); // No spaces at all
+      const result = truncateNicely(text, 30);
+
+      // Should do hard cut at maxLen
+      expect(result.length).toBe(30 + 3); // maxLen + '...'
+      expect(result).toBe('x'.repeat(30) + '...');
+    });
+
+    it('should handle empty string', () => {
+      const result = truncateNicely('', 50);
+
+      expect(result).toBe('');
+      expect(result).not.toContain('...');
+    });
+
+    it('should handle edge case where space is exactly at 70% threshold', () => {
+      // Create text where space is exactly at 70% of maxLen
+      // maxLen = 100, 70% = 70
+      // The condition is `lastSpace > maxLen * 0.7`, so space AT 70 is NOT > 70
+      const maxLen = 100;
+      const threshold = Math.floor(maxLen * 0.7); // 70
+      const text = 'x'.repeat(threshold) + ' ' + 'y'.repeat(50); // Space at position 70
+
+      const result = truncateNicely(text, maxLen);
+
+      // Space is at position 70, which is NOT > 70, so should use hard cut at maxLen
+      expect(result).toBe(text.slice(0, maxLen) + '...');
+    });
+
+    it('should preserve word boundaries with multiple spaces', () => {
+      const text = 'Word1 Word2 Word3 Word4 Word5 Word6 Word7 Word8';
+      const result = truncateNicely(text, 25);
+
+      // Should cut at word boundary
+      expect(result).toContain('...');
+      expect(result).toMatch(/Word\d\.\.\./); // Should end with a word, not space
+      expect(result.length).toBeLessThanOrEqual(25 + 3);
+    });
+
+    it('should handle single character maxLen', () => {
+      const text = 'Long text';
+      const result = truncateNicely(text, 1);
+
+      expect(result).toBe('L...');
+      expect(result.length).toBe(4);
+    });
+
+    it('should handle maxLen smaller than first word', () => {
+      const text = 'Supercalifragilisticexpialidocious is a long word';
+      const result = truncateNicely(text, 10);
+
+      // No space in first 10 chars, should hard cut
+      expect(result).toBe('Supercalif...');
+      expect(result.length).toBe(13); // 10 + '...'
+    });
+
+    it('should handle text with leading/trailing spaces', () => {
+      const text = '  Some text with spaces  ';
+      const result = truncateNicely(text, 15);
+
+      expect(result).toContain('...');
+      expect(result.length).toBeLessThanOrEqual(15 + 3);
+    });
+
+    it('should handle unicode characters correctly', () => {
+      const text = 'Привет мир! This is a test with unicode characters 你好世界';
+      const result = truncateNicely(text, 30);
+
+      expect(result).toContain('...');
+      expect(result.length).toBeLessThanOrEqual(30 + 3);
+    });
+
+    it('should handle newlines in text', () => {
+      const text = 'First line\nSecond line\nThird line that is very long';
+      const result = truncateNicely(text, 25);
+
+      expect(result).toContain('...');
+      expect(result.length).toBeLessThanOrEqual(25 + 3);
+    });
+
+    it('should correctly calculate 70% threshold for various maxLen values', () => {
+      // Test with maxLen = 100 (70% = 70)
+      const text1 = 'x'.repeat(71) + ' ' + 'y'.repeat(50);
+      const result1 = truncateNicely(text1, 100);
+      expect(result1).toBe('x'.repeat(71) + '...'); // Space at 71 > 70, should cut there
+
+      // Test with maxLen = 50 (70% = 35)
+      const text2 = 'x'.repeat(36) + ' ' + 'y'.repeat(50);
+      const result2 = truncateNicely(text2, 50);
+      expect(result2).toBe('x'.repeat(36) + '...'); // Space at 36 > 35, should cut there
+
+      // Test with maxLen = 20 (70% = 14)
+      const text3 = 'x'.repeat(15) + ' ' + 'y'.repeat(50);
+      const result3 = truncateNicely(text3, 20);
+      expect(result3).toBe('x'.repeat(15) + '...'); // Space at 15 > 14, should cut there
+    });
+
+    it('should not cut at space when it would result in too short text', () => {
+      // maxLen = 100, 70% = 70
+      // Space at position 50 (< 70), should use hard cut at 100 instead
+      const text = 'x'.repeat(50) + ' ' + 'y'.repeat(70);
+      const result = truncateNicely(text, 100);
+
+      // Should NOT cut at position 50 (too short), should cut at 100
+      expect(result.length).toBe(103); // 100 + '...'
+      expect(result).toBe(text.slice(0, 100) + '...');
     });
   });
 });

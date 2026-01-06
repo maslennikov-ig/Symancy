@@ -15,8 +15,6 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Brain, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAdminTranslations } from '@/admin/hooks/useAdminTranslations';
@@ -27,8 +25,6 @@ interface InterpretationStageSettingsProps {
   interpretationModel: string;
   interpretationTemperature: number;
   interpretationMaxTokens: number;
-  arinaPrompt: string;
-  cassandraPrompt: string;
   onUpdate: (key: string, value: unknown) => Promise<void>;
   loading: boolean;
 }
@@ -44,21 +40,17 @@ const INTERPRETATION_MODELS = [
 ] as const;
 
 // Validation constants
-const MIN_PROMPT_LENGTH = 50;
 const MIN_TEMPERATURE = 0;
 const MAX_TEMPERATURE = 2;
 const DEFAULT_TEMPERATURE = 0.7;
 const MIN_MAX_TOKENS = 1;
 const MAX_MAX_TOKENS = 8192;
 const DEFAULT_MAX_TOKENS = 2048;
-const PROMPT_MIN_HEIGHT_PX = 200;
 
 export const InterpretationStageSettings = memo(function InterpretationStageSettings({
   interpretationModel,
   interpretationTemperature,
   interpretationMaxTokens,
-  arinaPrompt,
-  cassandraPrompt,
   onUpdate,
   loading,
 }: InterpretationStageSettingsProps): React.ReactElement {
@@ -70,32 +62,6 @@ export const InterpretationStageSettings = memo(function InterpretationStageSett
     'interpretation_model',
     onUpdate,
     t('admin.systemConfig.modelUpdated')
-  );
-
-  // Arina prompt config
-  const {
-    value: arinaPromptValue,
-    setValue: setArinaPromptValue,
-    saving: arinaSaving,
-    handleUpdate: handleArinaUpdate
-  } = useConfigUpdate(
-    arinaPrompt,
-    'arina_prompt',
-    onUpdate,
-    t('admin.systemConfig.interpretation.promptUpdated')
-  );
-
-  // Cassandra prompt config
-  const {
-    value: cassandraPromptValue,
-    setValue: setCassandraPromptValue,
-    saving: cassandraSaving,
-    handleUpdate: handleCassandraUpdate
-  } = useConfigUpdate(
-    cassandraPrompt,
-    'cassandra_prompt',
-    onUpdate,
-    t('admin.systemConfig.interpretation.promptUpdated')
   );
 
   // Temperature config
@@ -124,19 +90,12 @@ export const InterpretationStageSettings = memo(function InterpretationStageSett
     t('admin.systemConfig.interpretation.maxTokensUpdated')
   );
 
-  const saving = modelSaving || arinaSaving || cassandraSaving || tempSaving || tokensSaving;
+  const saving = modelSaving || tempSaving || tokensSaving;
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  // Real-time validation state for prompts
-  const [arinaValidationError, setArinaValidationError] = useState<string | null>(null);
-  const [cassandraValidationError, setCassandraValidationError] = useState<string | null>(null);
+  // Real-time validation state
   const [temperatureError, setTemperatureError] = useState<string | null>(null);
   const [maxTokensError, setMaxTokensError] = useState<string | null>(null);
-
-  // Helper to format prompt min length message
-  const getPromptMinLengthMessage = useCallback(() => {
-    return t('admin.systemConfig.interpretation.promptMinLength').replace('{count}', String(MIN_PROMPT_LENGTH));
-  }, [t]);
 
   // Helper to format temperature range message
   const getTemperatureRangeMessage = useCallback(() => {
@@ -151,62 +110,6 @@ export const InterpretationStageSettings = memo(function InterpretationStageSett
       .replace('{min}', String(MIN_MAX_TOKENS))
       .replace('{max}', String(MAX_MAX_TOKENS));
   }, [t]);
-
-  // Arina prompt handlers with real-time validation
-  const handleArinaPromptChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setArinaPromptValue(value);
-
-    // Real-time validation
-    if (value.length < MIN_PROMPT_LENGTH) {
-      setArinaValidationError(getPromptMinLengthMessage());
-    } else {
-      setArinaValidationError(null);
-    }
-  }, [setArinaPromptValue, getPromptMinLengthMessage]);
-
-  const handleArinaPromptBlur = useCallback(async () => {
-    if (arinaPromptValue === arinaPrompt) return;
-
-    if (arinaPromptValue.length < MIN_PROMPT_LENGTH) {
-      toast.error(t('admin.systemConfig.interpretation.promptTooShort'), {
-        description: getPromptMinLengthMessage(),
-      });
-      setArinaPromptValue(arinaPrompt); // Revert
-      setArinaValidationError(null);
-      return;
-    }
-
-    await handleArinaUpdate(arinaPromptValue);
-  }, [arinaPromptValue, arinaPrompt, handleArinaUpdate, setArinaPromptValue, t, getPromptMinLengthMessage]);
-
-  // Cassandra prompt handlers with real-time validation
-  const handleCassandraPromptChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setCassandraPromptValue(value);
-
-    // Real-time validation
-    if (value.length < MIN_PROMPT_LENGTH) {
-      setCassandraValidationError(getPromptMinLengthMessage());
-    } else {
-      setCassandraValidationError(null);
-    }
-  }, [setCassandraPromptValue, getPromptMinLengthMessage]);
-
-  const handleCassandraPromptBlur = useCallback(async () => {
-    if (cassandraPromptValue === cassandraPrompt) return;
-
-    if (cassandraPromptValue.length < MIN_PROMPT_LENGTH) {
-      toast.error(t('admin.systemConfig.interpretation.promptTooShort'), {
-        description: getPromptMinLengthMessage(),
-      });
-      setCassandraPromptValue(cassandraPrompt); // Revert
-      setCassandraValidationError(null);
-      return;
-    }
-
-    await handleCassandraUpdate(cassandraPromptValue);
-  }, [cassandraPromptValue, cassandraPrompt, handleCassandraUpdate, setCassandraPromptValue, t, getPromptMinLengthMessage]);
 
   // Temperature handlers with validation
   const handleTemperatureChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -310,68 +213,6 @@ export const InterpretationStageSettings = memo(function InterpretationStageSett
             {selectedModel}
           </code>
         </div>
-
-        <Separator />
-
-        {/* Arina (Psychologist) Prompt Editor */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="arina-prompt">{t('admin.systemConfig.interpretation.arinaPrompt')}</Label>
-            <span className="text-xs text-muted-foreground">
-              {t('admin.systemConfig.interpretation.promptCharCount').replace('{count}', String(arinaPromptValue.length))}
-            </span>
-          </div>
-          <Textarea
-            id="arina-prompt"
-            value={arinaPromptValue}
-            onChange={handleArinaPromptChange}
-            onBlur={handleArinaPromptBlur}
-            disabled={loading || saving}
-            className={cn(
-              "min-h-[200px] font-mono text-sm",
-              arinaValidationError && 'border-destructive'
-            )}
-            placeholder={t('admin.systemConfig.interpretation.arinaPlaceholder')}
-          />
-          {arinaValidationError && (
-            <p className="text-xs text-destructive">{arinaValidationError}</p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            {getPromptMinLengthMessage()}. {t('admin.systemConfig.interpretation.autoSaveHint')}
-          </p>
-        </div>
-
-        <Separator />
-
-        {/* Cassandra (Mystic) Prompt Editor */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="cassandra-prompt">{t('admin.systemConfig.interpretation.cassandraPrompt')}</Label>
-            <span className="text-xs text-muted-foreground">
-              {t('admin.systemConfig.interpretation.promptCharCount').replace('{count}', String(cassandraPromptValue.length))}
-            </span>
-          </div>
-          <Textarea
-            id="cassandra-prompt"
-            value={cassandraPromptValue}
-            onChange={handleCassandraPromptChange}
-            onBlur={handleCassandraPromptBlur}
-            disabled={loading || saving}
-            className={cn(
-              "min-h-[200px] font-mono text-sm",
-              cassandraValidationError && 'border-destructive'
-            )}
-            placeholder={t('admin.systemConfig.interpretation.cassandraPlaceholder')}
-          />
-          {cassandraValidationError && (
-            <p className="text-xs text-destructive">{cassandraValidationError}</p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            {getPromptMinLengthMessage()}. {t('admin.systemConfig.interpretation.autoSaveHint')}
-          </p>
-        </div>
-
-        <Separator />
 
         {/* Advanced Settings */}
         <div className="border-t pt-4">
