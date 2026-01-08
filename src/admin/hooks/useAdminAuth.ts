@@ -2,9 +2,8 @@
  * Admin Authentication Hook
  *
  * Provides authentication state and admin authorization for the admin panel.
- * Uses Supabase Auth for authentication and a client-side email whitelist
- * for initial admin check. Server-side authorization is enforced by RLS
- * policies using the `is_admin()` Postgres function.
+ * Uses Supabase Auth for authentication and checks admin status via the
+ * `is_admin()` Postgres function (Single Source of Truth from system_config).
  *
  * @module admin/hooks/useAdminAuth
  */
@@ -12,15 +11,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
-
-/**
- * List of admin email addresses.
- * This is a client-side check for UX purposes (showing 403 page quickly).
- * Actual security is enforced by RLS policies in Supabase using is_admin() function.
- *
- * @constant
- */
-const ADMIN_EMAILS = ['maslennikov.ig@gmail.com'] as const;
 
 /**
  * Return type for useAdminAuth hook
@@ -39,6 +29,10 @@ interface UseAdminAuthReturn {
 /**
  * Hook for admin panel authentication and authorization.
  *
+ * Admin status is determined by the `is_admin()` Postgres function which
+ * reads from `system_config.admin_emails`. This ensures a Single Source
+ * of Truth — admins are managed only in the database.
+ *
  * @returns {UseAdminAuthReturn} Authentication state and utilities
  *
  * @example
@@ -55,6 +49,7 @@ interface UseAdminAuthReturn {
  */
 export function useAdminAuth(): UseAdminAuthReturn {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -63,14 +58,29 @@ export function useAdminAuth(): UseAdminAuthReturn {
     const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        if (cancelled) return;
+
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+
+        // Check admin status from database if user is authenticated
+        if (currentUser) {
+          const { data: adminCheck } = await supabase.rpc('is_admin');
+          if (!cancelled) {
+            setIsAdmin(adminCheck === true);
+          }
+        } else {
+          setIsAdmin(false);
+        }
+
         if (!cancelled) {
-          setUser(session?.user ?? null);
           setIsLoading(false);
         }
       } catch (error) {
         console.error('Admin auth check failed:', error);
         if (!cancelled) {
           setUser(null);
+          setIsAdmin(false);
           setIsLoading(false);
         }
       }
@@ -78,15 +88,29 @@ export function useAdminAuth(): UseAdminAuthReturn {
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (cancelled) return;
+
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+
+      // Re-check admin status on auth state change
+      if (currentUser) {
+        const { data: adminCheck } = await supabase.rpc('is_admin');
+        if (!cancelled) {
+          setIsAdmin(adminCheck === true);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+
       if (!cancelled) {
-        setUser(session?.user ?? null);
         setIsLoading(false);
       }
     });
 
     return () => {
-      subscription.unsubscribe(); // Stop events first
+      subscription.unsubscribe();
       cancelled = true;
     };
   }, []);
@@ -94,8 +118,6 @@ export function useAdminAuth(): UseAdminAuthReturn {
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
   }, []);
-
-  const isAdmin = user?.email != null && ADMIN_EMAILS.includes(user.email as typeof ADMIN_EMAILS[number]);
 
   return {
     isAdmin,
