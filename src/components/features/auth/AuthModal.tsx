@@ -9,6 +9,7 @@ import { TelegramLoginButton } from './TelegramLoginButton';
 import { LoaderIcon } from '../../icons/LoaderIcon';
 import { translations } from '../../../lib/i18n';
 import { ChevronDownIcon } from '../../icons/ChevronDownIcon';
+import { isTelegramWebApp } from '../../../hooks/useTelegramWebApp';
 // Fix: Import Provider type from supabase-js to allow type casting.
 import { Provider } from '@supabase/supabase-js';
 
@@ -113,30 +114,39 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, t }) => {
                     </Button>
                 </div>
 
-                {/* Telegram Login Widget */}
-                <div className="mt-4 flex justify-center">
-                    <TelegramLoginButton
-                        onAuth={async (telegramData) => {
-                            setTelegramLoading(true);
-                            setError(null);
-                            setMessage('');
-                            try {
-                                await signInWithTelegram(telegramData);
-                                onClose();
-                            } catch (err) {
-                                console.error('Telegram login error:', err);
-                                const errorMessage = err instanceof Error
-                                    ? err.message
-                                    : t('auth.telegram.failed');
-                                setError(errorMessage);
-                            } finally {
-                                setTelegramLoading(false);
-                            }
-                        }}
-                        size="large"
-                        radius={8}
-                    />
-                </div>
+                {/* Telegram Login Widget - only show outside of Telegram Mini App */}
+                {!isTelegramWebApp() && (
+                    <div className="mt-4 flex justify-center">
+                        <TelegramLoginButton
+                            onAuth={async (telegramData) => {
+                                setTelegramLoading(true);
+                                setError(null);
+                                setMessage('');
+                                try {
+                                    await signInWithTelegram(telegramData);
+                                    onClose();
+                                } catch (err) {
+                                    console.error('Telegram login error:', err);
+                                    const errorMessage = err instanceof Error
+                                        ? err.message
+                                        : t('auth.telegram.failed');
+                                    setError(errorMessage);
+                                } finally {
+                                    setTelegramLoading(false);
+                                }
+                            }}
+                            size="large"
+                            radius={8}
+                        />
+                    </div>
+                )}
+
+                {/* Inside Telegram Mini App - show info message */}
+                {isTelegramWebApp() && (
+                    <div className="mt-4 p-3 bg-muted/50 rounded-md text-sm text-center text-muted-foreground">
+                        {t('auth.telegram.webAppHint')}
+                    </div>
+                )}
 
                 {/* Error message */}
                 {error && (
