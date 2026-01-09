@@ -1,10 +1,14 @@
 /**
  * Topic selection keyboard for photo analysis flow
  * Allows users to choose a specific reading topic (Basic) or all topics (Pro)
+ *
+ * Note: Uses short IDs for file references due to Telegram's 64-byte callback_data limit.
+ * The storeFileId/resolveFileId functions handle the mapping.
  */
 import { InlineKeyboard } from "grammy";
 import type { InlineKeyboardMarkup } from "grammy/types";
 import { READING_TOPICS } from "../../config/constants.js";
+import { storeFileId, resolveFileId } from "./file-id-cache.js";
 
 /**
  * Labels for the "All topics" button in different languages
@@ -39,8 +43,8 @@ function getTopicButtonLabel(
  * Create topic selection keyboard for photo analysis
  * Layout: 2x3 grid for 6 topics + bottom row for "All topics (PRO)"
  *
- * @param fileId - Telegram file ID of the photo. Embedded in callback data (topic:{key}:{fileId})
- *                 and retrieved when user selects a topic to enqueue the analysis job.
+ * @param fileId - Telegram file ID of the photo. Stored in cache and referenced by short ID
+ *                 in callback data (topic:{key}:{shortId}) to stay within Telegram's 64-byte limit.
  * @param language - User's language code (ru, en, zh)
  * @returns InlineKeyboardMarkup for grammY
  *
@@ -56,6 +60,9 @@ export function createTopicKeyboard(
 ): InlineKeyboardMarkup {
   const keyboard = new InlineKeyboard();
 
+  // Store fileId and get short ID for callback_data (Telegram 64-byte limit)
+  const shortId = storeFileId(fileId);
+
   // 2x3 grid layout for 6 topics
   for (let i = 0; i < READING_TOPICS.length; i += 2) {
     const topic1 = READING_TOPICS[i];
@@ -64,14 +71,14 @@ export function createTopicKeyboard(
     if (topic1) {
       keyboard.text(
         getTopicButtonLabel(topic1, language),
-        `topic:${topic1.key}:${fileId}`
+        `topic:${topic1.key}:${shortId}`
       );
     }
 
     if (topic2) {
       keyboard.text(
         getTopicButtonLabel(topic2, language),
-        `topic:${topic2.key}:${fileId}`
+        `topic:${topic2.key}:${shortId}`
       );
     }
 
@@ -80,22 +87,24 @@ export function createTopicKeyboard(
 
   // Bottom row: "All topics (PRO)" button
   const allLabel = ALL_TOPICS_LABELS[language] || ALL_TOPICS_LABELS["ru"]!;
-  keyboard.text(allLabel, `topic:all:${fileId}`);
+  keyboard.text(allLabel, `topic:all:${shortId}`);
 
   return keyboard;
 }
 
 /**
  * Parse topic callback data
- * Format: topic:{topicKey}:{fileId}
+ * Format: topic:{topicKey}:{shortId}
+ *
+ * The shortId is resolved back to the original fileId using the cache.
  *
  * @param data - Callback data string from Telegram
- * @returns Parsed object with topicKey and fileId, or null if invalid
+ * @returns Parsed object with topicKey and fileId, or null if invalid/expired
  *
  * @example
  * ```typescript
- * const result = parseTopicCallback("topic:love:AgACAgIAAxkBAAI...");
- * // { topicKey: "love", fileId: "AgACAgIAAxkBAAI..." }
+ * const result = parseTopicCallback("topic:love:abc123xyz0");
+ * // { topicKey: "love", fileId: "AgACAgIAAxkBAAI..." } or null if expired
  * ```
  */
 export function parseTopicCallback(data: string): {
@@ -107,7 +116,7 @@ export function parseTopicCallback(data: string): {
     return null;
   }
 
-  // Split into parts: ["topic", topicKey, ...fileIdParts]
+  // Split into parts: ["topic", topicKey, shortId]
   const parts = data.split(":");
 
   if (parts.length < 3) {
@@ -115,11 +124,18 @@ export function parseTopicCallback(data: string): {
   }
 
   const topicKey = parts[1];
-  // Rejoin remaining parts in case fileId contains colons (unlikely but safe)
-  const fileId = parts.slice(2).join(":");
+  const shortId = parts[2];
 
-  // Validate topicKey is not empty
-  if (!topicKey || !fileId) {
+  // Validate topicKey and shortId are not empty
+  if (!topicKey || !shortId) {
+    return null;
+  }
+
+  // Resolve shortId back to fileId
+  const fileId = resolveFileId(shortId);
+
+  if (!fileId) {
+    // Short ID not found or expired
     return null;
   }
 
