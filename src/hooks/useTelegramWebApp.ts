@@ -543,3 +543,23 @@ export function isTelegramWebApp(): boolean {
   // Empty string means not in Telegram, non-empty means in Telegram
   return !!window.Telegram?.WebApp?.initData;
 }
+
+/**
+ * Check if running inside Telegram client (WebApp context exists)
+ *
+ * This is different from isTelegramWebApp() - it checks for WebApp object existence,
+ * not initData. Use this when you need to detect Telegram client environment
+ * regardless of whether initData is available (e.g., to hide Login Widget).
+ *
+ * @returns True if WebApp object exists (likely inside Telegram client)
+ */
+export function isInsideTelegramClient(): boolean {
+  // Check for WebApp object with platform info - indicates we're in Telegram
+  // platform will be 'android', 'ios', 'macos', 'tdesktop', 'web', 'weba', etc.
+  const webApp = window.Telegram?.WebApp;
+  if (!webApp) return false;
+
+  // If platform is present and not 'unknown', we're inside Telegram
+  // Also check for version which is always present in real Telegram
+  return !!(webApp.platform && webApp.version);
+}
