@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.6.1] - 2026-01-09
+
+### Fixed
+- **hooks**: update 2 source file(s) (0e5a4fc)
+
 ## [0.6.0] - 2026-01-09
 
 ### Added
