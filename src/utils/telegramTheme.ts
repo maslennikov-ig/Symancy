@@ -103,11 +103,24 @@ function ensureTelegramSdkInitialized(): void {
   if (sdkInitialized) return;
   if (typeof window === 'undefined' || !window.Telegram?.WebApp) return;
 
+  // Only try to init SDK if we have valid launch params (initData present)
+  // SDK throws LaunchParamsRetrieveError if opened outside Telegram or without initData
+  const webApp = window.Telegram.WebApp;
+  if (!webApp.initData || webApp.initData.length === 0) {
+    // Skip SDK init - we're in Telegram but without initData (e.g., direct link)
+    // This is expected and not an error
+    return;
+  }
+
   try {
     initTelegramSdk();
     sdkInitialized = true;
   } catch (error) {
-    console.warn('[Telegram SDK] init failed:', error);
+    // Silently ignore LaunchParamsRetrieveError - expected when initData is empty/invalid
+    // Only log unexpected errors
+    if (error instanceof Error && !error.message.includes('LaunchParams')) {
+      console.warn('[Telegram SDK] init failed:', error);
+    }
   }
 }
 

@@ -116,7 +116,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         // Continue to other auth methods
                     }
                 } else {
-                    console.warn('[Auth] Telegram WebApp detected but initData not available');
+                    // Expected when WebApp opened via direct link without initData
+                    // Not an error - user can still use OAuth or magic link
+                    console.log('[Auth] Telegram WebApp detected but initData not available');
                 }
             }
 

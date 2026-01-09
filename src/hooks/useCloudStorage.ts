@@ -123,16 +123,48 @@ type CloudStorageAPI = NonNullable<TelegramWebApp['CloudStorage']>;
 // ============================================================================
 
 /**
- * Check if CloudStorage API is available
+ * Minimum WebApp version that supports CloudStorage (Bot API 6.9)
+ * @see https://core.telegram.org/bots/webapps#cloudstorage
  */
-function isCloudStorageAvailable(): boolean {
-  return !!window.Telegram?.WebApp?.CloudStorage;
+const MIN_CLOUD_STORAGE_VERSION = '6.9';
+
+/**
+ * Compare semver-like version strings
+ * @returns negative if a < b, 0 if equal, positive if a > b
+ */
+function compareVersions(a: string, b: string): number {
+  const partsA = a.split('.').map(Number);
+  const partsB = b.split('.').map(Number);
+  const maxLength = Math.max(partsA.length, partsB.length);
+
+  for (let i = 0; i < maxLength; i++) {
+    const numA = partsA[i] || 0;
+    const numB = partsB[i] || 0;
+    if (numA !== numB) return numA - numB;
+  }
+  return 0;
 }
 
 /**
- * Get CloudStorage API (returns null if not available)
+ * Check if CloudStorage API is available AND supported by current WebApp version
+ * CloudStorage requires Bot API 6.9+ (WebApp version 6.9+)
+ */
+function isCloudStorageAvailable(): boolean {
+  const webApp = window.Telegram?.WebApp;
+  if (!webApp?.CloudStorage) return false;
+
+  // Check version - CloudStorage requires 6.9+
+  const version = webApp.version;
+  if (!version) return false;
+
+  return compareVersions(version, MIN_CLOUD_STORAGE_VERSION) >= 0;
+}
+
+/**
+ * Get CloudStorage API (returns null if not available or unsupported version)
  */
 function getCloudStorage(): CloudStorageAPI | null {
+  if (!isCloudStorageAvailable()) return null;
   return window.Telegram?.WebApp?.CloudStorage || null;
 }
 
@@ -357,8 +389,9 @@ export function useCloudStorage(): CloudStorageReturn {
         initialLoadCompleteRef.current = true;
       } catch (err) {
         if (!isMounted) return;
-        console.error('[useCloudStorage] Failed to load stored data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load preferences');
+        // Use warn level - CloudStorage errors are expected when version < 6.9
+        console.warn('[useCloudStorage] Failed to load stored data, using localStorage fallback:', err);
+        setError(null); // Don't show error to user - fallback to localStorage works fine
         // Use defaults on error
         setPreferences(DEFAULT_PREFERENCES);
         initialLoadCompleteRef.current = true;
