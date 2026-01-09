@@ -405,7 +405,7 @@ describe("handlePhotoMessage - Integration Tests", () => {
       );
     });
 
-    it("should include photo fileId in keyboard callback data", async () => {
+    it("should include short ID reference in keyboard callback data", async () => {
       const ctx = createPhotoContext({
         message: {
           message_id: 999,
@@ -419,7 +419,8 @@ describe("handlePhotoMessage - Integration Tests", () => {
 
       await handlePhotoMessage(ctx);
 
-      // Keyboard should be passed to reply
+      // Keyboard should be passed to reply with short ID format (topic:{key}:{shortId})
+      // Short IDs are used instead of file_id due to Telegram's 64-byte callback_data limit
       expect(ctx.reply).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
@@ -427,7 +428,8 @@ describe("handlePhotoMessage - Integration Tests", () => {
             inline_keyboard: expect.arrayContaining([
               expect.arrayContaining([
                 expect.objectContaining({
-                  callback_data: expect.stringContaining("test_file_id"),
+                  // Format: topic:{topicKey}:{shortId} where shortId is 10 chars
+                  callback_data: expect.stringMatching(/^topic:[a-z]+:[A-Za-z0-9_-]{10}$/),
                 }),
               ]),
             ]),
