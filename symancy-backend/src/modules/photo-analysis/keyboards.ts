@@ -144,11 +144,12 @@ export function parseTopicCallback(data: string): {
 
 /**
  * Messages for topic selection prompt in different languages
+ * Explains Basic (single topic) vs Pro (all topics) credit usage
  */
 export const TOPIC_SELECTION_MESSAGES: Record<string, string> = {
-  ru: "☕️ Фото получено! О чём хотите узнать?",
-  en: "☕️ Photo received! What would you like to know about?",
-  zh: "☕️ 照片已收到！您想了解什么？",
+  ru: "☕️ Фото получено!\n\nВыберите тему (1 Basic-кредит) или получите полный анализ (1 Pro-кредит):",
+  en: "☕️ Photo received!\n\nChoose a topic (1 Basic credit) or get full analysis (1 Pro credit):",
+  zh: "☕️ 照片已收到！\n\n选择主题（1个Basic积分）或获取完整分析（1个Pro积分）:",
 };
 
 /**

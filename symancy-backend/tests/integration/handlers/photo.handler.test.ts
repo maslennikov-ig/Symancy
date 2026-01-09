@@ -115,7 +115,7 @@ describe("handlePhotoMessage - Integration Tests", () => {
       await handlePhotoMessage(ctx);
 
       expect(ctx.reply).toHaveBeenCalledWith(
-        "☕️ Фото получено! О чём хотите узнать?",
+        "☕️ Фото получено!\n\nВыберите тему (1 Basic-кредит) или получите полный анализ (1 Pro-кредит):",
         expect.any(Object)
       );
     });
@@ -128,7 +128,7 @@ describe("handlePhotoMessage - Integration Tests", () => {
       await handlePhotoMessage(ctx);
 
       expect(ctx.reply).toHaveBeenCalledWith(
-        "☕️ Photo received! What would you like to know about?",
+        "☕️ Photo received!\n\nChoose a topic (1 Basic credit) or get full analysis (1 Pro credit):",
         expect.any(Object)
       );
     });
@@ -141,7 +141,7 @@ describe("handlePhotoMessage - Integration Tests", () => {
       await handlePhotoMessage(ctx);
 
       expect(ctx.reply).toHaveBeenCalledWith(
-        "☕️ 照片已收到！您想了解什么？",
+        "☕️ 照片已收到！\n\n选择主题（1个Basic积分）或获取完整分析（1个Pro积分）:",
         expect.any(Object)
       );
     });

@@ -7,7 +7,7 @@ import type { PhotoAnalysisJobData } from "../../types/job-schemas.js";
 import type { CreditType, ReadingTopic } from "../../types/job-schemas.js";
 import { getLogger } from "../../core/logger.js";
 import { sendAnalyzePhotoJob } from "../../core/queue.js";
-import { hasCredits } from "../credits/service.js";
+import { hasCreditsOfType } from "../credits/service.js";
 import { parseTopicCallback } from "./keyboards.js";
 import { arinaStrategy } from "./personas/arina.strategy.js";
 
@@ -15,21 +15,27 @@ const logger = getLogger().child({ module: "topic-handler" });
 
 /**
  * Insufficient credits error messages in different languages
+ * Now supports credit type differentiation
  */
-const INSUFFICIENT_CREDITS_MESSAGES: Record<string, string> = {
-  ru: "У вас недостаточно кредитов для гадания. Используйте /credits для проверки баланса.",
-  en: "You don't have enough credits for a reading. Use /credits to check your balance.",
-  zh: "您没有足够的积分进行占卜。使用 /credits 查看您的余额。",
+const INSUFFICIENT_CREDITS_MESSAGES: Record<string, Record<string, string>> = {
+  basic: {
+    ru: "У вас недостаточно Basic-кредитов. Используйте /credits для проверки баланса.",
+    en: "You don't have enough Basic credits. Use /credits to check your balance.",
+    zh: "您没有足够的Basic积分。使用 /credits 查看您的余额。",
+  },
+  pro: {
+    ru: "У вас недостаточно Pro-кредитов для полного анализа. Используйте /credits для проверки баланса.",
+    en: "You don't have enough Pro credits for full analysis. Use /credits to check your balance.",
+    zh: "您没有足够的Pro积分进行完整分析。使用 /credits 查看您的余额。",
+  },
 };
 
 /**
- * Get insufficient credits message for language
+ * Get insufficient credits message for language and credit type
  */
-function getInsufficientCreditsMessage(language: string = "ru"): string {
-  return (
-    INSUFFICIENT_CREDITS_MESSAGES[language] ||
-    INSUFFICIENT_CREDITS_MESSAGES["ru"]!
-  );
+function getInsufficientCreditsMessage(creditType: CreditType, language: string = "ru"): string {
+  const messages = INSUFFICIENT_CREDITS_MESSAGES[creditType] || INSUFFICIENT_CREDITS_MESSAGES["basic"]!;
+  return messages[language] || messages["ru"]!;
 }
 
 /**
@@ -105,16 +111,14 @@ export async function handleTopicCallback(ctx: BotContext): Promise<void> {
     "Processing topic selection"
   );
 
-  // Check if user has sufficient credits
-  // Topic selection flow uses Arina persona (1 credit cost)
-  // Note: If persona selection is added later, update this to use the selected persona's cost
-  const requiredCredits = arinaStrategy.getCreditCost();
-  const hasSufficientCredits = await hasCredits(telegramUserId, requiredCredits);
+  // Check if user has sufficient credits of the correct type
+  // Basic topics use basic credits, "all" uses pro credits
+  const hasSufficientCredits = await hasCreditsOfType(telegramUserId, creditType);
 
   if (!hasSufficientCredits) {
     const userLanguage =
       ctx.profile?.language_code || ctx.from.language_code || "ru";
-    const errorMessage = getInsufficientCreditsMessage(userLanguage);
+    const errorMessage = getInsufficientCreditsMessage(creditType, userLanguage);
 
     logger.info({ telegramUserId, topic, creditType }, "Insufficient credits");
     await ctx.answerCallbackQuery({

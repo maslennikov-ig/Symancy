@@ -2,12 +2,14 @@
  * Credit management service
  * Handles credit checking, consumption, and refunds
  *
- * Supports both:
- * - Legacy Telegram-only users (backend_user_credits table)
- * - Linked accounts (user_credits table via unified_users.auth_id)
+ * Supports:
+ * - Unified credits (unified_user_credits table via telegram_id)
+ * - Three credit types: basic, pro, cassandra
+ * - Legacy fallback for unlinked users (backend_user_credits)
  */
 import { getSupabase } from "../../core/database.js";
 import { getLogger } from "../../core/logger.js";
+import type { CreditType } from "../../types/job-schemas.js";
 
 const logger = getLogger().child({ module: "credits" });
 
@@ -466,6 +468,174 @@ export async function grantInitialCredits(
     success: true,
     balance: newBalance,
     alreadyGranted: !actuallyGranted,
+  };
+}
+
+// =============================================================================
+// UNIFIED CREDIT OPERATIONS (with credit type support)
+// =============================================================================
+
+/**
+ * Extended credit type including cassandra
+ */
+export type ExtendedCreditType = CreditType | "cassandra";
+
+/**
+ * Check if user has credits of a specific type
+ * Uses unified_user_credits via telegram_id
+ *
+ * @param telegramUserId - Telegram user ID
+ * @param creditType - Type of credit to check (basic, pro, cassandra)
+ * @returns true if user has at least 1 credit of specified type
+ */
+export async function hasCreditsOfType(
+  telegramUserId: number,
+  creditType: ExtendedCreditType
+): Promise<boolean> {
+  if (!Number.isInteger(telegramUserId) || telegramUserId <= 0) {
+    logger.error({ telegramUserId }, "Invalid telegram user ID");
+    return false;
+  }
+
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase.rpc("has_unified_credit", {
+    p_telegram_id: telegramUserId,
+    p_credit_type: creditType,
+  });
+
+  if (error) {
+    logger.error({ telegramUserId, creditType, error }, "Failed to check unified credits");
+    return false;
+  }
+
+  logger.debug({ telegramUserId, creditType, hasCredits: data }, "Checked unified credits");
+  return data === true;
+}
+
+/**
+ * Consume one credit of a specific type
+ * Uses unified_user_credits via telegram_id with atomic row locking
+ *
+ * @param telegramUserId - Telegram user ID
+ * @param creditType - Type of credit to consume (basic, pro, cassandra)
+ * @returns true if credit was consumed, false if insufficient
+ */
+export async function consumeCreditsOfType(
+  telegramUserId: number,
+  creditType: ExtendedCreditType
+): Promise<boolean> {
+  if (!Number.isInteger(telegramUserId) || telegramUserId <= 0) {
+    logger.error({ telegramUserId }, "Invalid telegram user ID");
+    return false;
+  }
+
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase.rpc("consume_unified_credit", {
+    p_telegram_id: telegramUserId,
+    p_credit_type: creditType,
+  });
+
+  if (error) {
+    logger.error({ telegramUserId, creditType, error }, "Failed to consume unified credits");
+    return false;
+  }
+
+  // RPC returns array with { success, remaining }
+  const result = data?.[0];
+  if (!result?.success) {
+    logger.warn({ telegramUserId, creditType }, "Insufficient unified credits");
+    return false;
+  }
+
+  logger.info(
+    { telegramUserId, creditType, remaining: result.remaining },
+    "Unified credit consumed"
+  );
+  return true;
+}
+
+/**
+ * Refund one credit of a specific type
+ * Uses unified_user_credits via telegram_id
+ *
+ * @param telegramUserId - Telegram user ID
+ * @param creditType - Type of credit to refund (basic, pro, cassandra)
+ * @returns true if credit was refunded
+ */
+export async function refundCreditsOfType(
+  telegramUserId: number,
+  creditType: ExtendedCreditType
+): Promise<boolean> {
+  if (!Number.isInteger(telegramUserId) || telegramUserId <= 0) {
+    logger.error({ telegramUserId }, "Invalid telegram user ID");
+    return false;
+  }
+
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase.rpc("refund_unified_credit", {
+    p_telegram_id: telegramUserId,
+    p_credit_type: creditType,
+  });
+
+  if (error) {
+    logger.error({ telegramUserId, creditType, error }, "Failed to refund unified credits");
+    return false;
+  }
+
+  // RPC returns array with { success, new_balance }
+  const result = data?.[0];
+  if (!result?.success) {
+    logger.error({ telegramUserId, creditType }, "Failed to refund unified credit");
+    return false;
+  }
+
+  logger.info(
+    { telegramUserId, creditType, newBalance: result.new_balance },
+    "Unified credit refunded"
+  );
+  return true;
+}
+
+/**
+ * Get all credit balances for a user
+ * Returns { basic, pro, cassandra } counts
+ *
+ * @param telegramUserId - Telegram user ID
+ * @returns Object with credit counts, or null if user not found
+ */
+export async function getAllCredits(
+  telegramUserId: number
+): Promise<{ basic: number; pro: number; cassandra: number } | null> {
+  if (!Number.isInteger(telegramUserId) || telegramUserId <= 0) {
+    logger.error({ telegramUserId }, "Invalid telegram user ID");
+    return null;
+  }
+
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase.rpc("get_unified_credits", {
+    p_telegram_id: telegramUserId,
+  });
+
+  if (error) {
+    logger.error({ telegramUserId, error }, "Failed to get unified credits");
+    return null;
+  }
+
+  // RPC returns array with single row
+  const result = data?.[0];
+  if (!result) {
+    logger.warn({ telegramUserId }, "User not found in unified_user_credits");
+    return null;
+  }
+
+  return {
+    basic: result.basic ?? 0,
+    pro: result.pro ?? 0,
+    cassandra: result.cassandra ?? 0,
   };
 }
 

@@ -23,7 +23,7 @@ import { registerWorker } from "../../core/queue.js";
 import { downloadAndResize, toBase64DataUrl } from "../../utils/image-processor.js";
 import { analyzeVision } from "../../chains/vision.chain.js";
 import { validateCoffeeGrounds } from "../../chains/validation.chain.js";
-import { consumeCredits, refundCredits } from "../credits/service.js";
+import { consumeCreditsOfType, refundCreditsOfType } from "../credits/service.js";
 import { splitMessage } from "../../utils/message-splitter.js";
 import {
   QUEUE_ANALYZE_PHOTO,
@@ -102,7 +102,6 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
     throw new Error(`Invalid persona: ${persona}`);
   }
 
-  const creditCost = strategy.getCreditCost();
   const modelName = strategy.getModelName();
 
   let analysisId: string | null = null;
@@ -339,23 +338,23 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
 
     // Step 4.5: Check and consume credits BEFORE generating interpretation
     // This is atomic and prevents race conditions from handler-level checks
-    jobLogger.debug({ creditCost }, "Checking and consuming credits");
-    const consumed = await consumeCredits(telegramUserId, creditCost);
+    // Uses creditType from job data (basic for single topic, pro for "all")
+    jobLogger.debug({ creditType }, "Checking and consuming credits");
+    const consumed = await consumeCreditsOfType(telegramUserId, creditType);
     if (!consumed) {
       // Not enough credits - update message and exit gracefully
-      const personaLabel = persona === "cassandra" ? "премиум гадание" : "гадание";
+      const creditLabel = creditType === "pro" ? "Pro" : "Basic";
       await bot.api.editMessageText(
         chatId,
         messageId,
-        `💳 Недостаточно кредитов для ${personaLabel}.\n` +
-          `Необходимо: ${creditCost} кредит(ов)\n` +
+        `💳 Недостаточно ${creditLabel}-кредитов.\n` +
           "Пожалуйста, пополните баланс."
       );
-      jobLogger.info({ creditCost }, "Insufficient credits - job aborted");
+      jobLogger.info({ creditType }, "Insufficient credits - job aborted");
       return; // Exit gracefully, don't throw
     }
     creditsConsumed = true;
-    jobLogger.info({ creditCost }, "Credits consumed");
+    jobLogger.info({ creditType }, "Credits consumed");
 
     // Step 5: Generate interpretation with persona using strategy (with retry)
     jobLogger.debug({ persona, topic }, "Generating interpretation");
@@ -493,14 +492,14 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
       });
     }
 
-    // Refund credits if they were consumed
+    // Refund credits if they were consumed (using correct credit type)
     if (creditsConsumed) {
-      jobLogger.info({ creditCost }, "Refunding credits due to failure");
-      const refunded = await refundCredits(telegramUserId, creditCost);
+      jobLogger.info({ creditType }, "Refunding credits due to failure");
+      const refunded = await refundCreditsOfType(telegramUserId, creditType);
       if (refunded) {
-        jobLogger.info({ creditCost }, "Credits refunded successfully");
+        jobLogger.info({ creditType }, "Credits refunded successfully");
       } else {
-        jobLogger.error({ creditCost }, "Failed to refund credits");
+        jobLogger.error({ creditType }, "Failed to refund credits");
       }
     }
 
