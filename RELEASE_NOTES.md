@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.6.2
+
+_Released on 2026-01-09_
+
+### 🐛 Bug Fixes
+
+- **telegram**: Suppress expected errors for CloudStorage and SDK init
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.6.1
 
 _Released on 2026-01-09_

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.6.2] - 2026-01-09
+
+### Fixed
+- **telegram**: suppress expected errors for CloudStorage and SDK init (48d5ac1)
+
 ## [0.6.1] - 2026-01-09
 
 ### Fixed
