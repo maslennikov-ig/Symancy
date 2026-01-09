@@ -2,6 +2,24 @@
 
 User-facing release notes for all versions.
 
+## v0.6.0
+
+_Released on 2026-01-09_
+
+### ✨ New Features
+
+- **credits**: Implement typed credit system (basic/pro/cassandra)
+
+### 🐛 Bug Fixes
+
+- **lib**: Update 2 source file(s)
+- **deps**: Add nanoid for file-id-cache
+- **photo**: Use short IDs in callback_data to fix BUTTON_DATA_INVALID
+
+---
+
+_This release was automatically generated from 5 commits._
+
 ## v0.5.53
 
 _Released on 2026-01-08_

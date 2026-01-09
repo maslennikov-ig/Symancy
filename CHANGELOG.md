@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.6.0] - 2026-01-09
+
+### Added
+- **credits**: implement typed credit system (basic/pro/cassandra) (7d11ff4)
+
+### Fixed
+- **lib**: update 2 source file(s) (e4523a5)
+- **deps**: add nanoid for file-id-cache (c05c8fe)
+- **photo**: use short IDs in callback_data to fix BUTTON_DATA_INVALID (e3fc2a6)
+
+### Other
+- **photo**: update integration test for short ID callback format (ebcb470)
+
 ## [0.5.53] - 2026-01-08
 
 ### Fixed
