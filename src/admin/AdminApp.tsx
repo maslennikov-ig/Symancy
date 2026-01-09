@@ -52,15 +52,18 @@ function ForbiddenPage() {
  * Protected route wrapper for admin pages
  */
 function ProtectedAdminRoutes() {
-  const { isAdmin, isLoading, user } = useAdminAuth();
+  const { isAdmin, isLoading, user, unifiedUser } = useAdminAuth();
 
   // Show loading while checking authentication
   if (isLoading) {
     return <AdminLoadingFallback />;
   }
 
+  // Check if user is authenticated (either via Supabase Auth or Telegram)
+  const isAuthenticated = !!user || !!unifiedUser;
+
   // Redirect to login if not logged in
-  if (!user) {
+  if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />;
   }
 
@@ -93,7 +96,10 @@ function ProtectedAdminRoutes() {
  * Entry point for all /admin/* routes
  */
 export function AdminApp() {
-  const { isLoading, user } = useAdminAuth();
+  const { isLoading, user, unifiedUser, isAdmin } = useAdminAuth();
+
+  // Check if user is authenticated (either via Supabase Auth or Telegram)
+  const isAuthenticated = !!user || !!unifiedUser;
 
   return (
     <Suspense fallback={<AdminLoadingFallback />}>
@@ -103,7 +109,7 @@ export function AdminApp() {
           path="login"
           element={
             // If already logged in as admin, redirect to dashboard
-            !isLoading && user ? (
+            !isLoading && isAuthenticated && isAdmin ? (
               <Navigate to="/admin/dashboard" replace />
             ) : (
               <LoginPage />
