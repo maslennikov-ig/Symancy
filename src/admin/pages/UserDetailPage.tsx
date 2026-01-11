@@ -931,7 +931,7 @@ export function UserDetailPage() {
                     {t('admin.userDetail.noCreditHistory') || 'No credit transactions'}
                   </div>
                 ) : (
-                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
                     {creditTransactions.map((tx) => (
                       <div key={tx.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                         <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
