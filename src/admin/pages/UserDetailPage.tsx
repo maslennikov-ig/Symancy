@@ -7,7 +7,7 @@ import { useAdminAuth } from '../hooks/useAdminAuth';
 import { useAdminTranslations } from '../hooks/useAdminTranslations';
 import { formatRelativeTime, formatFullDate, truncateText } from '../utils/formatters';
 import { sanitizeDisplayName } from '../utils/sanitize';
-import { MAX_CREDIT_ADJUSTMENT, TIME_THRESHOLDS } from '../utils/constants';
+import { MAX_CREDIT_ADJUSTMENT, MAX_CREDIT_SET_BALANCE, TIME_THRESHOLDS } from '../utils/constants';
 import { logger } from '../utils/logger';
 import { CreditsBadges, CreditBadge, type UserCredits } from '../components/CreditBadge';
 import { UserInfoSkeleton, ListSkeleton } from '../components/skeletons';
@@ -362,27 +362,44 @@ export function UserDetailPage() {
       return;
     }
 
-    // Input validation: check adjustment limits
-    if (Math.abs(basicDelta) > MAX_CREDIT_ADJUSTMENT.basic) {
-      setSaveError(
-        t('admin.userDetail.creditAdjustmentError')
-          .replace(/{max}/g, String(MAX_CREDIT_ADJUSTMENT.basic))
-      );
-      return;
-    }
-    if (Math.abs(proDelta) > MAX_CREDIT_ADJUSTMENT.pro) {
-      setSaveError(
-        t('admin.userDetail.creditAdjustmentError')
-          .replace(/{max}/g, String(MAX_CREDIT_ADJUSTMENT.pro))
-      );
-      return;
-    }
-    if (Math.abs(cassandraDelta) > MAX_CREDIT_ADJUSTMENT.cassandra) {
-      setSaveError(
-        t('admin.userDetail.creditAdjustmentError')
-          .replace(/{max}/g, String(MAX_CREDIT_ADJUSTMENT.cassandra))
-      );
-      return;
+    // Input validation: check limits based on mode
+    if (adjustmentMode === 'set') {
+      // In 'set' mode, check if target values exceed MAX_CREDIT_SET_BALANCE
+      if (basicValue > MAX_CREDIT_SET_BALANCE || proValue > MAX_CREDIT_SET_BALANCE || cassandraValue > MAX_CREDIT_SET_BALANCE) {
+        setSaveError(
+          t('admin.userDetail.creditSetBalanceError')
+            .replace(/{max}/g, String(MAX_CREDIT_SET_BALANCE))
+        );
+        return;
+      }
+      // Also check for negative values in set mode
+      if (basicValue < 0 || proValue < 0 || cassandraValue < 0) {
+        setSaveError(t('admin.userDetail.negativeBalanceError'));
+        return;
+      }
+    } else {
+      // In 'adjust' mode, check adjustment limits per type
+      if (Math.abs(basicDelta) > MAX_CREDIT_ADJUSTMENT.basic) {
+        setSaveError(
+          t('admin.userDetail.creditAdjustmentError')
+            .replace(/{max}/g, String(MAX_CREDIT_ADJUSTMENT.basic))
+        );
+        return;
+      }
+      if (Math.abs(proDelta) > MAX_CREDIT_ADJUSTMENT.pro) {
+        setSaveError(
+          t('admin.userDetail.creditAdjustmentError')
+            .replace(/{max}/g, String(MAX_CREDIT_ADJUSTMENT.pro))
+        );
+        return;
+      }
+      if (Math.abs(cassandraDelta) > MAX_CREDIT_ADJUSTMENT.cassandra) {
+        setSaveError(
+          t('admin.userDetail.creditAdjustmentError')
+            .replace(/{max}/g, String(MAX_CREDIT_ADJUSTMENT.cassandra))
+        );
+        return;
+      }
     }
 
     setIsSaving(true);

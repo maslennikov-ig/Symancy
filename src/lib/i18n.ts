@@ -466,6 +466,8 @@ export const translations = {
     'admin.common.processing': 'Processing...',
     'admin.common.next': 'Next',
     'admin.userDetail.creditAdjustmentError': 'Credit adjustment must be between -{max} and +{max}',
+    'admin.userDetail.creditSetBalanceError': 'Balance cannot exceed {max}',
+    'admin.userDetail.negativeBalanceError': 'Balance cannot be negative',
     'admin.userDetail.noAdjustmentError': 'Please specify at least one credit adjustment',
     // Admin Users Management
     'admin.adminUsers.title': 'Admin Users',
@@ -1189,6 +1191,8 @@ export const translations = {
     'admin.common.processing': 'Обработка...',
     'admin.common.next': 'Далее',
     'admin.userDetail.creditAdjustmentError': 'Корректировка кредитов должна быть от -{max} до +{max}',
+    'admin.userDetail.creditSetBalanceError': 'Баланс не может превышать {max}',
+    'admin.userDetail.negativeBalanceError': 'Баланс не может быть отрицательным',
     'admin.userDetail.noAdjustmentError': 'Укажите хотя бы одну корректировку кредитов',
     // Admin Users Management
     'admin.adminUsers.title': 'Администраторы',
@@ -1912,6 +1916,8 @@ export const translations = {
     'admin.common.processing': '处理中...',
     'admin.common.next': '下一页',
     'admin.userDetail.creditAdjustmentError': '积分调整必须在 -{max} 到 +{max} 之间',
+    'admin.userDetail.creditSetBalanceError': '余额不能超过 {max}',
+    'admin.userDetail.negativeBalanceError': '余额不能为负数',
     'admin.userDetail.noAdjustmentError': '请指定至少一项积分调整',
     // Admin Users Management
     'admin.adminUsers.title': '管理员用户',

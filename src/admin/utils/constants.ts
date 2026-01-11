@@ -12,9 +12,11 @@ export const PAGE_SIZES = {
 
 export const MAX_CREDIT_ADJUSTMENT = {
   basic: 1000,
-  pro: 100,
-  cassandra: 50,
+  pro: 1000,
+  cassandra: 1000,
 } as const;
+
+export const MAX_CREDIT_SET_BALANCE = 10000;
 
 /**
  * Time thresholds for admin panel features
