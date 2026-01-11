@@ -84,6 +84,18 @@ interface Analysis {
   created_at: string;
 }
 
+interface CreditTransaction {
+  id: string;
+  transaction_type: string;
+  credit_type: string;
+  amount: number;
+  balance_before: number;
+  balance_after: number;
+  reason: string | null;
+  admin_email: string | null;
+  created_at: string;
+}
+
 // Status badge for analysis
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; className?: string }> = {
@@ -140,6 +152,7 @@ export function UserDetailPage() {
   const [credits, setCredits] = useState<UserCredits | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
+  const [creditTransactions, setCreditTransactions] = useState<CreditTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -247,6 +260,21 @@ export function UserDetailPage() {
         }
         if (!cancelled) {
           setAnalyses((analysesData as Analysis[] | null) || []);
+        }
+
+        // Fetch credit transactions (last 20)
+        const { data: transactionsData, error: transactionsError } = await supabase
+          .from('credit_transactions')
+          .select('id, transaction_type, credit_type, amount, balance_before, balance_after, reason, admin_email, created_at')
+          .eq('unified_user_id', id)
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        if (transactionsError) {
+          logger.error('Error fetching credit transactions', transactionsError);
+        }
+        if (!cancelled) {
+          setCreditTransactions((transactionsData as CreditTransaction[] | null) || []);
         }
 
       } catch (err) {
@@ -407,6 +435,17 @@ export function UserDetailPage() {
       setIsEditingCredits(false);
       setSaveSuccess(true);
       toast.success(t('admin.userDetail.creditsSuccess'));
+
+      // Refresh credit transactions to show the new entry
+      const { data: newTransactions } = await supabase
+        .from('credit_transactions')
+        .select('id, transaction_type, credit_type, amount, balance_before, balance_after, reason, admin_email, created_at')
+        .eq('unified_user_id', id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (newTransactions) {
+        setCreditTransactions(newTransactions as CreditTransaction[]);
+      }
 
       // Clear success message after configured duration
       if (successTimeoutRef.current) {
@@ -856,6 +895,59 @@ export function UserDetailPage() {
                         </div>
                       </div>
                     )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Credit Transaction History Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('admin.userDetail.creditHistory') || 'Credit History'}</CardTitle>
+                <CardDescription>{t('admin.userDetail.creditHistoryDesc') || 'Recent credit transactions'}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <ListSkeleton items={5} />
+                ) : creditTransactions.length === 0 ? (
+                  <div className="text-muted-foreground text-center py-8">
+                    {t('admin.userDetail.noCreditHistory') || 'No credit transactions'}
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                    {creditTransactions.map((tx) => (
+                      <div key={tx.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
+                          tx.amount > 0 ? 'bg-green-500' : 'bg-red-500'
+                        }`}>
+                          {tx.amount > 0 ? '+' : '−'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium">
+                              {tx.amount > 0 ? '+' : ''}{tx.amount} {tx.credit_type}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {tx.transaction_type.replace('_', ' ')}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {tx.balance_before} → {tx.balance_after}
+                            </span>
+                          </div>
+                          {tx.reason && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {tx.reason}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                            <span>{formatRelativeTime(tx.created_at)}</span>
+                            {tx.admin_email && (
+                              <span>• by {tx.admin_email}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
