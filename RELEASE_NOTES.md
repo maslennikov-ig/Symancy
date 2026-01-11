@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.6.5
+
+_Released on 2026-01-11_
+
+### 🐛 Bug Fixes
+
+- **lib**: Update 2 source file(s)
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.6.4
 
 _Released on 2026-01-09_
