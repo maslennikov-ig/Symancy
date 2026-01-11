@@ -23,7 +23,7 @@ export function AdminLayout({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen h-screen overflow-y-auto bg-slate-50 dark:bg-slate-900">
       {/* Mobile menu button - only visible on mobile */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
