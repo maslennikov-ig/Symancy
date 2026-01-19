@@ -31,7 +31,7 @@ This audit identifies legacy tables that may be candidates for deprecation or mi
 
 1. ~~**IMMEDIATE (P0)**: Complete `analysis_history` and `purchases` migration to `unified_user_id`~~ ✅ DONE
 2. **HIGH (P1)**: Refactor backend to use `messages` instead of `chat_messages` (requires code changes in `symancy-backend/src/modules/chat/worker.ts`, `photo-analysis/worker.ts`, `chains/chat.chain.ts`)
-3. **MEDIUM (P2)**: Mark `backend_user_credits` and `user_credits` as read-only
+3. ~~**MEDIUM (P2)**: Mark `backend_user_credits` and `user_credits` as read-only~~ ✅ DONE
 4. **LOW (P3)**: Clean up orphaned `user_states` after full migration
 
 ---
@@ -42,8 +42,8 @@ This audit identifies legacy tables that may be candidates for deprecation or mi
 |-------|--------|---------|------------------|----------------|
 | **Legacy Tables** |
 | `profiles` | ACTIVE | 3 | 2/3 linked to unified_users | Keep (Telegram metadata) |
-| `user_credits` | DEPRECATED | 2 | Replaced by unified_user_credits | Mark read-only |
-| `backend_user_credits` | DEPRECATED | 2 | Replaced by unified_user_credits | Mark read-only |
+| `user_credits` | 🔒 READ-ONLY | 2 | Replaced by unified_user_credits | Done (2026-01-19) |
+| `backend_user_credits` | 🔒 READ-ONLY | 2 | Replaced by unified_user_credits | Done (2026-01-19) |
 | `chat_messages` | ACTIVE (!) | 67 | Should use `messages` | Migrate & deprecate |
 | `user_states` | ACTIVE | 3 | Legacy onboarding state | Keep for now |
 | **Omnichannel Tables** |
