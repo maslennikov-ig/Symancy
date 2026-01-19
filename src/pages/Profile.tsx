@@ -484,12 +484,14 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
     evening_enabled: boolean;
     morning_time: string;
     evening_time: string;
+    reminders_enabled: boolean;
   }>({
     enabled: true,
     morning_enabled: true,
     evening_enabled: true,
     morning_time: '08:00',
     evening_time: '20:00',
+    reminders_enabled: true,
   });
   const [settingsLoading, setSettingsLoading] = useState(true);
 
@@ -1028,6 +1030,30 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
               handleNotificationSettingsChange({ evening_time: time })
             }
           />
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 0',
+            }}
+          >
+            <span
+              style={{
+                color: 'var(--tg-theme-text-color, hsl(var(--foreground)))',
+                fontSize: '15px',
+              }}
+            >
+              {t('profile.reminders')}
+            </span>
+            <Switch
+              checked={notificationSettings.reminders_enabled}
+              onCheckedChange={(enabled) =>
+                handleNotificationSettingsChange({ reminders_enabled: enabled })
+              }
+            />
+          </div>
         </CardContent>
       </Card>
 

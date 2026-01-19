@@ -31,6 +31,7 @@ interface UpdateNotificationSettingsBody {
   evening_enabled?: boolean;
   morning_time?: string; // "HH:00" format
   evening_time?: string; // "HH:00" format
+  reminders_enabled?: boolean; // Enable/disable inactive & weekly reminders
 }
 
 /**
@@ -42,6 +43,7 @@ interface NotificationSettings {
   evening_enabled: boolean;
   morning_time: string;
   evening_time: string;
+  reminders_enabled: boolean; // Inactive reminders + weekly check-ins
 }
 
 /**
@@ -61,6 +63,7 @@ const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   evening_enabled: true,
   morning_time: '08:00',
   evening_time: '20:00',
+  reminders_enabled: true,
 };
 
 /**
@@ -360,6 +363,13 @@ export async function updateNotificationSettingsHandler(
     });
   }
 
+  if (body.reminders_enabled !== undefined && typeof body.reminders_enabled !== 'boolean') {
+    return reply.status(400).send({
+      error: 'VALIDATION_ERROR',
+      message: 'reminders_enabled must be a boolean',
+    });
+  }
+
   const supabase = getSupabase();
 
   logger.debug({ userId, updates: body }, 'Updating notification settings');
@@ -371,6 +381,7 @@ export async function updateNotificationSettingsHandler(
   if (body.evening_enabled !== undefined) updates.evening_enabled = body.evening_enabled;
   if (body.morning_time !== undefined) updates.morning_time = body.morning_time;
   if (body.evening_time !== undefined) updates.evening_time = body.evening_time;
+  if (body.reminders_enabled !== undefined) updates.reminders_enabled = body.reminders_enabled;
 
   // Retry loop to handle race conditions in read-modify-write
   const MAX_RETRIES = 3;

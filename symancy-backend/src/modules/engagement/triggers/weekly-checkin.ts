@@ -16,9 +16,10 @@ export interface WeeklyCheckInUser {
 /**
  * Find users for weekly check-in
  *
- * Criteria:
- * - notifications_enabled = TRUE
- * - onboarding_completed = TRUE
+ * Criteria (using unified_users table):
+ * - is_telegram_linked = TRUE (must have Telegram to receive reminders)
+ * - is_banned = FALSE
+ * - notification_settings->>'reminders_enabled' != 'false' (null = enabled by default)
  * - Haven't received weekly-checkin today (checked via engagement_log)
  *
  * @returns Array of users for weekly check-in
@@ -28,12 +29,14 @@ export async function findWeeklyCheckInUsers(): Promise<WeeklyCheckInUser[]> {
 
   logger.debug("Finding users for weekly check-in");
 
-  // Find all users with notifications enabled
+  // Find all users with Telegram linked from unified_users
+  // Note: We filter reminders_enabled in JS since Supabase doesn't support JSONB null-coalesce in filters
   const { data: users, error } = await supabase
-    .from("profiles")
-    .select("telegram_user_id, name")
-    .eq("notifications_enabled", true)
-    .eq("onboarding_completed", true);
+    .from("unified_users")
+    .select("telegram_id, display_name, notification_settings")
+    .eq("is_telegram_linked", true)
+    .eq("is_banned", false)
+    .not("telegram_id", "is", null);
 
   if (error) {
     logger.error({ error }, "Failed to find weekly check-in users");
@@ -42,6 +45,17 @@ export async function findWeeklyCheckInUsers(): Promise<WeeklyCheckInUser[]> {
 
   if (!users || users.length === 0) {
     logger.info("No users for weekly check-in");
+    return [];
+  }
+
+  // Filter users with reminders_enabled (null = true by default)
+  const usersWithRemindersEnabled = users.filter((user) => {
+    const settings = user.notification_settings as { reminders_enabled?: boolean } | null;
+    return settings?.reminders_enabled !== false;
+  });
+
+  if (usersWithRemindersEnabled.length === 0) {
+    logger.info("No users with reminders enabled for weekly check-in");
     return [];
   }
 
@@ -62,12 +76,12 @@ export async function findWeeklyCheckInUsers(): Promise<WeeklyCheckInUser[]> {
     sentToday?.map((log) => log.telegram_id) || []
   );
 
-  const filteredUsers = users
-    .filter((user) => !sentTodayUserIds.has(user.telegram_user_id))
+  const filteredUsers = usersWithRemindersEnabled
+    .filter((user) => user.telegram_id && !sentTodayUserIds.has(user.telegram_id))
     .map((user) => ({
-      telegramUserId: user.telegram_user_id,
-      chatId: user.telegram_user_id,
-      name: user.name,
+      telegramUserId: user.telegram_id!,
+      chatId: user.telegram_id!,
+      name: user.display_name,
     }));
 
   logger.info({ count: filteredUsers.length }, "Found users for weekly check-in");
