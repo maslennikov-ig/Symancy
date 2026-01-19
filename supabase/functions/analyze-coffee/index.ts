@@ -2,6 +2,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "npm:@supabase/supabase-js@2"
 import { ARINA_SYSTEM_PROMPT, CASSANDRA_SYSTEM_PROMPT, VISION_SYSTEM_PROMPT } from "./prompts.ts"
+import { getPrompt } from "./getPrompt.ts"
 import { getCreditType } from "./creditMapping.ts"
 
 // CORS headers (inlined to avoid shared module issues in deployment)
@@ -58,6 +59,8 @@ Deno.serve(async (req) => {
 
     // 4. AI ANALYSIS - STEP 1: VISION
     // Using Gemini 1.5 Flash via OpenRouter for cost/speed
+    const visionSystemPrompt = await getPrompt(supabaseClient, 'vision', VISION_SYSTEM_PROMPT);
+
     const visionResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -71,7 +74,7 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: VISION_SYSTEM_PROMPT
+            content: visionSystemPrompt
           },
           {
             role: "user",
@@ -95,8 +98,10 @@ Deno.serve(async (req) => {
     const visionDescription = visionResult.choices[0].message.content
 
     // 5. AI ANALYSIS - STEP 2: INTERPRETATION
-    // Select Prompt
-    let systemPromptTemplate = mode === 'esoteric' ? CASSANDRA_SYSTEM_PROMPT : ARINA_SYSTEM_PROMPT
+    // Select Prompt from DB with fallback to hardcoded
+    const selectedPromptKey = mode === 'esoteric' ? 'cassandra' : 'arina';
+    const selectedFallback = mode === 'esoteric' ? CASSANDRA_SYSTEM_PROMPT : ARINA_SYSTEM_PROMPT;
+    let systemPromptTemplate = await getPrompt(supabaseClient, selectedPromptKey, selectedFallback);
     
     // Inject User Data
     const userName = userData?.name || "Friend"
