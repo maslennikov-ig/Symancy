@@ -33,13 +33,14 @@ This document tracks temporary solutions, stubs, and areas requiring refactoring
   - *Solution:* Supports explicit creditType override from client
   - *Artifacts:* `creditMapping.ts`, updated `index.ts`
 
-### 🟡 Medium (Deferred)
+### ✅ Completed (2026-01-19)
 
-- **Prompts Storage (`analyze-coffee/prompts.ts`):**
-  - *Current:* System prompts are hardcoded strings constants.
-  - *Goal:* Move prompts to a Database table to allow dynamic updates via Admin Panel.
-  - *Status:* **DEFERRED** - Requires Admin Panel to be useful. Without UI for editing, DB storage adds complexity without value.
-  - *Prerequisite:* Admin Panel implementation
+- **Prompts Storage (`analyze-coffee/prompts.ts`):** ✅ FIXED
+  - *Solution:* Created `prompts` table in Supabase with RLS policies
+  - *Solution:* Created `getPrompt.ts` with 5-minute caching
+  - *Solution:* Updated `index.ts` to load prompts from DB with hardcoded fallback
+  - *Artifacts:* `20260119000001_create_prompts_table.sql`, `getPrompt.ts`
+  - *Migration:* Seeded 3 prompts (vision, arina, cassandra)
 
 ---
 
@@ -137,15 +138,28 @@ This document tracks temporary solutions, stubs, and areas requiring refactoring
 
 ## Remaining Items
 
-### 🟡 Deferred (Requires Prerequisites)
+### ✅ Recently Completed (2026-01-19)
 
-1. **Prompts Storage to Database**
-   - Prerequisite: Admin Panel implementation
-   - When ready: Create `prompts` table, update Edge Function to fetch from DB
+1. ~~**Prompts Storage to Database**~~ ✅ DONE
+   - Created `prompts` table with seed data
+   - Edge Function now loads from DB with fallback
 
-### 🟢 Future Cleanup (Low Risk)
+2. ~~**unified_user_id Migration**~~ ✅ DONE
+   - `analysis_history`: 50/50 records migrated
+   - `purchases`: 17/17 records migrated
 
-2. **Database Migration for Legacy Tables**
-   - 3 tables with 19 rows need migration before dropping
-   - 1 empty table can be dropped immediately
-   - 2 tables need roadmap decision
+3. ~~**Legacy Credit Tables Read-Only**~~ ✅ DONE
+   - `user_credits` and `backend_user_credits` marked read-only via RLS
+
+### 🟡 In Progress (Requires Backend Refactoring)
+
+4. **Migrate `chat_messages` to `messages`**
+   - Backend still writes to `chat_messages` (67 records, last: 2026-01-18)
+   - Files to update: `symancy-backend/src/modules/chat/worker.ts`, `photo-analysis/worker.ts`, `chains/chat.chain.ts`
+   - Estimate: Medium effort refactoring
+
+### 🟢 Future Cleanup (Low Priority)
+
+5. **Clean up orphaned `user_states`**
+   - 3 records, legacy onboarding state
+   - Wait for full omnichannel migration completion
