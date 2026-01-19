@@ -15,17 +15,22 @@ This audit identifies legacy tables that may be candidates for deprecation or mi
 
 - **Legacy Tables Identified**: 5 tables
 - **Omnichannel Tables**: 7 tables (actively used)
-- **Migration Status**: Partially complete
-- **Critical Issues**:
-  - `chat_messages` still actively receiving data (last message: 2026-01-18)
-  - 39/50 analysis records lack `unified_user_id`
-  - 17/17 purchases lack `unified_user_id`
+- **Migration Status**: ✅ `unified_user_id` migration complete (2026-01-19)
+- **Remaining Issues**:
+  - `chat_messages` still actively used by backend (requires code refactoring)
   - 1/3 profiles not linked to `unified_users`
+
+### Completed Migrations (2026-01-19)
+
+| Migration | Before | After |
+|-----------|--------|-------|
+| `analysis_history.unified_user_id` | 11/50 | **50/50** ✅ |
+| `purchases.unified_user_id` | 0/17 | **17/17** ✅ |
 
 ### Recommendations Priority
 
-1. **IMMEDIATE (P0)**: Complete `analysis_history` and `purchases` migration to `unified_user_id`
-2. **HIGH (P1)**: Deprecate `chat_messages` (replaced by `messages`)
+1. ~~**IMMEDIATE (P0)**: Complete `analysis_history` and `purchases` migration to `unified_user_id`~~ ✅ DONE
+2. **HIGH (P1)**: Refactor backend to use `messages` instead of `chat_messages` (requires code changes in `symancy-backend/src/modules/chat/worker.ts`, `photo-analysis/worker.ts`, `chains/chat.chain.ts`)
 3. **MEDIUM (P2)**: Mark `backend_user_credits` and `user_credits` as read-only
 4. **LOW (P3)**: Clean up orphaned `user_states` after full migration
 
@@ -48,9 +53,9 @@ This audit identifies legacy tables that may be candidates for deprecation or mi
 | `messages` | ACTIVE | 28 | Replaces chat_messages | Core table |
 | `message_deliveries` | ACTIVE | 0 | Delivery tracking | Core table |
 | `credit_transactions` | ACTIVE | 0 | Audit trail | Core table |
-| **Partially Migrated** |
-| `analysis_history` | MIGRATION_PENDING | 50 | 11/50 have unified_user_id | Complete migration |
-| `purchases` | MIGRATION_PENDING | 17 | 0/17 have unified_user_id | Complete migration |
+| **Migrated (2026-01-19)** |
+| `analysis_history` | ✅ MIGRATED | 50 | 50/50 have unified_user_id | Done |
+| `purchases` | ✅ MIGRATED | 17 | 17/17 have unified_user_id | Done |
 
 ---
 
