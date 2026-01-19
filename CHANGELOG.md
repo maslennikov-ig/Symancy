@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.6.10] - 2026-01-19
+
+### Fixed
+- **symancy-backend/src/modules/engagement/triggers/weekly-checkin.ts**: update 5 source file(s), update docs (f099fbe)
+
 ## [0.6.9] - 2026-01-11
 
 ### Fixed

@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.6.10
+
+_Released on 2026-01-19_
+
+### 🐛 Bug Fixes
+
+- **symancy-backend/src/modules/engagement/triggers/weekly-checkin.ts**: Update 5 source file(s), update docs
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.6.9
 
 _Released on 2026-01-11_
