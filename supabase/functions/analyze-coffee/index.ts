@@ -5,6 +5,23 @@ import { ARINA_SYSTEM_PROMPT, CASSANDRA_SYSTEM_PROMPT, VISION_SYSTEM_PROMPT } fr
 import { getPrompt } from "./getPrompt.ts"
 import { getCreditType } from "./creditMapping.ts"
 
+/**
+ * Sanitize user input before prompt interpolation to prevent prompt injection.
+ * - Escapes template markers ({{ and }})
+ * - Removes newlines (prevents instruction injection)
+ * - Limits length to prevent token overflow
+ */
+function sanitizePromptInput(input: string, maxLength = 200): string {
+  if (!input || typeof input !== 'string') return '';
+  return input
+    .replace(/\{\{/g, '&#123;&#123;')  // Escape opening template markers
+    .replace(/\}\}/g, '&#125;&#125;')  // Escape closing template markers
+    .replace(/[\n\r]/g, ' ')            // Remove newlines
+    .replace(/\s+/g, ' ')               // Collapse whitespace
+    .trim()
+    .substring(0, maxLength);           // Limit length
+}
+
 // CORS headers (inlined to avoid shared module issues in deployment)
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -59,7 +76,11 @@ Deno.serve(async (req) => {
 
     // 4. AI ANALYSIS - STEP 1: VISION
     // Using Gemini 1.5 Flash via OpenRouter for cost/speed
-    const visionSystemPrompt = await getPrompt(supabaseClient, 'vision', VISION_SYSTEM_PROMPT);
+    const visionPromptResult = await getPrompt(supabaseClient, 'vision', VISION_SYSTEM_PROMPT);
+    const visionSystemPrompt = visionPromptResult.content;
+    if (visionPromptResult.error) {
+      console.warn(`Vision prompt loaded from ${visionPromptResult.source}: ${visionPromptResult.error}`);
+    }
 
     const visionResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -101,13 +122,17 @@ Deno.serve(async (req) => {
     // Select Prompt from DB with fallback to hardcoded
     const selectedPromptKey = mode === 'esoteric' ? 'cassandra' : 'arina';
     const selectedFallback = mode === 'esoteric' ? CASSANDRA_SYSTEM_PROMPT : ARINA_SYSTEM_PROMPT;
-    let systemPromptTemplate = await getPrompt(supabaseClient, selectedPromptKey, selectedFallback);
+    const interpretPromptResult = await getPrompt(supabaseClient, selectedPromptKey, selectedFallback);
+    let systemPromptTemplate = interpretPromptResult.content;
+    if (interpretPromptResult.error) {
+      console.warn(`Interpretation prompt loaded from ${interpretPromptResult.source}: ${interpretPromptResult.error}`);
+    }
     
-    // Inject User Data
-    const userName = userData?.name || "Friend"
-    const userAge = userData?.age || "Unknown"
-    const userGender = userData?.gender || "Unknown"
-    const userIntent = userData?.intent || "General guidance"
+    // Inject User Data (sanitized to prevent prompt injection - CRITICAL-2)
+    const userName = sanitizePromptInput(userData?.name, 50) || "Friend"
+    const userAge = sanitizePromptInput(userData?.age, 10) || "Unknown"
+    const userGender = sanitizePromptInput(userData?.gender, 20) || "Unknown"
+    const userIntent = sanitizePromptInput(userData?.intent, 200) || "General guidance"
 
     let systemPrompt = systemPromptTemplate
       .replace(/{{NAME}}/g, userName)
