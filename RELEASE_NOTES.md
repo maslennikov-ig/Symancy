@@ -2,6 +2,24 @@
 
 User-facing release notes for all versions.
 
+## v0.6.11
+
+_Released on 2026-01-19_
+
+### ✨ New Features
+
+- **006**: Implement Prompts Storage and Legacy Tables Audit
+
+### 🐛 Bug Fixes
+
+- **analyze-coffee**: Address code review findings
+- **Database**: Mark legacy credit tables as read-only
+- **Database**: Complete unified_user_id migration for analysis_history and purchases
+
+---
+
+_This release was automatically generated from 5 commits._
+
 ## v0.6.10
 
 _Released on 2026-01-19_

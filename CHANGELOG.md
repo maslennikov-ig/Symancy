@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.6.11] - 2026-01-19
+
+### Added
+- **006**: implement Prompts Storage and Legacy Tables Audit (9ccb294)
+
+### Fixed
+- **analyze-coffee**: address code review findings (ba16f56)
+- **db**: mark legacy credit tables as read-only (8109af7)
+- **db**: complete unified_user_id migration for analysis_history and purchases (17aad81)
+
+### Other
+- update TECHNICAL_DEBT.md with completed migrations (c21d30d)
+
 ## [0.6.10] - 2026-01-19
 
 ### Fixed
