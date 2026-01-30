@@ -274,7 +274,7 @@ export const CREDIT_COST_CASSANDRA = 3;
 /**
  * Model for Arina persona (interpretation)
  */
-export const MODEL_ARINA = "xiaomi/mimo-v2-flash:free";
+export const MODEL_ARINA = "xiaomi/mimo-v2-flash";
 
 /**
  * Model for Cassandra persona (premium, more creative)
@@ -284,7 +284,7 @@ export const MODEL_CASSANDRA = "moonshotai/kimi-k2";
 /**
  * Model for general chat
  */
-export const MODEL_CHAT = "xiaomi/mimo-v2-flash:free";
+export const MODEL_CHAT = "xiaomi/mimo-v2-flash";
 
 /**
  * Model for vision analysis (multimodal)

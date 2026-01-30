@@ -51,7 +51,7 @@ const visionModel = new ChatOpenAI({
 });
 
 const interpretationModel = new ChatOpenAI({
-  model: "xiaomi/mimo-v2-flash:free",
+  model: "xiaomi/mimo-v2-flash",
   temperature: 0.9,
   maxTokens: 1200,
   modelKwargs: {

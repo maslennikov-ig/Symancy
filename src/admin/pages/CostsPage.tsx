@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { DollarSign, Zap, Clock, Activity, Download, Calendar, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -38,6 +38,7 @@ import { formatNumberEN, formatCurrencyUSD, formatMs } from '../utils/formatters
 import { exportToCsv } from '../utils/exportCsv';
 import { cn } from '@/lib/utils';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useOpenRouterModels } from '@/admin/hooks/useOpenRouterModels';
 import type { Lang } from '@/lib/i18n';
 
 // HIGH-2: Locale mapping for i18n date formatting
@@ -98,17 +99,18 @@ type DatePreset = 'last7' | 'last30' | 'thisMonth';
 // Constants
 // ============================================================================
 
-// Model pricing per 1M tokens (approximate)
-const MODEL_PRICES: Record<string, number> = {
+// Fallback model pricing per 1M tokens (used only when API fails)
+const FALLBACK_MODEL_PRICES: Record<string, number> = {
   'google/gemini-1.5-flash': 0.075,
   'google/gemini-2.0-flash': 0.1,
   'google/gemini-2.0-flash-exp:free': 0,
-  'google/gemini-3-flash-preview': 0.1, // Legacy Vision model
+  'google/gemini-3-flash-preview': 0.1,
   'openai/gpt-4o-mini': 0.15,
   'anthropic/claude-3.5-sonnet': 3.0,
   'anthropic/claude-3-haiku': 0.25,
-  'xiaomi/mimo-v2-flash:free': 0,
-  'x-ai/grok-vision-beta': 2.0, // Vision model - $2.00 per 1M tokens
+  'xiaomi/mimo-v2-flash': 0.01,
+  'x-ai/grok-vision-beta': 2.0,
+  'x-ai/grok-4.1-fast': 3.0,
 };
 
 // Chart colors for different models (using CSS variables)
@@ -124,8 +126,8 @@ const CHART_COLORS = [
 // Helpers
 // ============================================================================
 
-function estimateCost(tokens: number, model: string): number {
-  const price = MODEL_PRICES[model] ?? 0.1; // default $0.10/1M
+function estimateCostFallback(tokens: number, model: string): number {
+  const price = FALLBACK_MODEL_PRICES[model] ?? 0.1; // default $0.10/1M
   return (tokens / 1_000_000) * price;
 }
 
@@ -179,9 +181,22 @@ function formatChartDate(dateStr: string, locale: string = 'en-US'): string {
 export function CostsPage() {
   const { user, isAdmin, isLoading: authLoading, signOut } = useAdminAuth();
   const { t, language } = useAdminTranslations();
+  const { getModelPricing } = useOpenRouterModels();
 
   // HIGH-2: Get locale for date formatting
   const dateLocale = LOCALE_MAP[language];
+
+  // Estimate cost using dynamic pricing from OpenRouter API
+  const estimateCost = useCallback((tokens: number, model: string): number => {
+    const pricing = getModelPricing(model);
+    // pricing is per 1M tokens, use average of prompt and completion
+    const avgPrice = (pricing.prompt + pricing.completion) / 2;
+    // If pricing is 0, use fallback
+    if (avgPrice === 0) {
+      return estimateCostFallback(tokens, model);
+    }
+    return (tokens / 1_000_000) * avgPrice;
+  }, [getModelPricing]);
 
   // Date range state
   const [datePreset, setDatePreset] = useState<DatePreset>('last30');
@@ -273,7 +288,7 @@ export function CostsPage() {
     const avgProcessingMs = totalRequests > 0 ? weightedProcessingSum / totalRequests : 0;
 
     return { totalRequests, totalTokens, estimatedCost: totalCost, avgProcessingMs };
-  }, [rawData]);
+  }, [rawData, estimateCost]);
 
   // Model stats for bar chart and pie chart
   const modelStats = useMemo<ModelStats[]>(() => {
@@ -294,7 +309,7 @@ export function CostsPage() {
         ...stats,
       }))
       .sort((a, b) => b.requests - a.requests);
-  }, [rawData]);
+  }, [rawData, estimateCost]);
 
   // Time series data for area chart
   // HIGH-2: Use dateLocale for i18n date formatting
@@ -358,7 +373,7 @@ export function CostsPage() {
       }))
       .sort((a, b) => b.tokens - a.tokens)
       .slice(0, 20);
-  }, [rawData]);
+  }, [rawData, estimateCost]);
 
   // Chart config for ChartContainer
   const chartConfig = useMemo(() => {

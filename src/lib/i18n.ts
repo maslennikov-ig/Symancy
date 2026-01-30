@@ -533,6 +533,7 @@ export const translations = {
     'admin.systemConfig.personas.tooltip.frequencyPenalty': 'Reduces repetition of the same words. Higher = less repetition (0-2).',
     'admin.systemConfig.personas.tooltip.presencePenalty': 'Encourages discussing new topics. Higher = more diverse topics (0-2).',
     'admin.systemConfig.personas.tooltip.prompt': 'System instructions that define the persona\'s behavior and style.',
+    'admin.systemConfig.personas.usingFallbackModels': 'Using cached models (API unavailable)',
     // System Config - Vision Stage
     'admin.systemConfig.vision.title': 'Vision Stage Configuration',
     'admin.systemConfig.vision.description': 'Configure the AI model for image recognition and pattern detection in coffee grounds',
@@ -1261,6 +1262,7 @@ export const translations = {
     'admin.systemConfig.personas.tooltip.frequencyPenalty': 'Уменьшает повторение одних слов. Выше = меньше повторов (0-2).',
     'admin.systemConfig.personas.tooltip.presencePenalty': 'Поощряет обсуждение новых тем. Выше = разнообразнее (0-2).',
     'admin.systemConfig.personas.tooltip.prompt': 'Системные инструкции, определяющие поведение и стиль персоны.',
+    'admin.systemConfig.personas.usingFallbackModels': 'Используются кэшированные модели (API недоступен)',
     // System Config - Vision Stage
     'admin.systemConfig.vision.title': 'Настройка этапа Vision',
     'admin.systemConfig.vision.description': 'Настройка AI модели для распознавания образов и паттернов в кофейной гуще',
@@ -1989,6 +1991,7 @@ export const translations = {
     'admin.systemConfig.personas.tooltip.frequencyPenalty': '减少相同词语的重复。值越高 = 重复越少（0-2）。',
     'admin.systemConfig.personas.tooltip.presencePenalty': '鼓励讨论新话题。值越高 = 话题越多样（0-2）。',
     'admin.systemConfig.personas.tooltip.prompt': '定义角色行为和风格的系统指令。',
+    'admin.systemConfig.personas.usingFallbackModels': '使用缓存模型 (API 不可用)',
     // System Config - Vision Stage
     'admin.systemConfig.vision.title': '视觉阶段配置',
     'admin.systemConfig.vision.description': '配置AI模型以识别咖啡渣中的图像和模式',

@@ -25,9 +25,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
-import { Users, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
+import { Users, ChevronDown, ChevronUp, HelpCircle, RefreshCw, AlertCircle } from 'lucide-react';
 import { useAdminTranslations } from '@/admin/hooks/useAdminTranslations';
 import { useConfigUpdate } from '@/admin/hooks/useConfigUpdate';
+import { useOpenRouterModels } from '@/admin/hooks/useOpenRouterModels';
 import { cn } from '@/lib/utils';
 
 interface PersonasSettingsProps {
@@ -47,17 +48,6 @@ interface PersonasSettingsProps {
   loading: boolean;
 }
 
-// Persona model options with display labels
-const PERSONA_MODELS = [
-  { value: 'xiaomi/mimo-v2-flash:free', label: 'Xiaomi MiMo v2 Flash (Free)' },
-  { value: 'moonshotai/kimi-k2', label: 'Moonshot Kimi K2' },
-  { value: 'google/gemini-1.5-flash', label: 'Google Gemini 1.5 Flash' },
-  { value: 'google/gemini-1.5-pro', label: 'Google Gemini 1.5 Pro' },
-  { value: 'anthropic/claude-3-5-sonnet', label: 'Anthropic Claude 3.5 Sonnet' },
-  { value: 'anthropic/claude-3-5-haiku', label: 'Anthropic Claude 3.5 Haiku' },
-  { value: 'openai/gpt-4o', label: 'OpenAI GPT-4o' },
-  { value: 'openai/gpt-4o-mini', label: 'OpenAI GPT-4o Mini' },
-] as const;
 
 // Validation constants
 const MIN_PROMPT_LENGTH = 50;
@@ -89,6 +79,16 @@ export const PersonasSettings = memo(function PersonasSettings({
   loading,
 }: PersonasSettingsProps): React.ReactElement {
   const { t } = useAdminTranslations();
+  const {
+    models: openRouterModels,
+    modelsByProvider,
+    providers,
+    isLoading: modelsLoading,
+    error: modelsError,
+    isFallback: modelsFallback,
+    refresh: refreshModels,
+    getModelLabel,
+  } = useOpenRouterModels();
 
   // Arina model config
   const {
@@ -517,8 +517,8 @@ export const PersonasSettings = memo(function PersonasSettings({
   }, [cassandraPresPenalty, cassandraPresencePenalty, handleCassandraPresPenaltyUpdate, setCassandraPresPenalty, t]);
 
   // Get display labels for selected models
-  const arinaModelLabel = PERSONA_MODELS.find(m => m.value === arinaModelValue)?.label || arinaModelValue;
-  const cassandraModelLabel = PERSONA_MODELS.find(m => m.value === cassandraModelValue)?.label || cassandraModelValue;
+  const arinaModelLabel = getModelLabel(arinaModelValue);
+  const cassandraModelLabel = getModelLabel(cassandraModelValue);
 
   return (
     <TooltipProvider>
@@ -558,24 +558,48 @@ export const PersonasSettings = memo(function PersonasSettings({
                     </TooltipContent>
                   </Tooltip>
                 </div>
-              <Select
-                value={arinaModelValue}
-                onValueChange={handleArinaModelUpdate}
-                disabled={loading || saving}
-              >
-                <SelectTrigger id="arina-model" className="w-full">
-                  <SelectValue placeholder={t('admin.systemConfig.personas.selectPlaceholder')}>
-                    {arinaModelLabel}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {PERSONA_MODELS.map((model) => (
-                    <SelectItem key={model.value} value={model.value}>
-                      {model.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={arinaModelValue}
+                  onValueChange={handleArinaModelUpdate}
+                  disabled={loading || saving || modelsLoading}
+                >
+                  <SelectTrigger id="arina-model" className="w-full">
+                    <SelectValue placeholder={t('admin.systemConfig.personas.selectPlaceholder')}>
+                      {modelsLoading ? t('admin.common.loading') : arinaModelLabel}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[400px]">
+                    {providers.map((provider) => (
+                      <div key={provider}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-muted/50">
+                          {provider}
+                        </div>
+                        {modelsByProvider[provider]?.map((model) => (
+                          <SelectItem key={model.id} value={model.id}>
+                            {model.shortName}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <button
+                  type="button"
+                  onClick={refreshModels}
+                  disabled={modelsLoading}
+                  className="p-2 rounded-md hover:bg-muted transition-colors disabled:opacity-50"
+                  title={t('admin.common.refresh')}
+                >
+                  <RefreshCw className={cn("h-4 w-4", modelsLoading && "animate-spin")} />
+                </button>
+              </div>
+              {modelsFallback && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {t('admin.systemConfig.personas.usingFallbackModels')}
+                </p>
+              )}
               {arinaModelSaving && (
                 <p className="text-xs text-muted-foreground animate-pulse">
                   {t('admin.systemConfig.savingChanges')}
@@ -843,24 +867,48 @@ export const PersonasSettings = memo(function PersonasSettings({
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <Select
-                value={cassandraModelValue}
-                onValueChange={handleCassandraModelUpdate}
-                disabled={loading || saving}
-              >
-                <SelectTrigger id="cassandra-model" className="w-full">
-                  <SelectValue placeholder={t('admin.systemConfig.personas.selectPlaceholder')}>
-                    {cassandraModelLabel}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {PERSONA_MODELS.map((model) => (
-                    <SelectItem key={model.value} value={model.value}>
-                      {model.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={cassandraModelValue}
+                  onValueChange={handleCassandraModelUpdate}
+                  disabled={loading || saving || modelsLoading}
+                >
+                  <SelectTrigger id="cassandra-model" className="w-full">
+                    <SelectValue placeholder={t('admin.systemConfig.personas.selectPlaceholder')}>
+                      {modelsLoading ? t('admin.common.loading') : cassandraModelLabel}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[400px]">
+                    {providers.map((provider) => (
+                      <div key={provider}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-muted/50">
+                          {provider}
+                        </div>
+                        {modelsByProvider[provider]?.map((model) => (
+                          <SelectItem key={model.id} value={model.id}>
+                            {model.shortName}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <button
+                  type="button"
+                  onClick={refreshModels}
+                  disabled={modelsLoading}
+                  className="p-2 rounded-md hover:bg-muted transition-colors disabled:opacity-50"
+                  title={t('admin.common.refresh')}
+                >
+                  <RefreshCw className={cn("h-4 w-4", modelsLoading && "animate-spin")} />
+                </button>
+              </div>
+              {modelsFallback && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {t('admin.systemConfig.personas.usingFallbackModels')}
+                </p>
+              )}
               {cassandraModelSaving && (
                 <p className="text-xs text-muted-foreground animate-pulse">
                   {t('admin.systemConfig.savingChanges')}

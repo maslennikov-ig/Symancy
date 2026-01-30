@@ -376,7 +376,7 @@ export function SystemConfigPage() {
               <ConfigTabSkeleton />
             ) : (
               <PersonasSettings
-                arinaModel={getStringConfig(configs, 'arina_model', 'xiaomi/mimo-v2-flash:free')}
+                arinaModel={getStringConfig(configs, 'arina_model', 'xiaomi/mimo-v2-flash')}
                 arinaTemperature={getNumberConfig(configs, 'arina_temperature', 0.9)}
                 arinaMaxTokens={getNumberConfig(configs, 'arina_max_tokens', 1200)}
                 arinaFrequencyPenalty={getNumberConfig(configs, 'arina_frequency_penalty', 0)}
