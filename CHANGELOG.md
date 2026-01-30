@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.6.12] - 2026-01-30
+
+### Added
+- **admin**: add 2 source file(s), update 6 source file(s), +1 more (e756fc8)
+
 ## [0.6.11] - 2026-01-19
 
 ### Added

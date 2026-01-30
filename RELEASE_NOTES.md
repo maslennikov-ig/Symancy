@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.6.12
+
+_Released on 2026-01-30_
+
+### ✨ New Features
+
+- **admin**: Add 2 source file(s), update 6 source file(s), +1 more
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.6.11
 
 _Released on 2026-01-19_
