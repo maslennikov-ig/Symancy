@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.6.13
+
+_Released on 2026-01-30_
+
+### ✨ New Features
+
+- **admin**: Add dynamic admin_emails table for flexible admin management
+
+---
+
+_This release was automatically generated from 1 commits._
+
 ## v0.6.12
 
 _Released on 2026-01-30_

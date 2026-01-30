@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.6.13] - 2026-01-30
+
+### Added
+- **admin**: add dynamic admin_emails table for flexible admin management (74f6f8b)
+
 ## [0.6.12] - 2026-01-30
 
 ### Added
