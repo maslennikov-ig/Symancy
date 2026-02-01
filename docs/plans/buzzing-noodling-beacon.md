@@ -1,132 +1,210 @@
-# План: Создание гибкой системы назначения администраторов
+# План: Исправление сообщений об ошибках платежей
 
 ## Проблема
 
-1. Пользователь `1094242@list.ru` получает ошибку **403 "Доступ запрещен"** при входе в админ-панель
-2. Функции `is_admin()` и `is_admin_by_auth_id()` содержат **захардкоженный список** email-ов
-3. Нет механизма для динамического назначения администраторов
+Тестер сообщил о неправильных сообщениях при отклонении платежей:
+
+| Сценарий | Карта | Ожидаемое поведение | Фактическое сообщение |
+|----------|-------|---------------------|----------------------|
+| Карта просрочена | `2200 0000 0000 0038` | Сообщение о просрочке | "Похоже, ваша карта не работает" ✅ |
+| Подозрение на мошенничество | `2200 0000 0000 0046` | Сообщение о безопасности | "Технический сбой" ❌ |
+| Общий отказ банка | `2202 2022 1231 2379` | Сообщение об отказе банка | "Технический сбой" ❌ |
 
 ---
 
-## Решение: Таблица администраторов
+## Анализ
 
-Создать таблицу `admin_emails` для динамического управления списком админов через SQL или админ-панель.
+### Что выяснено:
+
+1. **Виджет YooKassa** показывает свои захардкоженные сообщения — их нельзя кастомизировать
+2. **Webhook не сохраняет `cancellation_reason`** из объекта `cancellation_details`
+3. **Таблица `purchases`** не имеет колонки для причины отмены
+4. **Страница `PaymentResult`** показывает одинаковое сообщение для всех отмен
+
+### Структура YooKassa cancellation_details:
+```json
+{
+  "cancellation_details": {
+    "party": "yoo_money",
+    "reason": "fraud_suspected"
+  }
+}
+```
+
+### Возможные значения `cancellation_reason`:
+- `insufficient_funds` — недостаточно средств
+- `card_expired` — карта просрочена
+- `fraud_suspected` — подозрение на мошенничество
+- `general_decline` — общий отказ банка
+- `3d_secure_failed` — не пройдена 3D Secure
+- `invalid_card_number` — неверный номер карты
+- `invalid_csc` — неверный CVV/CVC
+
+---
+
+## Решение
+
+Сохранять `cancellation_reason` в БД и показывать детальные сообщения на странице результата.
 
 ---
 
 ## План реализации
 
-### Шаг 1: Создать таблицу `admin_emails`
+### Шаг 1: Миграция — добавить колонку `cancellation_reason`
+
+**Файл**: `supabase/migrations/20260131000001_add_cancellation_reason.sql`
 
 ```sql
--- Таблица для хранения email-ов администраторов
-CREATE TABLE IF NOT EXISTS admin_emails (
-  email TEXT PRIMARY KEY,
-  added_by TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- Добавить колонку для причины отмены платежа
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;
 
--- RLS: только service_role может читать/писать
-ALTER TABLE admin_emails ENABLE ROW LEVEL SECURITY;
+-- Индекс для аналитики
+CREATE INDEX IF NOT EXISTS idx_purchases_cancellation_reason
+ON purchases(cancellation_reason) WHERE cancellation_reason IS NOT NULL;
 
--- Политика: service_role имеет полный доступ (для RPC-функций)
-CREATE POLICY "Service role full access" ON admin_emails
-  FOR ALL
-  USING (true)
-  WITH CHECK (true);
-
--- Вставить текущих администраторов
-INSERT INTO admin_emails (email, added_by) VALUES
-  ('maslennikov.ig@gmail.com', 'initial_setup'),
-  ('1094242@list.ru', 'initial_setup')
-ON CONFLICT (email) DO NOTHING;
+-- Комментарий
+COMMENT ON COLUMN purchases.cancellation_reason IS 'Причина отмены платежа из YooKassa cancellation_details.reason';
 ```
 
-### Шаг 2: Обновить функцию `is_admin()`
+### Шаг 2: Обновить webhook — сохранять cancellation_reason
 
-```sql
-CREATE OR REPLACE FUNCTION is_admin()
-RETURNS BOOLEAN AS $$
-BEGIN
-  -- Проверяем, есть ли email текущего пользователя в таблице admin_emails
-  RETURN EXISTS (
-    SELECT 1 FROM admin_emails
-    WHERE email = (auth.jwt() ->> 'email')
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+**Файл**: `supabase/functions/payment-webhook/index.ts`
+
+Изменения:
+1. Добавить `cancellation_details` в интерфейс `YooKassaPayment`
+2. В `handlePaymentCanceled` сохранять `cancellation_reason`
+
+```typescript
+// Добавить в интерфейс YooKassaPayment:
+interface YooKassaPayment {
+  // ... existing fields
+  cancellation_details?: {
+    party: string;
+    reason: string;
+  };
+}
+
+// В handlePaymentCanceled:
+const cancellationReason = payment.cancellation_details?.reason || null;
+
+await supabase
+  .from('purchases')
+  .update({
+    status: 'canceled',
+    yukassa_payment_id: yukassaPaymentId,
+    cancellation_reason: cancellationReason,  // NEW
+  })
+  .eq('id', purchase_id);
 ```
 
-### Шаг 3: Обновить функцию `is_admin_by_auth_id()`
+### Шаг 3: Добавить i18n ключи для причин отмены
 
-```sql
-CREATE OR REPLACE FUNCTION is_admin_by_auth_id(p_auth_id UUID)
-RETURNS BOOLEAN AS $$
-DECLARE
-  v_email TEXT;
-BEGIN
-  -- Получаем email пользователя по auth_id
-  SELECT email INTO v_email
-  FROM auth.users
-  WHERE id = p_auth_id;
+**Файл**: `src/lib/i18n.ts`
 
-  IF v_email IS NULL THEN
-    RETURN FALSE;
-  END IF;
+```typescript
+// EN
+'payment.cancel.insufficient_funds': 'Insufficient funds on your card',
+'payment.cancel.card_expired': 'Your card has expired',
+'payment.cancel.fraud_suspected': 'Payment declined for security reasons',
+'payment.cancel.general_decline': 'Payment declined by your bank',
+'payment.cancel.3d_secure_failed': '3D Secure verification failed',
+'payment.cancel.invalid_card_number': 'Invalid card number',
+'payment.cancel.invalid_csc': 'Invalid CVV/CVC code',
+'payment.cancel.unknown': 'Payment was declined',
 
-  -- Проверяем, есть ли email в таблице admin_emails
-  RETURN EXISTS (
-    SELECT 1 FROM admin_emails
-    WHERE email = v_email
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+// RU
+'payment.cancel.insufficient_funds': 'Недостаточно средств на карте',
+'payment.cancel.card_expired': 'Срок действия карты истёк',
+'payment.cancel.fraud_suspected': 'Платёж отклонён по соображениям безопасности',
+'payment.cancel.general_decline': 'Платёж отклонён вашим банком',
+'payment.cancel.3d_secure_failed': 'Не пройдена проверка 3D Secure',
+'payment.cancel.invalid_card_number': 'Неверный номер карты',
+'payment.cancel.invalid_csc': 'Неверный CVV/CVC код',
+'payment.cancel.unknown': 'Платёж был отклонён',
+
+// ZH (Chinese)
+'payment.cancel.insufficient_funds': '卡上余额不足',
+'payment.cancel.card_expired': '您的卡已过期',
+'payment.cancel.fraud_suspected': '因安全原因拒绝付款',
+'payment.cancel.general_decline': '您的银行拒绝了付款',
+'payment.cancel.3d_secure_failed': '3D Secure 验证失败',
+'payment.cancel.invalid_card_number': '卡号无效',
+'payment.cancel.invalid_csc': 'CVV/CVC 代码无效',
+'payment.cancel.unknown': '付款被拒绝',
 ```
+
+### Шаг 4: Обновить PaymentResult — показывать детальные сообщения
+
+**Файл**: `src/pages/PaymentResult.tsx`
+
+Изменения:
+1. Получать `cancellation_reason` из URL параметра или из БД
+2. Показывать детальное сообщение на основе причины
+
+```typescript
+// Добавить маппинг причин на i18n ключи
+const CANCELLATION_MESSAGES: Record<string, string> = {
+  insufficient_funds: 'payment.cancel.insufficient_funds',
+  card_expired: 'payment.cancel.card_expired',
+  fraud_suspected: 'payment.cancel.fraud_suspected',
+  general_decline: 'payment.cancel.general_decline',
+  '3d_secure_failed': 'payment.cancel.3d_secure_failed',
+  invalid_card_number: 'payment.cancel.invalid_card_number',
+  invalid_csc: 'payment.cancel.invalid_csc',
+};
+
+// В компоненте:
+const cancellationReason = searchParams.get('reason');
+const cancelMessage = cancellationReason
+  ? t(CANCELLATION_MESSAGES[cancellationReason] || 'payment.cancel.unknown')
+  : t('payment.result.canceled.subtitle');
+```
+
+### Шаг 5: Передавать reason в return_url (опционально)
+
+**Альтернатива**: Вместо передачи через URL, можно загружать из БД по `purchase_id`.
 
 ---
 
 ## Критические файлы
 
-| Файл/Компонент | Назначение |
-|----------------|------------|
-| `src/admin/hooks/useAdminAuth.ts:80` | Вызывает `supabase.rpc('is_admin')` |
-| `src/admin/hooks/useAdminAuth.ts:102` | Вызывает `supabase.rpc('is_admin_by_auth_id')` |
-| `src/admin/AdminApp.tsx:70-72` | Показывает 403 если `!isAdmin` |
-| Supabase function `is_admin()` | Проверка прав (переписать) |
-| Supabase function `is_admin_by_auth_id()` | Проверка для Telegram (переписать) |
-| Новая таблица `admin_emails` | Хранение списка админов |
+| Файл | Изменение |
+|------|-----------|
+| `supabase/migrations/20260131000001_add_cancellation_reason.sql` | Новая миграция |
+| `supabase/functions/payment-webhook/index.ts` | Сохранение cancellation_reason |
+| `src/lib/i18n.ts` | i18n ключи для всех причин (3 языка) |
+| `src/pages/PaymentResult.tsx` | Отображение детальных сообщений |
+| `src/types/payment.ts` | Добавить cancellation_reason в Purchase |
 
 ---
 
-## Проверка
+## Верификация
 
-1. **Выполнить миграцию** - создать таблицу и обновить функции через Supabase MCP
-2. **Проверить данные**:
+1. **Применить миграцию** через Supabase MCP
+2. **Задеплоить webhook** через `supabase functions deploy payment-webhook`
+3. **Протестировать** все 6 сценариев из `docs/PAYMENT-TESTING-GUIDE.md`:
+   - Успешная оплата: `2202 4743 0132 2987`
+   - 3D Secure: `2200 0000 0000 0004`
+   - Недостаточно средств: `2200 0000 0000 0053`
+   - Карта просрочена: `2200 0000 0000 0038`
+   - Мошенничество: `2200 0000 0000 0046`
+   - Общий отказ: `2202 2022 1231 2379`
+4. **Проверить в БД**:
    ```sql
-   SELECT * FROM admin_emails;
-   -- Ожидаем: maslennikov.ig@gmail.com, 1094242@list.ru
+   SELECT id, status, cancellation_reason
+   FROM purchases
+   WHERE status = 'canceled'
+   ORDER BY created_at DESC LIMIT 10;
    ```
-3. **Тест функции**:
-   ```sql
-   SELECT is_admin_by_auth_id('922c9538-2210-4e98-9684-704fdd1ae028');
-   -- Ожидаем: true (это auth_id пользователя 1094242@list.ru)
-   ```
-4. **Войти на https://symancy.ru/admin/** под `1094242@list.ru`
-5. **Убедиться**, что Dashboard отображается без ошибок 403
+5. **Проверить UI** — на странице `/payment/result?status=canceled` должно отображаться детальное сообщение
 
 ---
 
-## Преимущества нового подхода
+## Ожидаемый результат
 
-1. **Гибкость**: добавление/удаление админов через SQL без изменения кода
-2. **Аудит**: поля `added_by` и `created_at` для отслеживания
-3. **Масштабируемость**: можно добавить UI в админ-панели для управления
-4. **Безопасность**: RLS + SECURITY DEFINER защищают таблицу
-
----
-
-## Будущие улучшения (опционально)
-
-- Добавить страницу в админ-панель для управления списком админов
-- Добавить уведомления при добавлении/удалении админов
-- Логирование в `admin_audit_log`
+| Сценарий | cancellation_reason | Сообщение (RU) |
+|----------|---------------------|----------------|
+| Недостаточно средств | `insufficient_funds` | "Недостаточно средств на карте" |
+| Карта просрочена | `card_expired` | "Срок действия карты истёк" |
+| Мошенничество | `fraud_suspected` | "Платёж отклонён по соображениям безопасности" |
+| Общий отказ | `general_decline` | "Платёж отклонён вашим банком" |
