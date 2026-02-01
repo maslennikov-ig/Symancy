@@ -4,6 +4,27 @@
 export type ProductType = 'basic' | 'pack5' | 'pro' | 'cassandra';
 export type PaymentStatus = 'pending' | 'succeeded' | 'canceled';
 
+export type CancellationReason =
+  // Card issues
+  | 'insufficient_funds'
+  | 'card_expired'
+  | 'invalid_card_number'
+  | 'invalid_csc'
+  | 'invalid_expiry_month'
+  | 'invalid_expiry_year'
+  // Security & fraud
+  | 'fraud_suspected'
+  | '3d_secure_failed'
+  // Generic
+  | 'general_decline'
+  | 'processing_error'
+  // Merchant/permission
+  | 'canceled_by_merchant'
+  | 'permission_revoked';
+
+// Party that initiated the cancellation
+export type CancellationParty = 'yoo_money' | 'payment_network' | 'merchant';
+
 export interface Purchase {
   id: string;
   user_id: string;
@@ -15,6 +36,8 @@ export interface Purchase {
   created_at: string;
   paid_at: string | null;
   metadata: Record<string, unknown> | null;
+  cancellation_reason: CancellationReason | null;
+  cancellation_party: CancellationParty | null;
 }
 
 export interface UserCredits {

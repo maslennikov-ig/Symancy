@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { formatCurrencyRUB, formatNumber } from '../utils/formatters';
 import { logger } from '../utils/logger';
 import { StatCardSkeleton } from '../components/skeletons';
+import { PaymentCancellationStats } from '../components/PaymentCancellationStats';
 
 interface DashboardStats {
   totalUsers: number;
@@ -211,6 +212,11 @@ export function DashboardPage() {
             </>
           )}
         </Grid>
+      </div>
+
+      {/* Payment Cancellation Analytics */}
+      <div className="mb-8">
+        <PaymentCancellationStats />
       </div>
 
       {/* Quick Links */}

@@ -22,6 +22,10 @@ interface YooKassaPayment {
     product_type: ProductType
     purchase_id: string
   }
+  cancellation_details?: {
+    party: string
+    reason: string
+  }
 }
 
 interface YooKassaWebhookPayload {
@@ -171,10 +175,12 @@ async function handlePaymentCanceled(
   payment: YooKassaPayment,
   supabase: SupabaseClient
 ): Promise<void> {
-  const { metadata, id: yukassaPaymentId } = payment
+  const { metadata, id: yukassaPaymentId, cancellation_details } = payment
   const { user_id, product_type, purchase_id } = metadata
 
   const tariff = getTariffDetails(product_type)
+  const cancellationReason = cancellation_details?.reason || null
+  const cancellationParty = cancellation_details?.party || null
 
   // Check if already processed
   const { data: existingPurchase } = await supabase
@@ -188,12 +194,14 @@ async function handlePaymentCanceled(
     return
   }
 
-  // Update purchase status
+  // Update purchase status with cancellation details
   const { error: updateError } = await supabase
     .from('purchases')
     .update({
       status: 'canceled',
       yukassa_payment_id: yukassaPaymentId,
+      cancellation_reason: cancellationReason,
+      cancellation_party: cancellationParty,
     })
     .eq('id', purchase_id)
 
@@ -209,13 +217,13 @@ async function handlePaymentCanceled(
       user_id,
       product_type,
       amount_rub: tariff.price,
-      metadata: { yukassa_payment_id: yukassaPaymentId, purchase_id }
+      metadata: { yukassa_payment_id: yukassaPaymentId, purchase_id, cancellation_reason: cancellationReason, cancellation_party: cancellationParty }
     })
   } catch (analyticsError) {
     console.error('Analytics error (non-critical):', analyticsError)
   }
 
-  console.log('Payment canceled:', { purchase_id, yukassa_payment_id: yukassaPaymentId })
+  console.log('Payment canceled:', { purchase_id, yukassa_payment_id: yukassaPaymentId, cancellation_reason: cancellationReason, cancellation_party: cancellationParty })
 }
 
 // Send email confirmation via Resend API
@@ -372,11 +380,11 @@ Deno.serve(async (req: Request) => {
       }
     )
 
-    // Handle event
+    // Handle event - use verifiedPayment for both to ensure data consistency from API
     if (event === 'payment.succeeded') {
-      await handlePaymentSucceeded(payment, supabase)
+      await handlePaymentSucceeded(verifiedPayment, supabase)
     } else if (event === 'payment.canceled') {
-      await handlePaymentCanceled(payment, supabase)
+      await handlePaymentCanceled(verifiedPayment, supabase)
     } else {
       console.log('Unhandled event type:', event)
     }
