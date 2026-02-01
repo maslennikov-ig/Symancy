@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.6.14] - 2026-02-01
+
+### Added
+- **payments**: add detailed cancellation reason messages (df21207)
+
+### Other
+- update docs (4c7b5ce)
+
 ## [0.6.13] - 2026-01-30
 
 ### Added

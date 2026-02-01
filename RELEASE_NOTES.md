@@ -2,6 +2,18 @@
 
 User-facing release notes for all versions.
 
+## v0.6.14
+
+_Released on 2026-02-01_
+
+### ✨ New Features
+
+- **payments**: Add detailed cancellation reason messages
+
+---
+
+_This release was automatically generated from 2 commits._
+
 ## v0.6.13
 
 _Released on 2026-01-30_
