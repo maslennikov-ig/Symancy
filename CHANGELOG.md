@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.6.15] - 2026-02-04
+
+### Added
+- **pages**: add 1 source file(s), update 2 source file(s), +2 more (79075b1)
+
 ## [0.6.14] - 2026-02-01
 
 ### Added
