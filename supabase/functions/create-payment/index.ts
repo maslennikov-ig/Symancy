@@ -59,6 +59,13 @@ const TARIFFS: Record<ProductType, Tariff> = {
 
 const VALID_PRODUCT_TYPES: ProductType[] = ['basic', 'pack5', 'pro', 'cassandra']
 
+// Fiscal receipt configuration (54-FZ)
+// tax_system_code: 1=ОСН, 2=УСН(доходы), 3=УСН(доходы-расходы), 4=ЕНВД, 5=ЕСХН, 6=ПСН
+const RECEIPT_TAX_SYSTEM_CODE = 2  // УСН (доходы) — change if different
+
+// vat_code: 1=Без НДС, 2=НДС 0%, 3=НДС 10%, 4=НДС 20%, 5=НДС 10/110, 6=НДС 20/120
+const RECEIPT_VAT_CODE = 1  // Без НДС — standard for УСН
+
 function isValidProductType(type: string): type is ProductType {
   return VALID_PRODUCT_TYPES.includes(type as ProductType)
 }
@@ -163,7 +170,7 @@ Deno.serve(async (req: Request) => {
       : "https://symancy.ru"
     const paymentReturnUrl = `${origin}/payment/result?purchase_id=${purchaseId}`
 
-    // Create YooKassa payment
+    // Create YooKassa payment with fiscal receipt (54-FZ)
     const yukassaPayload = {
       amount: {
         value: tariff.price.toFixed(2),
@@ -175,6 +182,25 @@ Deno.serve(async (req: Request) => {
       },
       capture: true,
       description: `Symancy - ${tariff.name} (${tariff.description})`,
+      receipt: {
+        customer: {
+          email: user.email,
+        },
+        items: [
+          {
+            description: `${tariff.name} — ${tariff.description}`,
+            quantity: "1.00",
+            amount: {
+              value: tariff.price.toFixed(2),
+              currency: "RUB",
+            },
+            vat_code: RECEIPT_VAT_CODE,
+            payment_mode: "full_payment",
+            payment_subject: "service",
+          },
+        ],
+        tax_system_code: RECEIPT_TAX_SYSTEM_CODE,
+      },
       metadata: {
         user_id: userId,
         product_type: product_type,
