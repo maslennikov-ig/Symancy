@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { Button } from '../components/ui/button';
 import { translations, t as i18n_t, Lang } from '../lib/i18n';
 import { supabase } from '../lib/supabaseClient';
 import { getCancellationI18nKey } from '../constants/payment';
 
-type PaymentStatus = 'success' | 'canceled' | 'unknown';
+type PaymentStatus = 'success' | 'canceled' | 'pending' | 'unknown';
 
 interface StatusConfig {
   icon: string;
@@ -20,21 +20,29 @@ interface PaymentResultProps {
 
 const STATUS_CONFIGS: Record<PaymentStatus, StatusConfig> = {
   success: {
-    icon: '✅',
+    icon: '\u2705',
     titleKey: 'payment.result.success.title',
     subtitleKey: 'payment.result.success.subtitle',
   },
   canceled: {
-    icon: '❌',
+    icon: '\u274C',
     titleKey: 'payment.result.canceled.title',
     subtitleKey: 'payment.result.canceled.subtitle',
   },
+  pending: {
+    icon: '\u23F3',
+    titleKey: 'payment.result.pending.title',
+    subtitleKey: 'payment.result.pending.subtitle',
+  },
   unknown: {
-    icon: '❓',
+    icon: '\u2753',
     titleKey: 'payment.result.unknown.title',
     subtitleKey: 'payment.result.unknown.subtitle',
   },
 };
+
+const POLL_INTERVAL_MS = 3000;
+const MAX_POLL_ATTEMPTS = 10;
 
 const PaymentResult: React.FC<PaymentResultProps> = ({ language: propLanguage, t: propT }) => {
   const navigate = useNavigate();
@@ -43,10 +51,70 @@ const PaymentResult: React.FC<PaymentResultProps> = ({ language: propLanguage, t
   const [purchaseId, setPurchaseId] = useState<string | null>(null);
   const [cancellationReason, setCancellationReason] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollCountRef = useRef(0);
 
   // Fallback if props are not passed (though App.tsx should pass them)
   const language = propLanguage || 'en';
   const t = propT || ((key: keyof typeof translations.en) => i18n_t(key, language));
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Fetch purchase status from database and update component state
+  const fetchPurchaseStatus = async (id: string): Promise<boolean> => {
+    try {
+      const { data } = await supabase
+        .from('purchases')
+        .select('status, cancellation_reason')
+        .eq('id', id)
+        .single();
+
+      if (!data) return false;
+
+      if (data.status === 'succeeded') {
+        setStatus('success');
+        return true;
+      } else if (data.status === 'canceled') {
+        setStatus('canceled');
+        if (data.cancellation_reason) {
+          setCancellationReason(data.cancellation_reason);
+        }
+        return true;
+      }
+      // Still pending
+      return false;
+    } catch (error) {
+      console.error('Error fetching purchase status:', error);
+      return false;
+    }
+  };
+
+  // Start polling for pending purchases
+  const startPolling = (id: string) => {
+    pollCountRef.current = 0;
+    pollIntervalRef.current = setInterval(async () => {
+      pollCountRef.current += 1;
+      const resolved = await fetchPurchaseStatus(id);
+
+      if (resolved || pollCountRef.current >= MAX_POLL_ATTEMPTS) {
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+        }
+        if (!resolved) {
+          setStatus('unknown');
+        }
+        setLoading(false);
+      }
+    }, POLL_INTERVAL_MS);
+  };
 
   useEffect(() => {
     const statusParam = searchParams.get('status');
@@ -82,6 +150,23 @@ const PaymentResult: React.FC<PaymentResultProps> = ({ language: propLanguage, t
         };
         fetchCancellationReason();
       }
+    } else if (purchaseIdParam) {
+      // No status param but purchase_id exists (e.g., 3D Secure redirect)
+      // Auto-detect status from database
+      setPurchaseId(purchaseIdParam);
+      setStatus('pending');
+      setLoading(true);
+
+      const detectStatus = async () => {
+        const resolved = await fetchPurchaseStatus(purchaseIdParam);
+        if (!resolved) {
+          // Payment still pending — start polling
+          startPolling(purchaseIdParam);
+        } else {
+          setLoading(false);
+        }
+      };
+      detectStatus();
     } else {
       setStatus('unknown');
     }
@@ -131,6 +216,12 @@ const PaymentResult: React.FC<PaymentResultProps> = ({ language: propLanguage, t
               {t('payment.result.button.home')}
             </Button>
           </>
+        );
+      case 'pending':
+        return (
+          <Button onClick={handleGoHome} variant="outline" size="lg">
+            {t('payment.result.button.home')}
+          </Button>
         );
       case 'unknown':
       default:

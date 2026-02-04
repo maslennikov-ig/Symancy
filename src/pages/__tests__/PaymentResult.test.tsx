@@ -318,3 +318,98 @@ describe('PaymentResult - Component Rendering States', () => {
     expect(icon).toHaveTextContent('❌');
   });
 });
+
+describe('PaymentResult - Auto-detect Status from DB (no status param)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should show pending state initially when only purchase_id is provided', () => {
+    mockSingle.mockResolvedValue({ data: { status: 'pending', cancellation_reason: null } });
+
+    renderWithParams({ purchase_id: 'test_purchase_456' });
+
+    expect(screen.getByText('payment.result.pending.title')).toBeInTheDocument();
+    expect(screen.getByText('payment.result.pending.subtitle')).toBeInTheDocument();
+  });
+
+  it('should fetch purchase status from DB when no status param', async () => {
+    mockSingle.mockResolvedValue({ data: { status: 'succeeded', cancellation_reason: null } });
+
+    renderWithParams({ purchase_id: 'test_purchase_456' });
+
+    await waitFor(() => {
+      expect(mockFrom).toHaveBeenCalledWith('purchases');
+      expect(mockSelect).toHaveBeenCalledWith('status, cancellation_reason');
+      expect(mockEq).toHaveBeenCalledWith('id', 'test_purchase_456');
+    });
+  });
+
+  it('should show success when DB returns succeeded status', async () => {
+    mockSingle.mockResolvedValue({ data: { status: 'succeeded', cancellation_reason: null } });
+
+    renderWithParams({ purchase_id: 'test_purchase_456' });
+
+    await waitFor(() => {
+      expect(screen.getByText('payment.result.success.title')).toBeInTheDocument();
+    });
+  });
+
+  it('should show canceled with cancellation reason when DB returns canceled', async () => {
+    mockSingle.mockResolvedValue({ data: { status: 'canceled', cancellation_reason: 'fraud_suspected' } });
+
+    renderWithParams({ purchase_id: 'test_purchase_456' });
+
+    await waitFor(() => {
+      expect(screen.getByText('payment.result.canceled.title')).toBeInTheDocument();
+      expect(screen.getByText('payment.cancel.fraud_suspected')).toBeInTheDocument();
+    });
+  });
+
+  it('should show canceled with general_decline reason from DB', async () => {
+    mockSingle.mockResolvedValue({ data: { status: 'canceled', cancellation_reason: 'general_decline' } });
+
+    renderWithParams({ purchase_id: 'test_purchase_456' });
+
+    await waitFor(() => {
+      expect(screen.getByText('payment.result.canceled.title')).toBeInTheDocument();
+      expect(screen.getByText('payment.cancel.general_decline')).toBeInTheDocument();
+    });
+  });
+
+  it('should show canceled with fallback subtitle when reason is null', async () => {
+    mockSingle.mockResolvedValue({ data: { status: 'canceled', cancellation_reason: null } });
+
+    renderWithParams({ purchase_id: 'test_purchase_456' });
+
+    await waitFor(() => {
+      expect(screen.getByText('payment.result.canceled.title')).toBeInTheDocument();
+      expect(screen.getByText('payment.result.canceled.subtitle')).toBeInTheDocument();
+    });
+  });
+
+  it('should not call supabase when neither status nor purchase_id provided', () => {
+    renderWithParams({});
+
+    expect(mockFrom).not.toHaveBeenCalled();
+    expect(screen.getByText('payment.result.unknown.title')).toBeInTheDocument();
+  });
+
+  it('should handle DB error gracefully during auto-detection', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockSingle.mockRejectedValue(new Error('DB error'));
+
+    renderWithParams({ purchase_id: 'test_purchase_456' });
+
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalled();
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+});
+
