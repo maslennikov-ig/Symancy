@@ -93,12 +93,12 @@ function createChatOpenAIInstance(
  * - High temperature (0.9) for creative diversity
  * - Frequency penalty (0.6) to reduce token repetition
  * - Presence penalty (0.5) to encourage new topics
- * - Max tokens (1200) for controlled length
+ * - Max tokens (3000) sufficient for both single topic and full "all" readings
  */
 export async function createArinaModel(options?: ModelOptions): Promise<ChatOpenAI> {
   const modelName = await getConfig("arina_model", MODEL_ARINA);
   const temperature = await getConfig("arina_temperature", 0.9);
-  const maxTokens = await getConfig("arina_max_tokens", 1200);
+  const maxTokens = await getConfig("arina_max_tokens", 3000);
   const frequencyPenalty = await getConfig("arina_frequency_penalty", 0.6);
   const presencePenalty = await getConfig("arina_presence_penalty", 0.5);
 
