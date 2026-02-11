@@ -1,112 +1,103 @@
-# Plan: Fix PaymentResult to show cancellation reasons
+# Plan: Add fiscal receipt data (54-FZ) to YooKassa payments
 
 ## Problem
 
-Our detailed cancellation reason messages (implemented in commit df21207) are **effectively dead code** — they never reach the user.
+The `create-payment` edge function creates payments without fiscal receipt data. Russian law 54-FZ requires every online payment to generate a fiscal receipt. Without the `receipt` field, YooKassa won't generate receipts, which blocks production deployment.
 
-### Flow Analysis
+## Context
 
-1. **PaymentWidget.tsx:42-44** — `return_url` hardcoded with `status=success`:
-   ```
-   /payment/result?status=success&purchase_id=${purchaseId}
-   ```
-   This URL is only used by the widget on **successful** payments. On failure, the widget shows YooKassa's built-in error and does NOT redirect.
-
-2. **create-payment edge function:164** — return_url for YooKassa API (3D Secure) has NO status:
-   ```
-   /payment/result?purchase_id=${purchaseId}
-   ```
-
-3. **PaymentResult.tsx:52-88** — checks `status` URL param:
-   - `status=success` → shows success
-   - `status=canceled` → fetches cancellation_reason from DB (**NEVER REACHED**)
-   - no status → shows "unknown"
-
-4. **YooWidget `onFail`** (YooWidget.tsx:21) — fires only if YooKassa's built-in error handling is disabled. By default it's enabled, meaning the widget handles failures internally and lets user retry. This is the intended UX — we should NOT disable it.
-
-### Result
-- **Inline failure**: Widget shows YooKassa's generic error → user retries or closes widget → goes back to pricing page. PaymentResult never shown.
-- **3D Secure failure**: YooKassa redirects to `/payment/result?purchase_id=XXX` (no status) → shows "unknown" instead of specific cancellation reason.
-- Our i18n cancellation messages are never displayed.
+- YooKassa supports **inline receipts** — pass `receipt` field in `POST /v3/payments` and YooKassa auto-generates the fiscal receipt when payment succeeds
+- User email is already available from JWT auth (`user.email` at line 103)
+- Tax parameters are unknown to the user — using safe defaults (УСН / Без НДС), extracted as constants for easy change later
+- Webhook verification is already adequate (API-based verification at `payment-webhook/index.ts:54-80`)
 
 ## Solution
 
-### Step 1: Fix PaymentResult.tsx — auto-detect status from DB when missing
+### Single file change: `supabase/functions/create-payment/index.ts`
 
-When `purchase_id` is present but `status` is missing, fetch the actual payment status from the `purchases` table.
+**Step 1**: Add fiscal receipt constants at the top (after line 60):
 
-**File**: `src/pages/PaymentResult.tsx` (lines 51-88)
+```typescript
+// Fiscal receipt configuration (54-FZ)
+// tax_system_code: 1=ОСН, 2=УСН(доходы), 3=УСН(доходы-расходы), 4=ЕНВД, 5=ЕСХН, 6=ПСН
+const RECEIPT_TAX_SYSTEM_CODE = 2  // УСН (доходы) — change if different
 
-Replace the `useEffect` logic. New behavior:
-
-```
-if (statusParam === 'success') → show success immediately (keep as-is)
-if (statusParam === 'canceled') → fetch cancellation_reason from DB (keep as-is)
-if (no status) AND purchase_id exists → NEW: fetch purchase from DB:
-  - purchases.status = 'succeeded' → show success
-  - purchases.status = 'canceled' → show canceled + cancellation_reason
-  - purchases.status = 'pending' → show pending state, poll every 3s (max 30s)
+// vat_code: 1=Без НДС, 2=НДС 0%, 3=НДС 10%, 4=НДС 20%, 5=НДС 10/110, 6=НДС 20/120
+const RECEIPT_VAT_CODE = 1  // Без НДС — standard for УСН
 ```
 
-Key changes in `PaymentResult.tsx`:
-- Add `'pending'` to the `PaymentStatus` type (line 8)
-- Add `STATUS_CONFIGS.pending` entry (lines 21-37)
-- In the `useEffect`, add an `else if (!statusParam && purchaseIdParam)` branch that:
-  1. Sets `loading(true)`
-  2. Fetches `SELECT status, cancellation_reason FROM purchases WHERE id = purchaseIdParam`
-  3. Maps DB status to component status
-  4. If `pending` — starts polling interval (3s, max 10 attempts)
-- Use `getCancellationI18nKey()` (already imported, line 6) for canceled status
+**Step 2**: Add `receipt` field to `yukassaPayload` (lines 167-183):
 
-### Step 2: Add i18n keys for pending state
+```typescript
+const yukassaPayload = {
+  amount: {
+    value: tariff.price.toFixed(2),
+    currency: "RUB",
+  },
+  confirmation: {
+    type: "embedded",
+    return_url: paymentReturnUrl,
+  },
+  capture: true,
+  description: `Symancy - ${tariff.name} (${tariff.description})`,
+  receipt: {
+    customer: {
+      email: user.email,  // already available from line 103
+    },
+    items: [
+      {
+        description: `${tariff.name} — ${tariff.description}`,
+        quantity: "1.00",
+        amount: {
+          value: tariff.price.toFixed(2),
+          currency: "RUB",
+        },
+        vat_code: RECEIPT_VAT_CODE,
+        payment_mode: "full_payment",
+        payment_subject: "service",
+      },
+    ],
+    tax_system_code: RECEIPT_TAX_SYSTEM_CODE,
+  },
+  metadata: {
+    user_id: userId,
+    product_type: product_type,
+    purchase_id: purchaseId,
+  },
+}
+```
 
-**File**: `src/lib/i18n.ts`
+Key receipt fields per YooKassa API docs:
+- `customer.email` — email for sending the fiscal receipt to user
+- `items[].description` — tariff name (max 128 chars)
+- `items[].quantity` — "1.00" (single digital service)
+- `items[].amount` — matches payment amount
+- `items[].vat_code` — 1 (Без НДС for УСН)
+- `items[].payment_mode` — "full_payment" (полная оплата)
+- `items[].payment_subject` — "service" (оказание услуг)
+- `tax_system_code` — 2 (УСН доходы)
 
-Add 3 translation keys in all 3 languages (en ~line 166, ru ~line 934, zh ~line 1702):
+## What we're NOT doing
 
-| Key | EN | RU | ZH |
-|-----|----|----|-----|
-| `payment.result.pending.title` | Processing payment... | Обработка платежа... | 正在处理付款... |
-| `payment.result.pending.subtitle` | Please wait, we are verifying your payment | Подождите, мы проверяем ваш платёж | 请稍候，我们正在验证您的付款 |
+- **No webhook changes** — API-based verification already implemented, YooKassa docs confirm this is a valid approach (alternative to IP whitelist)
+- **No separate POST /v3/receipts call** — inline receipt is simpler and auto-generated by YooKassa
+- **No IP whitelist for webhooks** — Supabase Edge Functions don't expose client IP easily; API verification is sufficient
 
-### Step 3: Update tests
-
-**File**: `src/pages/__tests__/PaymentResult.test.tsx`
-
-Add test cases:
-- `purchase_id` without `status` → fetches from DB, shows correct status
-- DB returns `canceled` with `fraud_suspected` → shows "Платёж отклонён по соображениям безопасности"
-- DB returns `canceled` with `general_decline` → shows "Платёж отклонён вашим банком"
-- DB returns `pending` → shows pending state
-- DB returns `succeeded` → shows success
-
-## NOT doing (and why)
-
-- **Not switching to `success`/`fail` events in PaymentWidget**: Per [YooKassa docs](https://yookassa.ru/developers/payment-acceptance/integration-scenarios/widget/additional-settings/behaviour): events only fire when `return_url` is NOT in widget config. Removing `return_url` would require us to handle all redirects manually. Additionally, `fail` for card declines only fires if we disable built-in error handling — which would break the retry UX (users couldn't try a different card inside the widget).
-- **Not changing YooKassa widget messages**: Those are YooKassa's built-in strings, we have no control over them.
-
-## What this fixes in practice
-
-- **3D Secure failures**: User redirected to `/payment/result?purchase_id=XXX` (no status) → now auto-detects from DB → shows specific cancellation reason
-- **Direct link / bookmark**: If user returns to payment result page later → shows correct status from DB
-- **Race condition**: If webhook hasn't processed yet → shows "Processing..." with polling instead of "Unknown error"
-
-## Critical Files
+## Critical File
 
 | File | Change |
 |------|--------|
-| `src/pages/PaymentResult.tsx` | Auto-detect status from DB when URL param missing; add pending state with polling |
-| `src/lib/i18n.ts` | Add pending state translations (3 languages, 2 keys each) |
-| `src/pages/__tests__/PaymentResult.test.tsx` | Add tests for DB auto-detection and pending state |
-
-## Reuse existing code
-- `getCancellationI18nKey()` from `src/constants/payment.ts:39` — already imported in PaymentResult
-- `supabase` client from `src/lib/supabaseClient.ts` — already imported in PaymentResult
-- `STATUS_CONFIGS` pattern in `PaymentResult.tsx:21-37` — extend with `pending` entry
+| `supabase/functions/create-payment/index.ts` | Add receipt constants + receipt field to yukassaPayload |
 
 ## Verification
 
-1. `pnpm type-check` — no TypeScript errors
-2. `pnpm build` — build succeeds
-3. `pnpm test src/pages/__tests__/PaymentResult.test.tsx` — all tests pass
-4. Manual test: open `/payment/result?purchase_id=<canceled_purchase_id>` (no status param) → should show cancellation reason from DB
+1. Deploy edge function: `supabase functions deploy create-payment`
+2. Test with test card `2202 4743 0132 2987` (successful payment)
+3. Verify in YooKassa dashboard that the payment has a receipt attached
+4. Test with cancellation card `2200 0000 0000 0053` — receipt should only be generated for successful payments
+5. Check user's email — YooKassa should auto-send the fiscal receipt
+
+## Notes for later
+
+- When the tax system or VAT rate is confirmed by accountant, update `RECEIPT_TAX_SYSTEM_CODE` and `RECEIPT_VAT_CODE` constants
+- If the business is a self-employed individual (самозанятый), the receipt format differs — use YooKassa's "Чеки для самозанятых" integration instead

@@ -77,6 +77,13 @@ If contradictions occur:
 - If truly ambiguous: ask user with specific options
 - Only ask when unable to determine best practice (rare, ~10%)
 
+**8. TYPESCRIPT ERRORS** — Re-delegate to same agent OR `typescript-types-specialist`
+
+**9. /push — NEVER DISCARD CHANGES**
+
+- **FORBIDDEN**: `git reset`, `git checkout --`, `git stash` during `/push`
+- **ALWAYS** commit all uncommitted changes or ASK user first
+
 ### Planning Phase (ALWAYS First)
 
 Before implementing tasks:
@@ -88,6 +95,79 @@ Before implementing tasks:
 - Parallel: launch N calls in single message (not sequentially)
 
 See speckit.implement.md for details.
+
+---
+
+## Task Management with Beads
+
+> All work MUST be tracked in Beads. Prefix: `sym`.
+
+### Session Workflow
+
+```bash
+# SESSION START (auto via hooks)
+# bd prime runs automatically → injects context
+
+# FIND WORK
+bd ready                          # Available tasks (no blockers)
+bd list --unlocked                # Tasks not locked by other terminals
+bd show <id>                      # Task details
+
+# WORK
+bd update <id> --status in_progress   # Acquires exclusive lock
+# ... do the work ...
+bd close <id> --reason "Done"         # Releases lock
+
+# SESSION END (MANDATORY CHECKLIST)
+# [ ] git status
+# [ ] git add <files>
+# [ ] bd sync
+# [ ] git commit -m "..."
+# [ ] bd sync
+# [ ] git push
+```
+
+### Multi-Terminal Work
+
+- Each terminal acquires **exclusive lock** via `bd update --status in_progress`
+- Lock auto-releases after 30min inactivity
+- **Rule**: Each terminal works on DIFFERENT issues
+- Find unlocked: `bd list --unlocked`
+
+### How User Gives Me Tasks
+
+1. **From Beads**: "Работай над sym-xxx" or `bd ready` output
+2. **New task**: Create beads task FIRST, then work
+3. **Discussion**: If clarifying/researching, no task needed yet
+
+### Task Types
+
+| Work Type       | Tool  | Command                                         |
+| --------------- | ----- | ----------------------------------------------- |
+| Feature         | Beads | `bd create -t feature --files path/to/file.tsx` |
+| Bug fix         | Beads | `bd create -t bug`                              |
+| Tech debt/chore | Beads | `bd create -t chore`                            |
+| Documentation   | Beads | `bd create -t docs`                             |
+| Epic            | Beads | `bd create -t epic`                             |
+
+### Automation
+
+- **Daemon auto-sync**: Enabled (auto-commit, auto-push, auto-pull for beads)
+- **Hooks**: SessionStart/PreCompact → `bd prime`, Stop → `bd sync`
+- **Exclusive Lock**: Prevents conflicts in multi-terminal work
+- **Emergent work**: `bd create "Issue" -t bug --deps discovered-from:<current-id>`
+
+---
+
+## External Documentation (Context7)
+
+**Before implementing** with external libraries, query Context7 for latest docs:
+
+```
+mcp__context7__resolve-library-id → mcp__context7__query-docs
+```
+
+**When to use**: Supabase, React, YooKassa, grammY, Vite, Zod, Radix UI APIs
 
 ---
 
@@ -132,6 +212,27 @@ Follow command-specific instructions. See `docs/Agents Ecosystem/AGENT-ORCHESTRA
 - BASE (`.mcp.base.json`): context7 + sequential-thinking (~600 tokens)
 - FULL (`.mcp.full.json`): + supabase + playwright + n8n + shadcn (~5000 tokens)
 - Switch: `./switch-mcp.sh`
+
+---
+
+## Subagent Selection
+
+| Domain              | Subagent                        | When                          |
+| ------------------- | ------------------------------- | ----------------------------- |
+| DB/migrations       | `database-architect`            | Schema changes, RLS policies  |
+| UI components       | `react-vite-specialist`         | New pages, components         |
+| Backend (Telegram)  | `telegram-handler-specialist`   | grammY handlers, bot logic    |
+| Backend (Node)      | `node-backend-specialist`       | Server setup, webhooks        |
+| Edge Functions      | `supabase-edge-functions-specialist` | Supabase Edge Functions  |
+| Tests               | `test-writer`                   | Unit/integration tests        |
+| Bugs from report    | `bug-fixer`                     | Fix bug-hunting-report        |
+| Code exploration    | `Explore`                       | Find files, understand code   |
+| TypeScript types    | `typescript-types-specialist`   | Complex types, generics       |
+| Security            | `vulnerability-fixer`           | Security fixes                |
+| Prompts             | `prompt-engineer`               | LLM prompts, system prompts   |
+| Code review         | `code-reviewer`                 | Post-implementation review    |
+
+**Rule**: For complex tasks, ALWAYS consider delegation. Verify result yourself.
 
 ---
 

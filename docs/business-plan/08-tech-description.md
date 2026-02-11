@@ -1,21 +1,133 @@
-## 10. ТЕХНОЛОГИЧЕСКОЕ ОПИСАНИЕ ДЛЯ БИЗНЕС-ПЛАНА (Пункт 8)
+# ТЕХНОЛОГИЧЕСКОЕ ОПИСАНИЕ
 
 > **Готовый текст для отправки в Astana Hub / AFSA**
 
 ---
 
-### 8. ТЕХНОЛОГИЧЕСКОЕ ОПИСАНИЕ
+<div style="text-align:center;margin:2em 0">
+<img src="../../whisk-images/01-hero-coffee-ai.png" alt="Symancy AI Coffee Analysis" style="max-width:100%;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+</div>
 
 ---
 
-#### 8.1. ТЕКУЩАЯ АРХИТЕКТУРА: Интеллектуальная мультимодальная платформа
+## ЗАЩИТА ОТ ГАЛЛЮЦИНАЦИЙ: Как мы контролируем AI
+
+> **Для AFSA: Ответ на вопрос о предсказуемости AI-системы**
+
+<div style="text-align:center;margin:2em 0">
+<img src="../../whisk-images/06-anti-hallucination.png" alt="AI Hallucination Protection" style="max-width:100%;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>Механизм фильтрации и верификации выходных данных AI</em></p>
+</div>
+
+### Проблема: Галлюцинации LLM
+
+Языковые модели (LLM) могут генерировать правдоподобный, но не обоснованный текст — «галлюцинации». Это неприемлемо для регулируемых сервисов.
+
+### Наше решение: Трёхуровневая защита
+
+```mermaid
+flowchart TB
+    subgraph INPUT["ВХОДНЫЕ ДАННЫЕ"]
+        PHOTO["Фотография чашки кофе"]
+    end
+
+    subgraph CV["УРОВЕНЬ 1: CV-МОДУЛЬ"]
+        CV_PROC["Computer Vision Processing"]
+        F1["[F1] Зона RIM: плотность 0.78"]
+        F2["[F2] Спираль: уверенность 92%"]
+        F3["[F3] Поток: по часовой стрелке"]
+        JSON[/"JSON с ID признаков"/]
+    end
+
+    subgraph LLM_LAYER["УРОВЕНЬ 2: КОНТРОЛИРУЕМЫЙ LLM"]
+        PROMPT["Промпт: Интерпретируй<br/>ТОЛЬКО эти признаки,<br/>указывай [ID] для каждого"]
+        LLM_OUT["Ответ LLM:<br/>[F1][F2] Спираль на краю...<br/>[F3] Движение по часовой..."]
+    end
+
+    subgraph VERIFY["УРОВЕНЬ 3: ВЕРИФИКАЦИЯ"]
+        PARSE["Парсинг атрибуций"]
+        CHECK{{"ID валидны?"}}
+        ACCEPT["✓ ПРИНЯТО"]
+        REJECT["✗ ОТКЛОНЕНО<br/>галлюцинация"]
+        SCORE["Audit Score ≥95%"]
+    end
+
+    subgraph OUTPUT["РЕЗУЛЬТАТ"]
+        RESULT["Верифицированная<br/>интерпретация"]
+    end
+
+    PHOTO --> CV_PROC
+    CV_PROC --> F1
+    CV_PROC --> F2
+    CV_PROC --> F3
+    F1 --> JSON
+    F2 --> JSON
+    F3 --> JSON
+    JSON --> PROMPT
+    PROMPT --> LLM_OUT
+    LLM_OUT --> PARSE
+    PARSE --> CHECK
+    CHECK -->|Да| ACCEPT
+    CHECK -->|Нет| REJECT
+    ACCEPT --> SCORE
+    REJECT --> SCORE
+    SCORE --> RESULT
+
+    style INPUT fill:#e3f2fd,stroke:#1565c0
+    style CV fill:#fff8e1,stroke:#ff8f00
+    style LLM_LAYER fill:#f3e5f5,stroke:#7b1fa2
+    style VERIFY fill:#ffebee,stroke:#c62828
+    style OUTPUT fill:#e8f5e9,stroke:#2e7d32
+```
+
+### Ключевые гарантии для регулятора
+
+| Требование | Как обеспечиваем |
+|------------|------------------|
+| **Предсказуемость** | Одно фото → одинаковые CV-признаки (детерминированный алгоритм) |
+| **Прозрачность** | Каждое утверждение ссылается на конкретный CV-признак |
+| **Контроль** | Утверждения без привязки к признакам автоматически отклоняются |
+| **Аудит** | Полный лог: image_hash → CV features → prompt → response |
+| **Воспроизводимость** | Повторный анализ того же фото даёт идентичные признаки |
+
+### Почему это не «чёрный ящик»
+
+```mermaid
+flowchart LR
+    subgraph BAD["❌ ТРАДИЦИОННЫЙ ПОДХОД"]
+        direction LR
+        B_PHOTO["Фото"] --> B_BOX["Чёрный ящик<br/>LLM"]
+        B_BOX --> B_TEXT["Текст<br/>(неизвестно откуда)"]
+    end
+
+    subgraph GOOD["✓ НАШ ПОДХОД"]
+        direction LR
+        G_PHOTO["Фото"] --> G_CV["CV-модуль<br/>─────────<br/>Алгоритм открыт"]
+        G_CV --> G_JSON["{F1, F2, F3}<br/>─────────<br/>JSON сохраняется"]
+        G_JSON --> G_LLM["LLM<br/>─────────<br/>Атрибуции [ID]"]
+        G_LLM --> G_VERIFY["Верификация<br/>─────────<br/>Audit Score"]
+        G_VERIFY --> G_RESULT["Результат<br/>─────────<br/>100% проверен"]
+    end
+
+    style BAD fill:#ffebee,stroke:#c62828
+    style GOOD fill:#e8f5e9,stroke:#2e7d32
+```
+
+---
+
+## ТЕКУЩАЯ АРХИТЕКТУРА: Интеллектуальная мультимодальная платформа
 
 **Обзор платформы:**
 Symancy — AI-платформа нового поколения для визуального анализа и персонализированной интерпретации образов на основе искусства тассеографии (анализ кофейной гущи). Система объединяет передовые технологии Computer Vision, обработки естественного языка (NLP), мультиязычной генерации и персонализированного AI-ассистирования в единой омниканальной платформе.
 
+<div style="text-align:center;margin:2em 0">
+<img src="../../whisk-images/05-tech-stack.png" alt="Tech Stack Architecture" style="max-width:100%;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>Омниканальная архитектура платформы Symancy</em></p>
+</div>
+
 ---
 
-##### 8.1.1. Архитектурные компоненты платформы
+### Архитектурные компоненты платформы
 
 ```mermaid
 flowchart TB
@@ -68,7 +180,7 @@ flowchart TB
 
 ---
 
-##### 8.1.2. Ключевые технологические компоненты
+### Ключевые технологические компоненты
 
 **A. Модуль предобработки изображений (Image Preprocessing Pipeline)**
 
@@ -96,6 +208,19 @@ flowchart TB
 
 Проприетарная система персонализированных AI-ассистентов:
 
+<div style="display:flex;justify-content:center;gap:2em;margin:1.5em 0;flex-wrap:wrap">
+<div style="text-align:center;max-width:200px">
+<img src="../../whisk-images/03-persona-arina.png" alt="Арина" style="width:180px;height:180px;border-radius:50%;object-fit:cover;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+<p style="font-weight:bold;margin:0.5em 0 0.2em">АРИНА</p>
+<p style="font-size:0.85em;color:#666">Тёплая, поддерживающая</p>
+</div>
+<div style="text-align:center;max-width:200px">
+<img src="../../whisk-images/04-persona-kassandra.png" alt="Кассандра" style="width:180px;height:180px;border-radius:50%;object-fit:cover;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+<p style="font-weight:bold;margin:0.5em 0 0.2em">КАССАНДРА</p>
+<p style="font-size:0.85em;color:#666">Аналитическая, глубокая</p>
+</div>
+</div>
+
 | Персона | Стилистика | Применение |
 |---------|-----------|------------|
 | **Арина** | Тёплая, поддерживающая | Акцент на позитивных аспектах, эмпатичные формулировки |
@@ -113,7 +238,7 @@ flowchart TB
 
 ---
 
-##### 8.1.3. Интеллектуальные алгоритмы (R&D компонент)
+### Интеллектуальные алгоритмы (R&D компонент)
 
 **Prompt Engineering как область исследований:**
 
@@ -151,7 +276,7 @@ Symancy разработала методологию domain-specific prompt eng
 
 ---
 
-##### 8.1.4. Технологические преимущества
+### Технологические преимущества
 
 | Аспект | Реализация | Бизнес-ценность |
 |--------|-----------|-----------------|
@@ -164,7 +289,7 @@ Symancy разработала методологию domain-specific prompt eng
 
 ---
 
-##### 8.1.5. Соответствие критериям DeepTech (текущее состояние)
+### Соответствие критериям DeepTech (текущее состояние)
 
 | Критерий | Текущая реализация | Статус |
 |----------|-------------------|--------|
@@ -177,7 +302,7 @@ Symancy разработала методологию domain-specific prompt eng
 
 ---
 
-##### 8.1.6. Области развития (переход к версии 2.0)
+### Области развития (переход к версии 2.0)
 
 Текущая архитектура функциональна и масштабируема. Для полного соответствия требованиям AFSA по Explainable AI планируется развитие:
 
@@ -192,14 +317,14 @@ Symancy разработала методологию domain-specific prompt eng
 
 ---
 
-#### 8.2. Целевая архитектура: Visual Proof Module (Вариант 2)
+## Целевая архитектура: Visual Proof Module (Вариант 2)
 
 **Ключевая инновация:**
 Разработка собственного модуля Computer Vision (Visual Proof Module), который анализирует изображение **ДО** передачи в LLM и формирует структурированный набор верифицируемых признаков. Каждый текстовый инсайт становится **математически привязан** к конкретным визуальным данным.
 
 ---
 
-##### 8.2.1. Архитектура системы
+### Архитектура системы
 
 ```mermaid
 flowchart TB
@@ -281,7 +406,7 @@ flowchart TB
 
 ---
 
-##### 8.2.2. Детализация модулей
+### Детализация модулей
 
 **A. Preprocessing Module**
 - **Нормализация освещения**: Адаптивная гистограммная эквализация (CLAHE)
@@ -296,6 +421,12 @@ flowchart TB
 - **Технологии**: OpenCV contour detection, возможно Segment Anything Model (SAM) для точности
 
 **C. Zone Detection Module**
+
+<div style="text-align:center;margin:1.5em 0">
+<img src="../../whisk-images/02-cv-zones.png" alt="CV Zone Detection" style="max-width:300px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>Алгоритмическое разделение чашки на семантические зоны</em></p>
+</div>
+
 - **Алгоритмическое разделение чашки на семантические зоны**:
   - **RIM (край)**: Внешнее кольцо — символизирует ближайшее будущее
   - **CENTER (центр)**: Центральная область — текущая ситуация
@@ -330,7 +461,7 @@ flowchart TB
 
 ---
 
-##### 8.2.3. Механизм Explainable AI (Visual Proof)
+### Механизм Explainable AI (Visual Proof)
 
 ```mermaid
 flowchart LR
@@ -426,7 +557,7 @@ Audit Score: 100% (все утверждения верифицированы)
 
 ---
 
-##### 8.2.4. Frontend Overlay (Visual Proof UI)
+### Frontend Overlay (Visual Proof UI)
 
 **Визуализация связи CV ↔ Текст:**
 
@@ -446,7 +577,7 @@ Audit Score: 100% (все утверждения верифицированы)
 
 ---
 
-##### 8.2.5. Технический стек целевой архитектуры
+### Технический стек целевой архитектуры
 
 | Компонент | Технология | Обоснование |
 |-----------|-----------|-------------|
@@ -460,7 +591,7 @@ Audit Score: 100% (все утверждения верифицированы)
 
 ---
 
-##### 8.2.6. Соответствие требованиям регуляторов
+### Соответствие требованиям регуляторов
 
 **Для AFSA (МФЦА) — Explainable AI:**
 
@@ -485,7 +616,7 @@ Audit Score: 100% (все утверждения верифицированы)
 
 ---
 
-##### 8.2.7. Дорожная карта реализации
+### Дорожная карта реализации
 
 ```mermaid
 gantt
@@ -535,7 +666,7 @@ gantt
 
 ---
 
-##### 8.2.8. Заключение
+### Заключение
 
 Развитие архитектуры до Visual Proof Module усиливает позиции Symancy как DeepTech-платформы с собственным слоем Computer Vision. Это обеспечивает:
 
@@ -546,7 +677,7 @@ gantt
 
 ---
 
-#### 8.3. РЕЗЮМЕ ДЛЯ РЕГУЛЯТОРОВ
+## РЕЗЮМЕ ДЛЯ РЕГУЛЯТОРОВ
 
 ##### Для Astana Hub (DeepTech qualification)
 

@@ -195,6 +195,7 @@ Deno.serve(async (req: Request) => {
               currency: "RUB",
             },
             vat_code: RECEIPT_VAT_CODE,
+            measure: "piece",
             payment_mode: "full_payment",
             payment_subject: "service",
           },
