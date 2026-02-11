@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.6.16] - 2026-02-11
+
+### Added
+- **payments**: add 54-FZ fiscal receipt data to YooKassa payments (d9e4e52)
+
+### Fixed
+- **supabase/functions/create-payment/index.ts**: update 1 source file(s), update docs (8fe5e2d)
+- **coffee-reading**: increase Arina max_tokens from 1200 to 3000 (07e2129)
+
+### Other
+- replace ASCII diagrams with Mermaid diagrams (84a902f)
+- add detailed tech description for business plan (Section 8) (6be575d)
+- add DeepTech Strategy plan for Astana Hub + AFSA (ef3d707)
+
 ## [0.6.15] - 2026-02-04
 
 ### Added

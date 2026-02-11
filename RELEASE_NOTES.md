@@ -2,6 +2,23 @@
 
 User-facing release notes for all versions.
 
+## v0.6.16
+
+_Released on 2026-02-11_
+
+### ✨ New Features
+
+- **payments**: Add 54-FZ fiscal receipt data to YooKassa payments
+
+### 🐛 Bug Fixes
+
+- **supabase/functions/create-payment/index.ts**: Update 1 source file(s), update docs
+- **coffee-reading**: Increase Arina max_tokens from 1200 to 3000
+
+---
+
+_This release was automatically generated from 6 commits._
+
 ## v0.6.15
 
 _Released on 2026-02-04_
