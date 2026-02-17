@@ -60,9 +60,9 @@ function MoodCalendarComponent({ language, t }: MoodCalendarProps) {
 
   const locale = getLocale(language);
 
-  // Fetch entries for current month
+  // Fetch entries for current month (with AbortController for cancellation)
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
 
     async function fetchEntries() {
       setIsLoading(true);
@@ -73,17 +73,16 @@ function MoodCalendarComponent({ language, t }: MoodCalendarProps) {
         const endDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
 
         const data = await getMoodHistory(startDate, endDate);
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setEntries(data);
         }
       } catch (err) {
+        if (controller.signal.aborted) return;
         console.error('Failed to load mood history:', err);
-        if (!cancelled) {
-          setEntries([]);
-          setError(t('mood.error.loadFailed'));
-        }
+        setEntries([]);
+        setError(t('mood.error.loadFailed'));
       } finally {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setIsLoading(false);
         }
       }
@@ -91,7 +90,7 @@ function MoodCalendarComponent({ language, t }: MoodCalendarProps) {
 
     fetchEntries();
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [currentYear, currentMonth]);
 

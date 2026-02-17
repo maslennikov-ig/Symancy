@@ -1,4 +1,5 @@
 import { InlineKeyboard } from "grammy";
+import { resolveLang, moodT } from "./i18n.js";
 
 /** Emotion options with emoji and multilingual labels */
 export const EMOTION_OPTIONS = [
@@ -65,10 +66,11 @@ export function createEmotionKeyboard(
   }
 
   // Action buttons
+  const lang = resolveLang(language);
   if (selectedEmotions.length > 0) {
-    keyboard.text("✅ Готово", "mood:emo:confirm");
+    keyboard.text(moodT("confirmButton", lang) as string, "mood:emo:confirm");
   }
-  keyboard.text("⏭ Пропустить", "mood:emo:skip");
+  keyboard.text(moodT("skipButton", lang) as string, "mood:emo:skip");
   return keyboard;
 }
 

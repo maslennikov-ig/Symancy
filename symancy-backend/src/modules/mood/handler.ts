@@ -2,6 +2,7 @@ import type { BotContext } from "../router/middleware.js";
 import { getSupabase } from "../../core/database.js";
 import { getLogger } from "../../core/logger.js";
 import { createScoreKeyboard, createEmotionKeyboard } from "./keyboards.js";
+import { resolveLang, moodT } from "./i18n.js";
 
 const logger = getLogger().child({ module: "mood" });
 
@@ -24,8 +25,9 @@ setInterval(() => {
 export async function handleMoodCommand(ctx: BotContext): Promise<void> {
   if (!ctx.from) return;
 
+  const lang = resolveLang(ctx.from.language_code);
   const keyboard = createScoreKeyboard();
-  await ctx.reply("🌡 Как вы себя чувствуете сегодня? (1-10)", {
+  await ctx.reply(moodT("scorePrompt", lang) as string, {
     reply_markup: keyboard,
   });
   logger.info({ userId: ctx.from.id }, "Mood: score keyboard shown");
@@ -37,20 +39,22 @@ export async function handleMoodCallback(ctx: BotContext): Promise<void> {
 
   const data = ctx.callbackQuery.data;
   const userId = ctx.from.id;
+  const lang = resolveLang(ctx.from.language_code);
 
   // mood:score:{n}
   if (data.startsWith("mood:score:")) {
     const score = parseInt(data.split(":")[2]!, 10);
     if (isNaN(score) || score < 1 || score > 10) {
-      await ctx.answerCallbackQuery({ text: "Ошибка" });
+      await ctx.answerCallbackQuery({ text: moodT("error", lang) as string });
       return;
     }
 
     moodFlowState.set(userId, { score, emotions: [], timestamp: Date.now() });
 
     const keyboard = createEmotionKeyboard([], ctx.from.language_code);
+    const scoreSelectedFn = moodT("scoreSelected", lang) as (score: number) => string;
     await ctx.editMessageText(
-      `🌡 Настроение: ${score}/10\n\nКакие эмоции вы испытываете?`,
+      scoreSelectedFn(score),
       { reply_markup: keyboard }
     );
     await ctx.answerCallbackQuery();
@@ -64,30 +68,26 @@ export async function handleMoodCallback(ctx: BotContext): Promise<void> {
     const state = moodFlowState.get(userId);
 
     if (!state) {
-      await ctx.answerCallbackQuery({ text: "Сессия истекла. Отправьте /mood" });
+      await ctx.answerCallbackQuery({ text: moodT("sessionExpired", lang) as string });
       return;
     }
 
     if (value === "confirm" || value === "skip") {
       const emotionText = state.emotions.length > 0
         ? state.emotions.join(", ")
-        : "не указаны";
+        : moodT("noEmotions", lang) as string;
 
       try {
         await saveMoodEntry(userId, state.score, state.emotions);
 
-        await ctx.editMessageText(
-          `✅ Настроение записано!\n\n` +
-          `🌡 Оценка: ${state.score}/10\n` +
-          `💭 Эмоции: ${emotionText}\n\n` +
-          `Спасибо! Это поможет сделать гадания точнее.`
-        );
-        await ctx.answerCallbackQuery({ text: "Сохранено!" });
+        const confirmFn = moodT("savedConfirmation", lang) as (score: number, emotionText: string) => string;
+        await ctx.editMessageText(confirmFn(state.score, emotionText));
+        await ctx.answerCallbackQuery({ text: moodT("saved", lang) as string });
         logger.info({ userId, score: state.score, emotions: state.emotions }, "Mood saved");
       } catch (error) {
         logger.error({ userId, error }, "Failed to save mood entry via callback");
-        await ctx.answerCallbackQuery({ text: "Ошибка сохранения" });
-        await ctx.reply("Не удалось сохранить настроение. Попробуйте /mood ещё раз.");
+        await ctx.answerCallbackQuery({ text: moodT("saveError", lang) as string });
+        await ctx.reply(moodT("saveErrorReply", lang) as string);
       } finally {
         moodFlowState.delete(userId);
       }

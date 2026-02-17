@@ -18,6 +18,8 @@ import { EmotionTagGrid } from '../../components/features/mood/EmotionTagGrid';
 import { Textarea } from '../../components/ui/textarea';
 import MoodCalendar from './MoodCalendar';
 import MoodStats from './MoodStats';
+import { MoodTrendChart } from './MoodTrendChart';
+import { MoodEmotionChart } from './MoodEmotionChart';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
 import type { translations, Lang } from '../../lib/i18n';
 import type { MoodEntry, MoodEntryInput, EmotionTag } from '../../types/mood';
@@ -40,7 +42,8 @@ const MoodPage: React.FC<MoodPageProps> = ({ language, t: propT }) => {
   const t = propT as (key: string) => string;
 
   // Tab state from URL param
-  const initialTab = searchParams.get('tab') === 'calendar' ? 'calendar' : 'entry';
+  const tabParam = searchParams.get('tab');
+  const initialTab = tabParam === 'calendar' ? 'calendar' : tabParam === 'insights' ? 'insights' : 'entry';
   const [activeTab, setActiveTab] = useState<string>(initialTab);
 
   // Today's entry from hook
@@ -55,6 +58,9 @@ const MoodPage: React.FC<MoodPageProps> = ({ language, t: propT }) => {
 
   // Calendar entries for stats
   const [calendarEntries, setCalendarEntries] = useState<MoodEntry[]>([]);
+
+  // Insight entries (last 30 days)
+  const [insightEntries, setInsightEntries] = useState<MoodEntry[]>([]);
 
   // Initialize form from today's entry (wait for loading to complete)
   useEffect(() => {
@@ -80,6 +86,24 @@ const MoodPage: React.FC<MoodPageProps> = ({ language, t: propT }) => {
       }
     }
     loadEntries();
+  }, []);
+
+  // Load insight entries (last 30 days)
+  useEffect(() => {
+    async function loadInsights() {
+      try {
+        const now = new Date();
+        const start = new Date(now);
+        start.setDate(start.getDate() - 30);
+        const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+        const endStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const data = await getMoodHistory(startStr, endStr);
+        setInsightEntries(data);
+      } catch {
+        // Insights are non-critical
+      }
+    }
+    loadInsights();
   }, []);
 
   // Determine if form has changes
@@ -167,6 +191,9 @@ const MoodPage: React.FC<MoodPageProps> = ({ language, t: propT }) => {
             <TabsTrigger value="calendar" className="flex-1">
               {t('mood.tab.calendar')}
             </TabsTrigger>
+            <TabsTrigger value="insights" className="flex-1">
+              {t('mood.tab.insights')}
+            </TabsTrigger>
           </TabsList>
 
           {/* Entry Tab */}
@@ -188,6 +215,13 @@ const MoodPage: React.FC<MoodPageProps> = ({ language, t: propT }) => {
                 onChange={setEmotions}
                 t={t}
               />
+
+              {/* Hint when score is set but no emotions selected */}
+              {score !== null && emotions.length === 0 && (
+                <p className="text-xs text-muted-foreground -mt-4">
+                  {t('mood.entry.emotionsHint')}
+                </p>
+              )}
 
               {/* Note */}
               <div className="flex flex-col gap-2">
@@ -243,6 +277,14 @@ const MoodPage: React.FC<MoodPageProps> = ({ language, t: propT }) => {
             <div className="flex flex-col gap-4 pb-24 pt-2">
               <MoodCalendar language={language} t={t} />
               <MoodStats entries={calendarEntries} t={t} />
+            </div>
+          </TabsContent>
+
+          {/* Insights Tab */}
+          <TabsContent value="insights">
+            <div className="flex flex-col gap-6 pb-24 pt-2">
+              <MoodTrendChart entries={insightEntries} t={t} />
+              <MoodEmotionChart entries={insightEntries} t={t} />
             </div>
           </TabsContent>
         </Tabs>
