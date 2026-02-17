@@ -33,6 +33,15 @@ const SESSION_EXPIRED_MESSAGES: Record<string, string> = {
 };
 
 /**
+ * Topic already covered messages in different languages
+ */
+const TOPIC_ALREADY_COVERED_MESSAGES: Record<string, string> = {
+  ru: "Вы уже получили толкование по этой теме.",
+  en: "You already received a reading for this topic.",
+  zh: "您已经获得了该主题的解读。",
+};
+
+/**
  * Insufficient credits error messages in different languages
  */
 const INSUFFICIENT_CREDITS_MESSAGES: Record<string, string> = {
@@ -51,6 +60,13 @@ function getSessionExpiredMessage(language: string = "ru"): string {
 /**
  * Get insufficient credits message for language
  */
+function getTopicAlreadyCoveredMessage(language: string = "ru"): string {
+  return (
+    TOPIC_ALREADY_COVERED_MESSAGES[language] ||
+    TOPIC_ALREADY_COVERED_MESSAGES["ru"]!
+  );
+}
+
 function getInsufficientCreditsMessage(language: string = "ru"): string {
   return (
     INSUFFICIENT_CREDITS_MESSAGES[language] ||
@@ -176,6 +192,29 @@ export async function handleRetopicCallback(ctx: BotContext): Promise<void> {
       show_alert: true,
     });
     return;
+  }
+
+  // Check if topic was already covered in this session group
+  if (analysis.session_group_id) {
+    const { data: coveredRows } = await supabase
+      .from("analysis_history")
+      .select("topic")
+      .eq("session_group_id", analysis.session_group_id)
+      .eq("status", "completed")
+      .neq("topic", "all");
+
+    const coveredTopics = (coveredRows || []).map((r: { topic: string }) => r.topic);
+    if (coveredTopics.includes(topicKey)) {
+      logger.warn(
+        { telegramUserId, topicKey, analysisId },
+        "User attempted to retopic an already covered topic"
+      );
+      await ctx.answerCallbackQuery({
+        text: getTopicAlreadyCoveredMessage(userLanguage),
+        show_alert: true,
+      });
+      return;
+    }
   }
 
   // CR-002 fix: Answer callback and edit message BEFORE credit check
