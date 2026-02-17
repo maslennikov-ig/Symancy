@@ -5,6 +5,10 @@ import './index.css';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 import { initTelegramCssVariables } from './utils/telegramTheme';
+import { initSentry } from './lib/sentry';
+
+// Initialize error tracking FIRST (before any other code)
+initSentry();
 
 /**
  * Early Telegram WebApp initialization

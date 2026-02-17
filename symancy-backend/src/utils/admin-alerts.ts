@@ -10,6 +10,7 @@
 import { getBotApi } from "@/core/telegram.js";
 import { getEnv } from "@/config/env.js";
 import { logger } from "@/core/logger.js";
+import { captureException } from "@/core/sentry.js";
 
 /**
  * Alert severity levels
@@ -284,6 +285,9 @@ export async function sendErrorAlert(
       logger.debug("Error alert rate-limited", { error: error.message });
       return;
     }
+
+    // Report to Sentry (always, even if Telegram alert fails below)
+    captureException(error, context);
 
     // Get count from cache
     const entry = alertCache.get(errorKey);

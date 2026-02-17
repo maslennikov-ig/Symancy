@@ -4,6 +4,7 @@
  */
 import pino from "pino";
 import { getEnv, isDevelopment } from "../config/env.js";
+import { captureException } from "./sentry.js";
 
 /**
  * Create the main logger instance
@@ -81,11 +82,15 @@ export function setupProcessErrorHandlers(): void {
   const log = getLogger();
 
   process.on("uncaughtException", (error) => {
+    captureException(error, { source: "uncaughtException" });
     log.fatal({ err: error }, "Uncaught exception");
     process.exit(1);
   });
 
   process.on("unhandledRejection", (reason) => {
+    if (reason instanceof Error) {
+      captureException(reason, { source: "unhandledRejection" });
+    }
     log.error({ reason }, "Unhandled rejection");
   });
 }

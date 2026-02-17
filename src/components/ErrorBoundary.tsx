@@ -7,6 +7,7 @@
  */
 import React, { Component, ReactNode } from 'react';
 import { Lang, translations } from '../lib/i18n';
+import { captureException } from '../lib/sentry';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -36,7 +37,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('[ErrorBoundary] Caught error:', error, errorInfo);
-    // TODO: Send to error tracking service (Sentry, etc.)
+    captureException(error, {
+      componentStack: errorInfo.componentStack || undefined,
+      source: 'ErrorBoundary',
+    });
   }
 
   handleReload = () => {

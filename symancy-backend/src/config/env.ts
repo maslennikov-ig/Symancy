@@ -66,6 +66,9 @@ const EnvSchema = z.object({
 
   // Timezone Configuration
   DEFAULT_TIMEZONE: z.string().default("Europe/Moscow"),
+
+  // Sentry Error Tracking
+  SENTRY_DSN: z.string().url().optional(),
 }).refine(
   (data) => data.SUPABASE_JWT_SIGNING_KEY || data.SUPABASE_JWT_SECRET,
   {

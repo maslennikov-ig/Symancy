@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Metric, Text, Grid, Title, Badge, Flex } from '@tremor/react';
-import { Settings, Users, MessageSquare, DollarSign, Activity, BarChart3, TrendingUp } from 'lucide-react';
+import { Settings, Users, MessageSquare, DollarSign, Activity, BarChart3, TrendingUp, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router';
 import { toast } from 'sonner';
 import { AdminLayout } from '../layout/AdminLayout';
@@ -12,12 +12,14 @@ import { formatCurrencyRUB, formatNumber } from '../utils/formatters';
 import { logger } from '../utils/logger';
 import { StatCardSkeleton } from '../components/skeletons';
 import { PaymentCancellationStats } from '../components/PaymentCancellationStats';
+import { SystemHealthWidget } from '../components/SystemHealthWidget';
 
 interface DashboardStats {
   totalUsers: number;
   totalAnalyses: number;
   activeToday: number;
   totalRevenue: number;
+  errorsToday: number;
   isLoading: boolean;
   error: string | null;
 }
@@ -59,6 +61,7 @@ export function DashboardPage() {
     totalAnalyses: 0,
     activeToday: 0,
     totalRevenue: 0,
+    errorsToday: 0,
     isLoading: true,
     error: null,
   });
@@ -72,7 +75,7 @@ export function DashboardPage() {
 
       try {
         // Fetch all stats in parallel
-        const [usersResult, analysesResult, activeTodayResult, revenueResult] = await Promise.all([
+        const [usersResult, analysesResult, activeTodayResult, revenueResult, errorsResult] = await Promise.all([
           // Total users from unified_users
           supabase.from('unified_users').select('id', { count: 'exact', head: true }),
 
@@ -90,6 +93,13 @@ export function DashboardPage() {
             .from('purchases')
             .select('amount_rub')
             .eq('status', 'succeeded'),
+
+          // Errors in last 24h
+          supabase
+            .from('analysis_history')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'failed')
+            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
         ]);
 
         // Calculate total revenue from successful purchases
@@ -104,6 +114,7 @@ export function DashboardPage() {
             totalAnalyses: analysesResult.count ?? 0,
             activeToday: activeTodayResult.count ?? 0,
             totalRevenue,
+            errorsToday: errorsResult.count ?? 0,
             isLoading: false,
             error: null,
           });
@@ -157,9 +168,10 @@ export function DashboardPage() {
           </div>
         )}
 
-        <Grid numItemsMd={2} numItemsLg={4} className="gap-4">
+        <Grid numItemsMd={2} numItemsLg={5} className="gap-4">
           {stats.isLoading ? (
             <>
+              <StatCardSkeleton />
               <StatCardSkeleton />
               <StatCardSkeleton />
               <StatCardSkeleton />
@@ -209,9 +221,24 @@ export function DashboardPage() {
                   <TrendingUp className="h-8 w-8 text-amber-500" />
                 </Flex>
               </Card>
+
+              <Card decoration="top" decorationColor="rose">
+                <Flex justifyContent="between" alignItems="center">
+                  <div>
+                    <Text>{t('admin.monitoring.errorsToday')}</Text>
+                    <Metric>{formatNumber(stats.errorsToday)}</Metric>
+                  </div>
+                  <AlertTriangle className="h-8 w-8 text-rose-500" />
+                </Flex>
+              </Card>
             </>
           )}
         </Grid>
+      </div>
+
+      {/* System Health */}
+      <div className="mb-8">
+        <SystemHealthWidget />
       </div>
 
       {/* Payment Cancellation Analytics */}

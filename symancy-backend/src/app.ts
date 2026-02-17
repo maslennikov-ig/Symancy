@@ -9,6 +9,7 @@ import { access, mkdir } from "fs/promises";
 import { constants } from "fs";
 import { getEnv, isApiMode, isWorkerMode } from "./config/env.js";
 import { getLogger, setupProcessErrorHandlers } from "./core/logger.js";
+import { initSentry, flushSentry } from "./core/sentry.js";
 import { closeDatabase, getPool } from "./core/database.js";
 import { getQueue, stopQueue } from "./core/queue.js";
 import { createWebhookHandler, setWebhook, getWebhookInfo } from "./core/telegram.js";
@@ -274,6 +275,7 @@ async function shutdown(fastify?: Awaited<ReturnType<typeof Fastify>>) {
   await closeCheckpointer();
   await closeDatabase();
 
+  await flushSentry();
   logger.info("Shutdown complete");
   process.exit(0);
 }
@@ -283,6 +285,7 @@ async function shutdown(fastify?: Awaited<ReturnType<typeof Fastify>>) {
  */
 async function main() {
   setupProcessErrorHandlers();
+  initSentry();
 
   const env = getEnv();
   logger.info({ mode: env.MODE }, "Starting application...");
