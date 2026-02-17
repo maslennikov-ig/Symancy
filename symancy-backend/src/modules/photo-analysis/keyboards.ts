@@ -158,3 +158,142 @@ export const TOPIC_SELECTION_MESSAGES: Record<string, string> = {
 export function getTopicSelectionMessage(language: string = "ru"): string {
   return TOPIC_SELECTION_MESSAGES[language] || TOPIC_SELECTION_MESSAGES["ru"]!;
 }
+
+// =============================================================================
+// Retopic Keyboard (re-reading another topic from same cup)
+// =============================================================================
+
+/**
+ * Prompt messages for retopic keyboard in different languages
+ * Shown above the retopic inline keyboard after a reading is complete
+ */
+export const RETOPIC_MESSAGES: Record<string, string> = {
+  ru: "☕ Хотите узнать о другой теме? (1 Basic-кредит)",
+  en: "☕ Want to read another topic? (1 Basic credit)",
+  zh: "☕ 想了解其他主题吗？（1个Basic积分）",
+};
+
+/**
+ * Valid single topic keys (excludes "all" which is not valid for retopic)
+ */
+const VALID_SINGLE_TOPICS = new Set([
+  "love",
+  "career",
+  "money",
+  "health",
+  "family",
+  "spiritual",
+]);
+
+/**
+ * UUID v4 format regex for validation
+ */
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Create retopic keyboard for selecting another topic from the same cup
+ * Filters out topics already covered in the analysis session
+ *
+ * @param analysisId - UUID of the original analysis record
+ * @param coveredTopics - Array of topic keys already read in this session
+ * @param language - User's language code (ru, en, zh)
+ * @returns InlineKeyboardMarkup or null if no remaining topics
+ *
+ * @example
+ * ```typescript
+ * const keyboard = createRetopicKeyboard("uuid-here", ["love", "career"], "ru");
+ * if (keyboard) {
+ *   await ctx.reply(RETOPIC_MESSAGES["ru"], { reply_markup: keyboard });
+ * }
+ * ```
+ */
+export function createRetopicKeyboard(
+  analysisId: string,
+  coveredTopics: string[],
+  language: string = "ru"
+): InlineKeyboardMarkup | null {
+  // Filter READING_TOPICS excluding already covered topics
+  const coveredSet = new Set(coveredTopics);
+  const remainingTopics = READING_TOPICS.filter(
+    (topic) => !coveredSet.has(topic.key)
+  );
+
+  // No remaining topics to show
+  if (remainingTopics.length === 0) {
+    return null;
+  }
+
+  const keyboard = new InlineKeyboard();
+
+  // 2-column grid layout (same as createTopicKeyboard)
+  for (let i = 0; i < remainingTopics.length; i += 2) {
+    const topic1 = remainingTopics[i];
+    const topic2 = remainingTopics[i + 1];
+
+    if (topic1) {
+      keyboard.text(
+        getTopicButtonLabel(topic1, language),
+        `rt:${topic1.key}:${analysisId}`
+      );
+    }
+
+    if (topic2) {
+      keyboard.text(
+        getTopicButtonLabel(topic2, language),
+        `rt:${topic2.key}:${analysisId}`
+      );
+    }
+
+    keyboard.row();
+  }
+
+  return keyboard;
+}
+
+/**
+ * Parse retopic callback data
+ * Format: rt:{topicKey}:{analysisId}
+ *
+ * @param data - Callback data string from Telegram
+ * @returns Parsed object with topicKey and analysisId, or null if invalid
+ *
+ * @example
+ * ```typescript
+ * const result = parseRetopicCallback("rt:love:550e8400-e29b-41d4-a716-446655440000");
+ * // { topicKey: "love", analysisId: "550e8400-e29b-41d4-a716-446655440000" }
+ * ```
+ */
+export function parseRetopicCallback(data: string): {
+  topicKey: string;
+  analysisId: string;
+} | null {
+  // Validate format starts with "rt:"
+  if (!data.startsWith("rt:")) {
+    return null;
+  }
+
+  // Split into parts: ["rt", topicKey, analysisId]
+  const parts = data.split(":");
+
+  if (parts.length < 3) {
+    return null;
+  }
+
+  const topicKey = parts[1];
+  // analysisId may contain colons (unlikely for UUID, but be safe)
+  // Rejoin remaining parts in case of unexpected format
+  const analysisId = parts.slice(2).join(":");
+
+  // Validate topicKey is not empty and is a valid single topic
+  if (!topicKey || !VALID_SINGLE_TOPICS.has(topicKey)) {
+    return null;
+  }
+
+  // Validate analysisId looks like UUID format
+  if (!analysisId || !UUID_REGEX.test(analysisId)) {
+    return null;
+  }
+
+  return { topicKey, analysisId };
+}

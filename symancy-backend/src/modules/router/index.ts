@@ -9,6 +9,7 @@ import { loadProfile, loadUserState, checkBanned, type BotContext } from "./midd
 import { rateLimitMiddleware } from "./rate-limit.js";
 import { handlePhotoMessage } from "../photo-analysis/handler.js";
 import { handleTopicCallback } from "../photo-analysis/topic-handler.js";
+import { handleRetopicCallback } from "../photo-analysis/retopic-handler.js";
 import { handleTextMessage } from "../chat/handler.js";
 import {
   handleCassandraCommand,
@@ -350,6 +351,12 @@ export function setupRouter(): void {
       // Route topic selection callbacks (photo analysis)
       if (ctx.callbackQuery.data.startsWith("topic:")) {
         await handleTopicCallback(botCtx);
+        return;
+      }
+
+      // Route retopic callbacks (another topic from same cup)
+      if (ctx.callbackQuery.data.startsWith("rt:")) {
+        await handleRetopicCallback(botCtx);
         return;
       }
 

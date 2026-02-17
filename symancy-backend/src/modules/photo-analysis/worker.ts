@@ -42,6 +42,8 @@ import { withRetry } from "../../utils/retry.js";
 import { sendErrorAlert } from "../../utils/admin-alerts.js";
 import { savePhoto } from "./storage.service.js";
 import { getEnv } from "../../config/env.js";
+import { randomUUID } from "node:crypto";
+import { createRetopicKeyboard, RETOPIC_MESSAGES } from "./keyboards.js";
 
 const logger = getLogger().child({ module: "photo-analysis-worker" });
 
@@ -106,6 +108,7 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
 
   let analysisId: string | null = null;
   let creditsConsumed = false;
+  const sessionGroupId = randomUUID();
 
   try {
     // Create analysis record with "processing" status
@@ -117,6 +120,7 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
         persona,
         topic,
         status: "processing",
+        session_group_id: sessionGroupId,
       })
       .select("id")
       .single();
@@ -400,6 +404,7 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
         processing_time_ms: processingTime,
         status: "completed",
         completed_at: new Date().toISOString(),
+        vision_result: visionResult, // Cache for retopic feature
       })
       .eq("id", analysisId);
 
@@ -466,6 +471,21 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
           parse_mode: "HTML",
         });
         jobLogger.debug({ chunk: index + 1, total: messages.length }, "Sent message chunk");
+      }
+    }
+
+    // After single-topic delivery, show retopic keyboard
+    if (topic !== "all" && analysisId) {
+      try {
+        const retopicKeyboard = createRetopicKeyboard(analysisId, [topic], language || "ru");
+        if (retopicKeyboard) {
+          const retopicMsg = RETOPIC_MESSAGES[language || "ru"] || RETOPIC_MESSAGES["ru"]!;
+          await bot.api.sendMessage(chatId, retopicMsg, { reply_markup: retopicKeyboard });
+          jobLogger.debug("Retopic keyboard sent");
+        }
+      } catch (retopicError) {
+        jobLogger.warn({ error: retopicError }, "Failed to send retopic keyboard");
+        // Non-blocking: don't fail the job if retopic keyboard fails
       }
     }
 

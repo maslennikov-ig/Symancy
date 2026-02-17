@@ -129,6 +129,11 @@ export const QUEUE_MORNING_INSIGHT_SINGLE = "morning-insight-single";
  */
 export const QUEUE_EVENING_INSIGHT_SINGLE = "evening-insight-single";
 
+/**
+ * Queue name for retopic (re-reading another topic from same cup)
+ */
+export const QUEUE_RETOPIC_PHOTO = "retopic-photo";
+
 // =============================================================================
 // Rate Limits
 // =============================================================================

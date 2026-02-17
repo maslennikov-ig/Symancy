@@ -47,6 +47,25 @@ export const PhotoAnalysisJobSchema = z.object({
 export type PhotoAnalysisJobData = z.infer<typeof PhotoAnalysisJobSchema>;
 
 /**
+ * Retopic job schema
+ * Validates job data for retopic queue (re-reading another topic from same cup)
+ */
+export const RetopicJobSchema = z.object({
+  telegramUserId: z.number().int().positive(),
+  chatId: z.number().int(),
+  messageId: z.number().int().positive(),
+  /** ID of the original analysis that has vision_result */
+  analysisId: z.string().uuid(),
+  persona: z.enum(["arina", "cassandra"]),
+  /** Single topic only (no "all" for retopic) */
+  topic: z.enum(["love", "career", "money", "health", "family", "spiritual"]),
+  language: z.string().min(2).max(10),
+  userName: z.string().optional(),
+});
+
+export type RetopicJobData = z.infer<typeof RetopicJobSchema>;
+
+/**
  * Chat reply job schema
  * Validates job data for chat reply queue
  */

@@ -19,15 +19,18 @@ import {
   QUEUE_EVENING_INSIGHT,
   QUEUE_MORNING_INSIGHT_SINGLE,
   QUEUE_EVENING_INSIGHT_SINGLE,
+  QUEUE_RETOPIC_PHOTO,
   JOB_TIMEOUT_MS,
 } from "../config/constants.js";
 import {
   PhotoAnalysisJobSchema,
   ChatReplyJobSchema,
   SendMessageJobSchema,
+  RetopicJobSchema,
   type PhotoAnalysisJobData,
   type ChatReplyJobData,
   type SendMessageJobData,
+  type RetopicJobData,
 } from "../types/job-schemas.js";
 
 let _boss: PgBoss | null = null;
@@ -70,6 +73,7 @@ export async function getQueue(): Promise<PgBoss> {
       QUEUE_EVENING_INSIGHT,
       QUEUE_MORNING_INSIGHT_SINGLE,
       QUEUE_EVENING_INSIGHT_SINGLE,
+      QUEUE_RETOPIC_PHOTO,
     ];
     for (const queueName of queuesToCreate) {
       try {
@@ -133,6 +137,22 @@ export async function sendMessageJob(data: SendMessageJobData): Promise<string |
   return boss.send(QUEUE_SEND_MESSAGE, validated, {
     retryLimit: 3,
     retryDelay: 10, // Longer delay for message sending (rate limits)
+    expireInSeconds: JOB_TIMEOUT_MS / 1000,
+  });
+}
+
+/**
+ * Send job to retopic queue (re-reading another topic from same cup)
+ * @param data - Job data (validated against RetopicJobSchema)
+ * @returns Job ID or null if failed
+ */
+export async function sendRetopicJob(data: RetopicJobData): Promise<string | null> {
+  const validated = RetopicJobSchema.parse(data);
+
+  const boss = await getQueue();
+  return boss.send(QUEUE_RETOPIC_PHOTO, validated, {
+    retryLimit: 3,
+    retryDelay: 5,
     expireInSeconds: JOB_TIMEOUT_MS / 1000,
   });
 }
@@ -378,4 +398,5 @@ export const QUEUES = {
   ANALYZE_PHOTO: QUEUE_ANALYZE_PHOTO,
   CHAT_REPLY: QUEUE_CHAT_REPLY,
   SEND_MESSAGE: QUEUE_SEND_MESSAGE,
+  RETOPIC_PHOTO: QUEUE_RETOPIC_PHOTO,
 } as const;

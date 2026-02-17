@@ -16,6 +16,7 @@ import { createWebhookHandler, setWebhook, getWebhookInfo } from "./core/telegra
 import { closeCheckpointer } from "./core/langchain/index.js";
 import { setupRouter } from "./modules/router/index.js";
 import { registerPhotoWorker } from "./modules/photo-analysis/worker.js";
+import { registerRetopicWorker } from "./modules/photo-analysis/retopic-worker.js";
 import { registerChatWorker } from "./modules/chat/worker.js";
 import { setupScheduler, registerEngagementWorkers } from "./modules/engagement/index.js";
 import { validatePromptsExist } from "./chains/validation.js";
@@ -241,6 +242,10 @@ async function startWorkers() {
   // Register photo analysis worker
   const photoWorkerId = await registerPhotoWorker();
   logger.info({ workerId: photoWorkerId }, "Photo analysis worker registered");
+
+  // Register retopic worker (re-reading another topic from same cup)
+  const retopicWorkerId = await registerRetopicWorker();
+  logger.info({ workerId: retopicWorkerId }, "Retopic worker registered");
 
   // Register chat reply worker
   const chatWorkerId = await registerChatWorker();
