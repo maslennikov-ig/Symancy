@@ -4,7 +4,7 @@
  * Supports both Arina (warm, mystical) and Cassandra (direct, analytical) personas
  */
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { createArinaModel, createCassandraModel } from "../core/langchain/models.js";
+import { createArinaModel, createArinaBasicModel, createCassandraModel } from "../core/langchain/models.js";
 import type {
   InterpretationChainInput,
   InterpretationResult,
@@ -18,6 +18,12 @@ import { findMaxSimilarity } from "../utils/similarity.js";
 import { getTopicFocusInstruction, type ReadingTopic } from "../config/constants.js";
 
 const logger = getLogger().child({ module: "interpretation-chain" });
+
+/** Max tokens for "all" topic readings (6 sections + intro + conclusion) */
+const MAX_TOKENS_ALL_TOPICS = 5000;
+
+/** Max tokens for continuation requests */
+const MAX_TOKENS_CONTINUATION = 2000;
 
 /**
  * Fallback interpretations when LLM fails
@@ -150,6 +156,76 @@ function replacePlaceholders(
 }
 
 /**
+ * Check if an LLM response was truncated due to token limit
+ * and attempt a continuation if so.
+ *
+ * @param response - The LLM response to check
+ * @param systemPrompt - The system prompt to reuse for continuation
+ * @param model - The model instance (or a new one with continuation token limit)
+ * @param topic - The reading topic for logging
+ * @param createModelFn - Factory to create a continuation model with MAX_TOKENS_CONTINUATION
+ * @returns The (potentially extended) text and additional tokens used
+ */
+async function handleTruncation(
+  response: { content: string | object; response_metadata?: Record<string, unknown>; usage_metadata?: { total_tokens?: number } },
+  systemPrompt: string,
+  topic: ReadingTopic,
+  createModelFn: () => Promise<import("@langchain/openai").ChatOpenAI>,
+): Promise<{ text: string; additionalTokens: number }> {
+  const text = response.content as string;
+  const finishReason = response.response_metadata?.finish_reason as string | undefined;
+  const tokensUsed = response.usage_metadata?.total_tokens ?? 0;
+
+  if (finishReason !== "length") {
+    return { text, additionalTokens: 0 };
+  }
+
+  logger.warn(
+    { topic, tokensUsed, textLength: text.length, finishReason },
+    "Interpretation truncated - requesting continuation"
+  );
+
+  try {
+    const continuationModel = await createModelFn();
+
+    const continuationMessages = [
+      new SystemMessage(systemPrompt),
+      new HumanMessage(
+        "Continue your response from where it was cut off. Complete the remaining sections naturally. Here is what you wrote so far:\n\n" + text
+      ),
+    ];
+
+    const continuationResponse = await continuationModel.invoke(continuationMessages);
+    const continuationText = continuationResponse.content as string;
+    const continuationTokens = continuationResponse.usage_metadata?.total_tokens ?? 0;
+    const continuationFinishReason = continuationResponse.response_metadata?.finish_reason as string | undefined;
+
+    if (continuationFinishReason === "length") {
+      logger.warn(
+        { topic, continuationTokens, continuationLength: continuationText.length },
+        "Continuation also truncated - returning combined result as-is"
+      );
+    }
+
+    logger.info(
+      { topic, continuationTokens, continuationLength: continuationText.length },
+      "Continuation completed successfully"
+    );
+
+    return {
+      text: text + "\n\n" + continuationText,
+      additionalTokens: continuationTokens,
+    };
+  } catch (error) {
+    logger.error(
+      { error, topic },
+      "Continuation request failed - returning truncated result"
+    );
+    return { text, additionalTokens: 0 };
+  }
+}
+
+/**
  * Generate interpretation of coffee ground analysis
  *
  * @param input - Vision result, persona, and optional language/userName/userContext/recentInterpretations
@@ -187,6 +263,10 @@ export async function generateInterpretation(
   let interpretationPrompt: string;
   let model;
 
+  // Use higher maxTokens for "all" topic readings (covers 6 life areas)
+  const isAllTopics = topic === "all";
+  const maxTokensOverride = isAllTopics ? { maxTokens: MAX_TOKENS_ALL_TOPICS } : undefined;
+
   if (persona === "arina") {
     await loadArinaPrompts();
 
@@ -196,7 +276,11 @@ export async function generateInterpretation(
 
     systemPrompt = arinaSystemPrompt;
     interpretationPrompt = arinaInterpretationPrompt;
-    model = await createArinaModel();
+
+    // Single topic uses cheaper basic model; "all" topics uses full Arina model
+    model = isAllTopics
+      ? await createArinaModel(maxTokensOverride)
+      : await createArinaBasicModel();
   } else {
     // Cassandra persona
     await loadCassandraPrompts();
@@ -207,7 +291,7 @@ export async function generateInterpretation(
 
     systemPrompt = cassandraSystemPrompt;
     interpretationPrompt = cassandraInterpretationPrompt;
-    model = await createCassandraModel();
+    model = await createCassandraModel(maxTokensOverride);
   }
 
   // Format vision result for prompt
@@ -239,6 +323,17 @@ export async function generateInterpretation(
     new HumanMessage(interpretationText),
   ];
 
+  // Factory for creating continuation model with limited tokens
+  const createContinuationModel = async () => {
+    const continuationOptions = { maxTokens: MAX_TOKENS_CONTINUATION };
+    if (persona === "arina") {
+      return isAllTopics
+        ? createArinaModel(continuationOptions)
+        : createArinaBasicModel(continuationOptions);
+    }
+    return createCassandraModel(continuationOptions);
+  };
+
   // Invoke model with error recovery
   try {
     const response = await model.invoke(messages);
@@ -247,10 +342,18 @@ export async function generateInterpretation(
     // ChatOpenAI response structure: response.usage_metadata.total_tokens or response.response_metadata
     const tokensUsed = response.usage_metadata?.total_tokens ?? 0;
 
+    // Check for truncation and attempt continuation if needed
+    const { text: resolvedText, additionalTokens } = await handleTruncation(
+      response,
+      systemPrompt,
+      topic,
+      createContinuationModel,
+    );
+
     // Check similarity with recent interpretations
     if (recentInterpretations && recentInterpretations.length > 0) {
       const { maxSimilarity } = findMaxSimilarity(
-        response.content as string,
+        resolvedText,
         recentInterpretations
       );
 
@@ -270,6 +373,7 @@ export async function generateInterpretation(
           USER_CONTEXT: userContext || "Не указан",
           LENS_NAME: newLens.name,
           LENS_INSTRUCTION: newLens.instruction,
+          TOPIC_FOCUS: topicFocus,
         });
 
         const newMessages = [
@@ -279,21 +383,31 @@ export async function generateInterpretation(
 
         const newResponse = await model.invoke(newMessages);
 
+        // Check for truncation on re-roll response as well
+        const { text: rerollText, additionalTokens: rerollAdditionalTokens } = await handleTruncation(
+          newResponse,
+          systemPrompt,
+          topic,
+          createContinuationModel,
+        );
+
         return {
-          text: newResponse.content as string,
+          text: rerollText,
           persona,
           tokensUsed:
-            (response.usage_metadata?.total_tokens ?? 0) +
-            (newResponse.usage_metadata?.total_tokens ?? 0),
+            tokensUsed +
+            additionalTokens +
+            (newResponse.usage_metadata?.total_tokens ?? 0) +
+            rerollAdditionalTokens,
           success: true,
         };
       }
     }
 
     return {
-      text: response.content as string,
+      text: resolvedText,
       persona,
-      tokensUsed,
+      tokensUsed: tokensUsed + additionalTokens,
       success: true,
     };
   } catch (error) {

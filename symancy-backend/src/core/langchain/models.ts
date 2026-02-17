@@ -9,6 +9,7 @@ import { ChatOpenAI } from "@langchain/openai";
 import { getEnv } from "../../config/env.js";
 import {
   MODEL_ARINA,
+  MODEL_ARINA_BASIC,
   MODEL_CASSANDRA,
   MODEL_CHAT,
   MODEL_VISION,
@@ -83,8 +84,8 @@ function createChatOpenAIInstance(
 }
 
 /**
- * Create Arina persona model
- * Used for Arina-style interpretations with warm, archetypal tone
+ * Create Arina persona model (full "all" topics readings)
+ * Used for Arina-style interpretations covering all 6 life areas
  *
  * Loads model from per-persona config (arina_model, arina_temperature, arina_max_tokens)
  * with fallback to constants for resilience.
@@ -93,10 +94,32 @@ function createChatOpenAIInstance(
  * - High temperature (0.9) for creative diversity
  * - Frequency penalty (0.6) to reduce token repetition
  * - Presence penalty (0.5) to encourage new topics
- * - Max tokens (3000) sufficient for both single topic and full "all" readings
+ * - Max tokens (3000) default, overridden to 5000 for "all" topic readings
  */
 export async function createArinaModel(options?: ModelOptions): Promise<ChatOpenAI> {
   const modelName = await getConfig("arina_model", MODEL_ARINA);
+  const temperature = await getConfig("arina_temperature", 0.9);
+  const maxTokens = await getConfig("arina_max_tokens", 3000);
+  const frequencyPenalty = await getConfig("arina_frequency_penalty", 0.6);
+  const presencePenalty = await getConfig("arina_presence_penalty", 0.5);
+
+  return createChatOpenAIInstance(modelName, {
+    temperature,
+    frequencyPenalty,
+    presencePenalty,
+    maxTokens,
+    ...options,
+  });
+}
+
+/**
+ * Create Arina basic model for single-topic readings
+ * Uses a cheaper/faster model for focused readings on one life area
+ *
+ * Same creative parameters as the full Arina model but with MODEL_ARINA_BASIC.
+ */
+export async function createArinaBasicModel(options?: ModelOptions): Promise<ChatOpenAI> {
+  const modelName = await getConfig("arina_basic_model", MODEL_ARINA_BASIC);
   const temperature = await getConfig("arina_temperature", 0.9);
   const maxTokens = await getConfig("arina_max_tokens", 3000);
   const frequencyPenalty = await getConfig("arina_frequency_penalty", 0.6);
@@ -121,12 +144,12 @@ export async function createArinaModel(options?: ModelOptions): Promise<ChatOpen
  * - Higher temperature (1.1) for more creative, unpredictable outputs
  * - Frequency penalty (0.4) to reduce token repetition
  * - Presence penalty (0.3) to encourage exploring new topics
- * - Max tokens (1500) for elaborate mystical descriptions
+ * - Max tokens (6000) generous ceiling for premium detailed readings
  */
 export async function createCassandraModel(options?: ModelOptions): Promise<ChatOpenAI> {
   const modelName = await getConfig("cassandra_model", MODEL_CASSANDRA);
   const temperature = await getConfig("cassandra_temperature", 1.1);
-  const maxTokens = await getConfig("cassandra_max_tokens", 1500);
+  const maxTokens = await getConfig("cassandra_max_tokens", 6000);
   const frequencyPenalty = await getConfig("cassandra_frequency_penalty", 0.4);
   const presencePenalty = await getConfig("cassandra_presence_penalty", 0.3);
 

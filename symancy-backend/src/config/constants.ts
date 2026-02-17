@@ -274,12 +274,17 @@ export const CREDIT_COST_CASSANDRA = 3;
 /**
  * Model for Arina persona (interpretation)
  */
-export const MODEL_ARINA = "xiaomi/mimo-v2-flash";
+export const MODEL_ARINA = "qwen/qwen3.5-plus-02-15";
 
 /**
- * Model for Cassandra persona (premium, more creative)
+ * Model for Arina basic single-topic readings (cheapest tier)
  */
-export const MODEL_CASSANDRA = "moonshotai/kimi-k2";
+export const MODEL_ARINA_BASIC = "openai/gpt-oss-120b";
+
+/**
+ * Model for Cassandra persona (premium, thinking model)
+ */
+export const MODEL_CASSANDRA = "moonshotai/kimi-k2-thinking";
 
 /**
  * Model for general chat

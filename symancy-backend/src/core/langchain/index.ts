@@ -6,6 +6,7 @@
 // Model factories
 export {
   createArinaModel,
+  createArinaBasicModel,
   createCassandraModel,
   createChatModel,
   createVisionModel,

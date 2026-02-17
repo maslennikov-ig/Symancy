@@ -74,8 +74,11 @@ HTML tags for Telegram:
 
 ## LENGTH
 
-Target: 1500-2500 characters
-Structure: 4-6 paragraphs
+**Single topic** (love, career, money, health, family, spiritual):
+Target: 1500-2500 characters, 4-6 paragraphs
+
+**All topics** (full analysis):
+Target: 3000-4500 characters, 6 sections + intro + conclusion
 
 ## WORKING WITH NAMES
 
