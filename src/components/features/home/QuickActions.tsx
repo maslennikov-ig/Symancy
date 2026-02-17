@@ -62,6 +62,28 @@ function ChatIcon({ className }: { className?: string }) {
 }
 
 /**
+ * Mood Icon SVG (heart with smile)
+ */
+function MoodIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+      <path d="M9 11a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" />
+      <path d="M15 11a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" />
+      <path d="M9.5 15a3.5 3.5 0 0 0 5 0" />
+    </svg>
+  );
+}
+
+/**
  * QuickActions - Two side-by-side action buttons
  */
 function QuickActionsComponent({ t, className }: QuickActionsProps) {
@@ -97,6 +119,11 @@ function QuickActionsComponent({ t, className }: QuickActionsProps) {
     navigate('/chat');
   };
 
+  const handleLogMood = () => {
+    hapticFeedback.impact('light');
+    navigate('/mood');
+  };
+
   return (
     <div className={cn('w-full', className)}>
       <div className="grid grid-cols-2 gap-3">
@@ -130,6 +157,21 @@ function QuickActionsComponent({ t, className }: QuickActionsProps) {
           </span>
         </Button>
       </div>
+
+      {/* Log Mood - full width */}
+      <Button
+        onClick={handleLogMood}
+        variant="outline"
+        className="w-full h-auto py-3 px-3 flex items-center gap-3 bg-card hover:bg-accent mt-3"
+        aria-label={t('home.logMood')}
+      >
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center" aria-hidden="true">
+          <MoodIcon className="w-5 h-5 text-primary" />
+        </div>
+        <span className="text-sm font-medium text-foreground">
+          {t('home.logMood')}
+        </span>
+      </Button>
     </div>
   );
 }

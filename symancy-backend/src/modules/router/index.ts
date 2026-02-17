@@ -25,6 +25,7 @@ import {
   handleOnboardingCallback,
   isInOnboarding,
 } from "../onboarding/handler.js";
+import { handleMoodCommand, handleMoodCallback } from "../mood/handler.js";
 
 const logger = getLogger().child({ module: "router" });
 
@@ -275,6 +276,24 @@ export function setupRouter(): void {
     }
   });
 
+  // Handle /mood command
+  bot.command("mood", async (ctx) => {
+    const botCtx = ctx as BotContext;
+    logger.info({ telegramUserId: ctx.from?.id }, "Received /mood command");
+
+    if (requiresOnboarding(botCtx)) {
+      await sendOnboardingRequired(botCtx);
+      return;
+    }
+
+    try {
+      await handleMoodCommand(botCtx);
+    } catch (error) {
+      logger.error({ error, telegramUserId: ctx.from?.id }, "Error in /mood command");
+      await ctx.reply("Ошибка в команде /mood");
+    }
+  });
+
   // Handle photos - delegate to photo-analysis module
   bot.on("message:photo", async (ctx) => {
     const botCtx = ctx as BotContext;
@@ -360,6 +379,12 @@ export function setupRouter(): void {
         return;
       }
 
+      // Route mood callbacks
+      if (ctx.callbackQuery.data.startsWith("mood:")) {
+        await handleMoodCallback(botCtx);
+        return;
+      }
+
       // Unknown callback - acknowledge to remove loading state
       await ctx.answerCallbackQuery({ text: "Обрабатывается..." });
     } catch (error) {
@@ -382,6 +407,7 @@ export function setupRouter(): void {
       { command: "credits", description: "Проверить баланс кредитов" },
       { command: "history", description: "История гаданий" },
       { command: "link", description: "Связать с веб-версией" },
+      { command: "mood", description: "Записать настроение" },
       { command: "help", description: "Справка по командам" },
     ])
     .then(() => logger.info("Bot commands menu set"))

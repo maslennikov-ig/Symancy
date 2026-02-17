@@ -35,6 +35,7 @@ const AdminApp = lazy(() => import('./admin/AdminApp'));
 const Home = lazy(() => import('./pages/Home'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const Analysis = lazy(() => import('./pages/Analysis'));
+const Mood = lazy(() => import('./pages/Mood'));
 
 // Layout components
 import { AppLayout } from './components/layout/AppLayout';
@@ -628,6 +629,10 @@ const App: React.FC = () => {
           <Route
             path="/profile/credits"
             element={withAppLayout(<ProfileCredits language={language} t={t} />)}
+          />
+          <Route
+            path="/mood"
+            element={withAppLayout(<Mood language={language} t={t} />)}
           />
 
           {/* Admin routes - no BottomNav */}

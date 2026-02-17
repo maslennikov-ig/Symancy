@@ -23,6 +23,7 @@ import { BalanceCard } from '../components/features/home/BalanceCard';
 import { DailyInsightCard } from '../components/features/home/DailyInsightCard';
 import { QuickActions } from '../components/features/home/QuickActions';
 import { RecentActivity } from '../components/features/home/RecentActivity';
+import { MoodPromptCard } from '../components/features/mood/MoodPromptCard';
 import { LoaderIcon } from '../components/icons/LoaderIcon';
 
 interface HomeProps {
@@ -97,6 +98,12 @@ const Home: React.FC<HomeProps> = ({ language: propLanguage, t: propT }) => {
           t={t as (key: string) => string}
           language={language}
           dailyInsightCache={dailyInsightCache}
+        />
+
+        {/* Mood Prompt Card */}
+        <MoodPromptCard
+          t={t as (key: string) => string}
+          language={language}
         />
 
         {/* Quick Actions */}
