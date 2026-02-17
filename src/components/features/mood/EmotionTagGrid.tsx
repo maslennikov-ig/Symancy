@@ -60,6 +60,8 @@ function EmotionTagGridComponent({ selected, onChange, t }: EmotionTagGridProps)
                 }
               `}
               aria-pressed={isSelected}
+              role="switch"
+              aria-label={t(emotion.labelKey)}
             >
               <span aria-hidden="true">{emotion.emoji}</span>
               <span className="truncate">{t(emotion.labelKey)}</span>

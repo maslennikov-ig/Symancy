@@ -9,6 +9,7 @@
  */
 import React, { useCallback } from 'react';
 import { useTelegramWebApp } from '../../../hooks/useTelegramWebApp';
+import { getScoreColor, MOOD_SCORE_MIN, MOOD_SCORE_MAX } from '../../../lib/moodUtils';
 
 interface MoodScorePickerProps {
   /** Currently selected score (null if none) */
@@ -17,17 +18,6 @@ interface MoodScorePickerProps {
   onChange: (score: number) => void;
   /** Translation function */
   t: (key: string) => string;
-}
-
-/**
- * Maps a score (1-10) to an HSL color from red to green
- */
-function getScoreColor(score: number): string {
-  if (score <= 2) return 'hsl(0, 70%, 55%)';
-  if (score <= 4) return 'hsl(30, 80%, 55%)';
-  if (score <= 6) return 'hsl(50, 80%, 50%)';
-  if (score <= 8) return 'hsl(90, 60%, 45%)';
-  return 'hsl(120, 50%, 45%)';
 }
 
 function MoodScorePickerComponent({ value, onChange, t }: MoodScorePickerProps) {
@@ -47,7 +37,7 @@ function MoodScorePickerComponent({ value, onChange, t }: MoodScorePickerProps) 
         {t('mood.entry.score')}
       </label>
       <div className="flex items-center justify-between gap-1.5">
-        {Array.from({ length: 10 }, (_, i) => i + 1).map((score) => {
+        {Array.from({ length: MOOD_SCORE_MAX - MOOD_SCORE_MIN + 1 }, (_, i) => i + MOOD_SCORE_MIN).map((score) => {
           const isSelected = value === score;
           const color = getScoreColor(score);
 

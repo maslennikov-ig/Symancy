@@ -44,7 +44,7 @@ const MoodPage: React.FC<MoodPageProps> = ({ language, t: propT }) => {
   const [activeTab, setActiveTab] = useState<string>(initialTab);
 
   // Today's entry from hook
-  const { todayEntry, save: saveEntry } = useMoodEntry();
+  const { todayEntry, isLoading: entryLoading, save: saveEntry } = useMoodEntry();
 
   // Form state
   const [score, setScore] = useState<number | null>(null);
@@ -56,14 +56,14 @@ const MoodPage: React.FC<MoodPageProps> = ({ language, t: propT }) => {
   // Calendar entries for stats
   const [calendarEntries, setCalendarEntries] = useState<MoodEntry[]>([]);
 
-  // Initialize form from today's entry
+  // Initialize form from today's entry (wait for loading to complete)
   useEffect(() => {
-    if (todayEntry) {
+    if (!entryLoading && todayEntry) {
       setScore(todayEntry.score);
       setEmotions(todayEntry.emotions);
       setNote(todayEntry.note ?? '');
     }
-  }, [todayEntry]);
+  }, [todayEntry, entryLoading]);
 
   // Load calendar entries for stats
   useEffect(() => {

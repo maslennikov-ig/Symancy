@@ -34,8 +34,10 @@ function getTodayISO(): string {
  */
 export async function saveTodayMood(input: MoodEntryInput): Promise<MoodEntry> {
   const client = getClient();
+  const today = getTodayISO();
 
   const { data, error } = await client.rpc('upsert_mood_entry', {
+    p_date: today,
     p_score: input.score,
     p_emotions: input.emotions,
     p_note: input.note || null,

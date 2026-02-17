@@ -8,6 +8,7 @@
  */
 import React, { useMemo } from 'react';
 import { EMOTIONS } from '../../types/mood';
+import { getScoreColor } from '../../lib/moodUtils';
 import type { MoodEntry, EmotionTag } from '../../types/mood';
 
 interface MoodStatsProps {
@@ -15,17 +16,6 @@ interface MoodStatsProps {
   entries: MoodEntry[];
   /** Translation function */
   t: (key: string) => string;
-}
-
-/**
- * Maps score to color
- */
-function getScoreColor(score: number): string {
-  if (score <= 2) return 'hsl(0, 70%, 55%)';
-  if (score <= 4) return 'hsl(30, 80%, 55%)';
-  if (score <= 6) return 'hsl(50, 80%, 50%)';
-  if (score <= 8) return 'hsl(90, 60%, 45%)';
-  return 'hsl(120, 50%, 45%)';
 }
 
 /**
@@ -42,33 +32,32 @@ function getWeekStart(): Date {
 }
 
 /**
- * Calculate consecutive day streak up to today
+ * Calculate consecutive day streak up to today.
+ * If today has no entry, starts counting from yesterday.
  */
 function calculateStreak(entries: MoodEntry[]): number {
   if (entries.length === 0) return 0;
 
-  // Sort entries by date descending
-  const sorted = [...entries].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-  );
+  const dateSet = new Set(entries.map((e) => e.date));
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  let streak = 0;
-  const checkDate = new Date(today);
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
+  // Start from today if entry exists, otherwise from yesterday
+  const checkDate = new Date(today);
+  if (!dateSet.has(todayStr)) {
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  let streak = 0;
   for (let i = 0; i < 365; i++) {
     const dateStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
-    const hasEntry = sorted.some((e) => e.date === dateStr);
 
-    if (hasEntry) {
+    if (dateSet.has(dateStr)) {
       streak++;
       checkDate.setDate(checkDate.getDate() - 1);
-    } else if (i === 0) {
-      // Today has no entry yet, check if yesterday starts a streak
-      checkDate.setDate(checkDate.getDate() - 1);
-      continue;
     } else {
       break;
     }

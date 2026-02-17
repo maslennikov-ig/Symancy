@@ -9,6 +9,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { getMoodHistory } from '../../services/moodService';
 import { EMOTIONS } from '../../types/mood';
+import { getScoreColor } from '../../lib/moodUtils';
 import type { MoodEntry, EmotionTag } from '../../types/mood';
 import type { Lang } from '../../lib/i18n';
 
@@ -17,17 +18,6 @@ interface MoodCalendarProps {
   language: Lang;
   /** Translation function */
   t: (key: string) => string;
-}
-
-/**
- * Maps score to color for calendar dot
- */
-function getScoreColor(score: number): string {
-  if (score <= 2) return 'hsl(0, 70%, 55%)';
-  if (score <= 4) return 'hsl(30, 80%, 55%)';
-  if (score <= 6) return 'hsl(50, 80%, 50%)';
-  if (score <= 8) return 'hsl(90, 60%, 45%)';
-  return 'hsl(120, 50%, 45%)';
 }
 
 /**
@@ -65,6 +55,7 @@ function MoodCalendarComponent({ language, t }: MoodCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [entries, setEntries] = useState<MoodEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const locale = getLocale(language);
@@ -75,6 +66,7 @@ function MoodCalendarComponent({ language, t }: MoodCalendarProps) {
 
     async function fetchEntries() {
       setIsLoading(true);
+      setError(null);
       try {
         const startDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
         const endDay = getDaysInMonth(currentYear, currentMonth);
@@ -88,6 +80,7 @@ function MoodCalendarComponent({ language, t }: MoodCalendarProps) {
         console.error('Failed to load mood history:', err);
         if (!cancelled) {
           setEntries([]);
+          setError(t('mood.error.loadFailed'));
         }
       } finally {
         if (!cancelled) {
@@ -262,6 +255,13 @@ function MoodCalendarComponent({ language, t }: MoodCalendarProps) {
           );
         })}
       </div>
+
+      {/* Error message */}
+      {error && (
+        <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm text-center">
+          {error}
+        </div>
+      )}
 
       {/* Legend */}
       <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">

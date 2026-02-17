@@ -5,8 +5,20 @@ import { createScoreKeyboard, createEmotionKeyboard } from "./keyboards.js";
 
 const logger = getLogger().child({ module: "mood" });
 
-// In-memory flow state per user (short-lived, cleared after save)
-const moodFlowState = new Map<number, { score: number; emotions: string[] }>();
+// In-memory flow state per user (short-lived, cleared after save or TTL expiry)
+const moodFlowState = new Map<number, { score: number; emotions: string[]; timestamp: number }>();
+
+// TTL cleanup: remove stale flow states every 10 minutes (30 min TTL)
+const FLOW_STATE_TTL_MS = 30 * 60 * 1000;
+setInterval(() => {
+  const now = Date.now();
+  for (const [userId, state] of moodFlowState.entries()) {
+    if (now - state.timestamp > FLOW_STATE_TTL_MS) {
+      moodFlowState.delete(userId);
+      logger.debug({ userId }, "Mood flow state expired (TTL)");
+    }
+  }
+}, 10 * 60 * 1000);
 
 /** Handle /mood command -- show score keyboard */
 export async function handleMoodCommand(ctx: BotContext): Promise<void> {
@@ -34,7 +46,7 @@ export async function handleMoodCallback(ctx: BotContext): Promise<void> {
       return;
     }
 
-    moodFlowState.set(userId, { score, emotions: [] });
+    moodFlowState.set(userId, { score, emotions: [], timestamp: Date.now() });
 
     const keyboard = createEmotionKeyboard([], ctx.from.language_code);
     await ctx.editMessageText(
@@ -57,22 +69,28 @@ export async function handleMoodCallback(ctx: BotContext): Promise<void> {
     }
 
     if (value === "confirm" || value === "skip") {
-      // Save to DB
-      await saveMoodEntry(userId, state.score, state.emotions);
-      moodFlowState.delete(userId);
-
       const emotionText = state.emotions.length > 0
         ? state.emotions.join(", ")
         : "не указаны";
 
-      await ctx.editMessageText(
-        `✅ Настроение записано!\n\n` +
-        `🌡 Оценка: ${state.score}/10\n` +
-        `💭 Эмоции: ${emotionText}\n\n` +
-        `Спасибо! Это поможет сделать гадания точнее.`
-      );
-      await ctx.answerCallbackQuery({ text: "Сохранено!" });
-      logger.info({ userId, score: state.score, emotions: state.emotions }, "Mood saved");
+      try {
+        await saveMoodEntry(userId, state.score, state.emotions);
+
+        await ctx.editMessageText(
+          `✅ Настроение записано!\n\n` +
+          `🌡 Оценка: ${state.score}/10\n` +
+          `💭 Эмоции: ${emotionText}\n\n` +
+          `Спасибо! Это поможет сделать гадания точнее.`
+        );
+        await ctx.answerCallbackQuery({ text: "Сохранено!" });
+        logger.info({ userId, score: state.score, emotions: state.emotions }, "Mood saved");
+      } catch (error) {
+        logger.error({ userId, error }, "Failed to save mood entry via callback");
+        await ctx.answerCallbackQuery({ text: "Ошибка сохранения" });
+        await ctx.reply("Не удалось сохранить настроение. Попробуйте /mood ещё раз.");
+      } finally {
+        moodFlowState.delete(userId);
+      }
       return;
     }
 
@@ -107,8 +125,7 @@ async function saveMoodEntry(
     .single();
 
   if (userError || !user) {
-    logger.error({ telegramUserId, error: userError }, "Failed to resolve unified user for mood");
-    return;
+    throw new Error(`Failed to resolve unified user for telegram_id=${telegramUserId}: ${userError?.message}`);
   }
 
   const today = new Date().toISOString().split("T")[0];
@@ -127,6 +144,6 @@ async function saveMoodEntry(
     );
 
   if (error) {
-    logger.error({ telegramUserId, error }, "Failed to save mood entry");
+    throw new Error(`Failed to save mood entry: ${error.message}`);
   }
 }

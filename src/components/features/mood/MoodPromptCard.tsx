@@ -15,6 +15,7 @@ import { Button } from '../../ui/button';
 import { cn } from '../../../lib/utils';
 import { useMoodEntry } from '../../../hooks/useMoodEntry';
 import { EMOTIONS } from '../../../types/mood';
+import { getScoreColor } from '../../../lib/moodUtils';
 import type { Lang } from '../../../lib/i18n';
 
 interface MoodPromptCardProps {
@@ -24,17 +25,6 @@ interface MoodPromptCardProps {
   language: Lang;
   /** Optional className */
   className?: string;
-}
-
-/**
- * Maps a score to a color for display
- */
-function getScoreColor(score: number): string {
-  if (score <= 2) return 'hsl(0, 70%, 55%)';
-  if (score <= 4) return 'hsl(30, 80%, 55%)';
-  if (score <= 6) return 'hsl(50, 80%, 50%)';
-  if (score <= 8) return 'hsl(90, 60%, 45%)';
-  return 'hsl(120, 50%, 45%)';
 }
 
 function MoodPromptCardComponent({ t, language, className }: MoodPromptCardProps) {
