@@ -50,6 +50,11 @@ export type PhotoAnalysisJobData = z.infer<typeof PhotoAnalysisJobSchema>;
  * Retopic job schema
  * Validates job data for retopic queue (re-reading another topic from same cup)
  */
+/** Single topic enum (derived from ReadingTopicEnum, excludes "all") */
+export const SingleTopicEnum = ReadingTopicEnum.exclude(["all"]);
+
+export type SingleTopic = z.infer<typeof SingleTopicEnum>;
+
 export const RetopicJobSchema = z.object({
   telegramUserId: z.number().int().positive(),
   chatId: z.number().int(),
@@ -58,7 +63,7 @@ export const RetopicJobSchema = z.object({
   analysisId: z.string().uuid(),
   persona: z.enum(["arina", "cassandra"]),
   /** Single topic only (no "all" for retopic) */
-  topic: z.enum(["love", "career", "money", "health", "family", "spiritual"]),
+  topic: SingleTopicEnum,
   language: z.string().min(2).max(10),
   userName: z.string().optional(),
 });

@@ -8,6 +8,7 @@
 import { InlineKeyboard } from "grammy";
 import type { InlineKeyboardMarkup } from "grammy/types";
 import { READING_TOPICS } from "../../config/constants.js";
+import { SingleTopicEnum } from "../../types/job-schemas.js";
 import { storeFileId, resolveFileId } from "./file-id-cache.js";
 
 /**
@@ -174,16 +175,9 @@ export const RETOPIC_MESSAGES: Record<string, string> = {
 };
 
 /**
- * Valid single topic keys (excludes "all" which is not valid for retopic)
+ * Valid single topic keys (derived from SingleTopicEnum, excludes "all")
  */
-const VALID_SINGLE_TOPICS = new Set([
-  "love",
-  "career",
-  "money",
-  "health",
-  "family",
-  "spiritual",
-]);
+const VALID_SINGLE_TOPICS: Set<string> = new Set(SingleTopicEnum.options);
 
 /**
  * UUID v4 format regex for validation
@@ -273,17 +267,15 @@ export function parseRetopicCallback(data: string): {
     return null;
   }
 
-  // Split into parts: ["rt", topicKey, analysisId]
+  // Split into exactly 3 parts: ["rt", topicKey, analysisId]
   const parts = data.split(":");
 
-  if (parts.length < 3) {
+  if (parts.length !== 3) {
     return null;
   }
 
   const topicKey = parts[1];
-  // analysisId may contain colons (unlikely for UUID, but be safe)
-  // Rejoin remaining parts in case of unexpected format
-  const analysisId = parts.slice(2).join(":");
+  const analysisId = parts[2];
 
   // Validate topicKey is not empty and is a valid single topic
   if (!topicKey || !VALID_SINGLE_TOPICS.has(topicKey)) {

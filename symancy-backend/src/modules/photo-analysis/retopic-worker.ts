@@ -30,7 +30,7 @@ import { cassandraStrategy } from "./personas/cassandra.strategy.js";
 import type { PersonaStrategy } from "./personas/arina.strategy.js";
 import { withRetry } from "../../utils/retry.js";
 import { sendErrorAlert } from "../../utils/admin-alerts.js";
-import { createRetopicKeyboard, RETOPIC_MESSAGES } from "./keyboards.js";
+import { createRetopicKeyboard } from "./keyboards.js";
 
 const logger = getLogger().child({ module: "retopic-worker" });
 
@@ -41,6 +41,20 @@ const logger = getLogger().child({ module: "retopic-worker" });
 const PERSONA_STRATEGIES: Record<"arina" | "cassandra", PersonaStrategy> = {
   arina: arinaStrategy,
   cassandra: cassandraStrategy,
+};
+
+/** Localized insufficient credits messages for worker */
+const INSUFFICIENT_CREDITS_MESSAGES: Record<string, string> = {
+  ru: "💳 Недостаточно Basic-кредитов.\nПожалуйста, пополните баланс.",
+  en: "💳 Not enough Basic credits.\nPlease top up your balance.",
+  zh: "💳 Basic积分不足。\n请充值。",
+};
+
+/** Localized error messages for worker failures */
+const ERROR_MESSAGES: Record<string, string> = {
+  ru: "Произошла ошибка при повторном анализе. Ваш кредит возвращён. Попробуйте ещё раз.",
+  en: "An error occurred during re-analysis. Your credit has been refunded. Please try again.",
+  zh: "重新分析时出错。您的积分已退还。请再试一次。",
 };
 
 /**
@@ -92,12 +106,23 @@ export async function processRetopicJob(job: Job<RetopicJobData>): Promise<void>
       throw new Error("Original analysis not found");
     }
 
-    // Validate ownership
+    // Validate ownership (security check)
     if (originalAnalysis.telegram_user_id !== telegramUserId) {
       jobLogger.error(
-        { expected: telegramUserId, actual: originalAnalysis.telegram_user_id },
-        "Telegram user ID mismatch"
+        {
+          expected: telegramUserId,
+          actual: originalAnalysis.telegram_user_id,
+          analysisId,
+          jobId: job.id,
+          SECURITY_EVENT: "ownership_mismatch",
+        },
+        "SECURITY: Telegram user ID mismatch in retopic job"
       );
+      await sendErrorAlert(new Error("Retopic ownership mismatch"), {
+        module: "retopic-worker",
+        telegramUserId,
+        analysisId,
+      });
       throw new Error("Original analysis not found");
     }
 
@@ -107,11 +132,32 @@ export async function processRetopicJob(job: Job<RetopicJobData>): Promise<void>
       throw new Error("Original analysis not found");
     }
 
-    // Step 2: Parse vision_result from JSONB
+    // Step 2: Parse and validate vision_result from JSONB
     const visionResult = originalAnalysis.vision_result as VisionAnalysisResult;
+    if (!visionResult.rawDescription || !Array.isArray(visionResult.symbols) ||
+        !Array.isArray(visionResult.colors) || !Array.isArray(visionResult.patterns)) {
+      jobLogger.error({ visionResult }, "Invalid vision_result structure in JSONB");
+      throw new Error("Corrupted vision analysis data");
+    }
     jobLogger.debug({ sessionGroupId: originalAnalysis.session_group_id }, "Original analysis fetched");
 
-    // Step 3: Create new analysis record with same session_group_id
+    // Step 3: Consume credits BEFORE creating analysis record (CR-011: avoids orphaned records)
+    jobLogger.debug("Checking and consuming credits");
+    const consumed = await consumeCreditsOfType(telegramUserId, "basic");
+    if (!consumed) {
+      // Not enough credits - edit message and exit gracefully
+      await bot.api.editMessageText(
+        chatId,
+        messageId,
+        INSUFFICIENT_CREDITS_MESSAGES[language] || INSUFFICIENT_CREDITS_MESSAGES["ru"]!
+      );
+      jobLogger.info("Insufficient credits - job aborted");
+      return; // Exit gracefully, don't throw
+    }
+    creditsConsumed = true;
+    jobLogger.info("Credits consumed");
+
+    // Step 4: Create new analysis record with same session_group_id (after credit check)
     const { data: newRecord, error: insertError } = await supabase
       .from("analysis_history")
       .insert({
@@ -133,23 +179,6 @@ export async function processRetopicJob(job: Job<RetopicJobData>): Promise<void>
 
     newAnalysisId = newRecord.id;
     jobLogger.debug({ newAnalysisId }, "New analysis record created");
-
-    // Step 4: Consume credits
-    jobLogger.debug("Checking and consuming credits");
-    const consumed = await consumeCreditsOfType(telegramUserId, "basic");
-    if (!consumed) {
-      // Not enough credits - edit message and exit gracefully
-      await bot.api.editMessageText(
-        chatId,
-        messageId,
-        "💳 Недостаточно Basic-кредитов.\n" +
-          "Пожалуйста, пополните баланс."
-      );
-      jobLogger.info("Insufficient credits - job aborted");
-      return; // Exit gracefully, don't throw
-    }
-    creditsConsumed = true;
-    jobLogger.info("Credits consumed");
 
     // Step 5: Send typing action
     await bot.api.sendChatAction(chatId, "typing");
@@ -216,19 +245,7 @@ export async function processRetopicJob(job: Job<RetopicJobData>): Promise<void>
       jobLogger.debug("Chat message saved");
     }
 
-    // Step 9: Deliver interpretation via splitMessage
-    const messages = splitMessage(interpretation.text);
-
-    if (messages.length === 0) {
-      throw new Error("Message splitting resulted in empty array");
-    }
-
-    for (const chunk of messages) {
-      await bot.api.sendMessage(chatId, chunk, { parse_mode: "HTML" });
-    }
-    jobLogger.debug({ chunks: messages.length }, "Interpretation delivered");
-
-    // Step 10: Query covered topics in session group
+    // Step 9: Query covered topics in session group (needed for keyboard)
     const { data: coveredRows } = await supabase
       .from("analysis_history")
       .select("topic")
@@ -240,14 +257,26 @@ export async function processRetopicJob(job: Job<RetopicJobData>): Promise<void>
       (coveredRows || []).map((r: { topic: string }) => r.topic)
     )];
 
-    // Step 11: Show retopic keyboard with remaining topics
+    // Build retopic keyboard for remaining topics (inline with last message)
     const retopicKeyboard = createRetopicKeyboard(
       newAnalysisId!, coveredTopics, language
     );
-    if (retopicKeyboard) {
-      const msg = RETOPIC_MESSAGES[language] || RETOPIC_MESSAGES["ru"]!;
-      await bot.api.sendMessage(chatId, msg, { reply_markup: retopicKeyboard });
+
+    // Step 10: Deliver interpretation via splitMessage (keyboard on last chunk)
+    const messages = splitMessage(interpretation.text);
+
+    if (messages.length === 0) {
+      throw new Error("Message splitting resulted in empty array");
     }
+
+    for (const [index, chunk] of messages.entries()) {
+      const isLast = index === messages.length - 1;
+      await bot.api.sendMessage(chatId, chunk, {
+        parse_mode: "HTML",
+        reply_markup: isLast && retopicKeyboard ? retopicKeyboard : undefined,
+      });
+    }
+    jobLogger.debug({ chunks: messages.length, coveredTopics }, "Interpretation delivered");
 
     jobLogger.info(
       { processingTime, tokensUsed: interpretation.tokensUsed, coveredTopics },
@@ -302,7 +331,7 @@ export async function processRetopicJob(job: Job<RetopicJobData>): Promise<void>
     try {
       await bot.api.sendMessage(
         chatId,
-        "Произошла ошибка при повторном анализе. Ваш кредит возвращён. Пожалуйста, попробуйте ещё раз."
+        ERROR_MESSAGES[language] || ERROR_MESSAGES["ru"]!
       );
       jobLogger.debug("Error message sent to user");
     } catch (sendError) {

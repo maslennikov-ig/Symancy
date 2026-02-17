@@ -43,7 +43,7 @@ import { sendErrorAlert } from "../../utils/admin-alerts.js";
 import { savePhoto } from "./storage.service.js";
 import { getEnv } from "../../config/env.js";
 import { randomUUID } from "node:crypto";
-import { createRetopicKeyboard, RETOPIC_MESSAGES } from "./keyboards.js";
+import { createRetopicKeyboard } from "./keyboards.js";
 
 const logger = getLogger().child({ module: "photo-analysis-worker" });
 
@@ -453,10 +453,21 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
       throw new Error("Message splitting resulted in empty array");
     }
 
+    // Build retopic keyboard for single-topic readings (inline with last message)
+    let retopicKeyboard: ReturnType<typeof createRetopicKeyboard> = null;
+    if (topic !== "all" && analysisId) {
+      try {
+        retopicKeyboard = createRetopicKeyboard(analysisId, [topic], language || "ru");
+      } catch (retopicError) {
+        jobLogger.warn({ error: retopicError }, "Failed to create retopic keyboard");
+      }
+    }
+
     if (messages.length === 1) {
-      // Single message: edit the loading message
+      // Single message: edit the loading message (attach retopic keyboard inline)
       await bot.api.editMessageText(chatId, messageId, messages[0]!, {
         parse_mode: "HTML",
+        reply_markup: retopicKeyboard || undefined,
       });
       jobLogger.debug("Loading message edited with result");
     } else {
@@ -467,25 +478,12 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
       jobLogger.debug("Loading message deleted");
 
       for (const [index, chunk] of messages.entries()) {
+        const isLast = index === messages.length - 1;
         await bot.api.sendMessage(chatId, chunk, {
           parse_mode: "HTML",
+          reply_markup: isLast && retopicKeyboard ? retopicKeyboard : undefined,
         });
         jobLogger.debug({ chunk: index + 1, total: messages.length }, "Sent message chunk");
-      }
-    }
-
-    // After single-topic delivery, show retopic keyboard
-    if (topic !== "all" && analysisId) {
-      try {
-        const retopicKeyboard = createRetopicKeyboard(analysisId, [topic], language || "ru");
-        if (retopicKeyboard) {
-          const retopicMsg = RETOPIC_MESSAGES[language || "ru"] || RETOPIC_MESSAGES["ru"]!;
-          await bot.api.sendMessage(chatId, retopicMsg, { reply_markup: retopicKeyboard });
-          jobLogger.debug("Retopic keyboard sent");
-        }
-      } catch (retopicError) {
-        jobLogger.warn({ error: retopicError }, "Failed to send retopic keyboard");
-        // Non-blocking: don't fail the job if retopic keyboard fails
       }
     }
 

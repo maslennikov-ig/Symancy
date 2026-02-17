@@ -13,6 +13,13 @@ import { sendRetopicJob } from "../../core/queue.js";
 import { hasCreditsOfType } from "../credits/service.js";
 import { parseRetopicCallback } from "./keyboards.js";
 import { arinaStrategy } from "./personas/arina.strategy.js";
+import { cassandraStrategy } from "./personas/cassandra.strategy.js";
+import type { PersonaStrategy } from "./personas/arina.strategy.js";
+
+const PERSONA_STRATEGIES: Record<"arina" | "cassandra", PersonaStrategy> = {
+  arina: arinaStrategy,
+  cassandra: cassandraStrategy,
+};
 
 const logger = getLogger().child({ module: "retopic-handler" });
 
@@ -171,7 +178,30 @@ export async function handleRetopicCallback(ctx: BotContext): Promise<void> {
     return;
   }
 
-  // Check if user has sufficient basic credits
+  // CR-002 fix: Answer callback and edit message BEFORE credit check
+  // This disables the keyboard immediately, preventing double-click race condition
+  await ctx.answerCallbackQuery();
+
+  const strategy = PERSONA_STRATEGIES[analysis.persona as "arina" | "cassandra"] || arinaStrategy;
+  const loadingText = strategy.getLoadingMessage(userLanguage);
+  const messageId = ctx.callbackQuery.message?.message_id;
+
+  // CR-005 fix: Require valid messageId
+  if (!messageId) {
+    logger.error({ telegramUserId, analysisId }, "Missing message ID in retopic callback");
+    return;
+  }
+
+  try {
+    await ctx.api.editMessageText(chatId, messageId, loadingText);
+  } catch (error) {
+    logger.warn(
+      { error },
+      "Failed to edit retopic message to loading state"
+    );
+  }
+
+  // Check credits AFTER disabling buttons (race-safe)
   const hasSufficientCredits = await hasCreditsOfType(
     telegramUserId,
     "basic"
@@ -182,36 +212,24 @@ export async function handleRetopicCallback(ctx: BotContext): Promise<void> {
       { telegramUserId, topicKey, analysisId },
       "Insufficient credits for retopic"
     );
-    await ctx.answerCallbackQuery({
-      text: getInsufficientCreditsMessage(userLanguage),
-      show_alert: true,
-    });
-    return;
-  }
-
-  // Answer callback query (removes loading indicator on the button)
-  await ctx.answerCallbackQuery();
-
-  // Edit the retopic message to loading state (removes keyboard)
-  const loadingText = arinaStrategy.getLoadingMessage(userLanguage);
-  const messageId = ctx.callbackQuery.message?.message_id;
-
-  if (messageId) {
+    // Restore the message with error text (button already removed)
     try {
-      await ctx.api.editMessageText(chatId, messageId, loadingText);
-    } catch (error) {
-      logger.warn(
-        { error },
-        "Failed to edit retopic message to loading state"
+      await ctx.api.editMessageText(
+        chatId,
+        messageId,
+        getInsufficientCreditsMessage(userLanguage)
       );
+    } catch {
+      // Ignore edit failure
     }
+    return;
   }
 
   // Enqueue retopic job
   const jobData: RetopicJobData = {
     telegramUserId,
     chatId,
-    messageId: messageId || 0,
+    messageId,
     analysisId,
     persona: analysis.persona as "arina" | "cassandra",
     topic: topicKey as RetopicJobData["topic"],
