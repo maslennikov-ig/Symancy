@@ -3,7 +3,10 @@
 
 import { supabase, createSupabaseWithToken } from '../lib/supabaseClient';
 import { getStoredToken } from './authService';
+import { createLogger } from '../lib/logger';
 import type { MoodEntry, MoodEntryInput, EmotionTag } from '../types/mood';
+
+const log = createLogger('moodService');
 
 /**
  * Get the appropriate Supabase client based on auth type.
@@ -45,7 +48,7 @@ export async function saveTodayMood(input: MoodEntryInput): Promise<MoodEntry> {
   });
 
   if (error) {
-    console.error('Error saving mood entry:', error);
+    log.error('Failed to save mood entry', error);
     throw new Error(error.message);
   }
 
@@ -69,7 +72,7 @@ export async function getTodayMood(): Promise<MoodEntry | null> {
     .maybeSingle();
 
   if (error) {
-    console.error('Error fetching today mood:', error);
+    log.error('Failed to fetch today mood', error);
     throw new Error(error.message);
   }
 
@@ -109,7 +112,7 @@ export async function getMoodHistory(
     .order('date', { ascending: false });
 
   if (error) {
-    console.error('Error fetching mood history:', error);
+    log.error('Failed to fetch mood history', error);
     throw new Error(error.message);
   }
 

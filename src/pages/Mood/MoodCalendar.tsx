@@ -10,8 +10,11 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { getMoodHistory } from '../../services/moodService';
 import { EMOTIONS } from '../../types/mood';
 import { getScoreColor } from '../../lib/moodUtils';
+import { createLogger } from '../../lib/logger';
 import type { MoodEntry, EmotionTag } from '../../types/mood';
 import type { Lang } from '../../lib/i18n';
+
+const log = createLogger('MoodCalendar');
 
 interface MoodCalendarProps {
   /** Current language for locale */
@@ -78,7 +81,7 @@ function MoodCalendarComponent({ language, t }: MoodCalendarProps) {
         }
       } catch (err) {
         if (controller.signal.aborted) return;
-        console.error('Failed to load mood history:', err);
+        log.error('Failed to load mood history', err);
         setEntries([]);
         setError(t('mood.error.loadFailed'));
       } finally {

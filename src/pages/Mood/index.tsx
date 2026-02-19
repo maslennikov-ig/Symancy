@@ -21,8 +21,11 @@ import MoodStats from './MoodStats';
 import { MoodTrendChart } from './MoodTrendChart';
 import { MoodEmotionChart } from './MoodEmotionChart';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
+import { createLogger } from '../../lib/logger';
 import type { translations, Lang } from '../../lib/i18n';
 import type { MoodEntry, MoodEntryInput, EmotionTag } from '../../types/mood';
+
+const log = createLogger('MoodPage');
 
 interface MoodPageProps {
   /** Current language */
@@ -139,7 +142,7 @@ const MoodPage: React.FC<MoodPageProps> = ({ language, t: propT }) => {
       // Auto-dismiss toast
       setTimeout(() => setToastMessage(null), 2500);
     } catch (err) {
-      console.error('Failed to save mood:', err);
+      log.error('Failed to save mood', err);
       hapticFeedback.notification('error');
       setToastMessage(t('mood.error.saveFailed'));
       setTimeout(() => setToastMessage(null), 3000);
