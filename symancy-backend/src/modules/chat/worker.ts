@@ -24,6 +24,7 @@ import { registerWorkerWithMetadata } from "../../core/queue.js";
 import { generateChatResponseDirect } from "../../chains/chat.chain.js";
 import { consumeCredits, refundCredits } from "../credits/service.js";
 import { splitMessage } from "../../utils/message-splitter.js";
+import { sanitizeTelegramHtml } from "../../utils/html-formatter.js";
 import { QUEUE_CHAT_REPLY, DAILY_CHAT_LIMIT } from "../../config/constants.js";
 import type { ChatReplyJobData } from "../../types/telegram.js";
 import { withRetry } from "../../utils/retry.js";
@@ -271,7 +272,7 @@ export async function processChatReply(job: JobWithMetadata<ChatReplyJobData>): 
     jobLogger.info("Credits consumed");
 
     // Step 7: Send response to user (with message splitting if needed)
-    const messages = splitMessage(response.text);
+    const messages = splitMessage(sanitizeTelegramHtml(response.text));
 
     if (messages.length === 0) {
       throw new Error("Message splitting resulted in empty array");

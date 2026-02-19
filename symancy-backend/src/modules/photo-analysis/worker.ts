@@ -25,6 +25,7 @@ import { analyzeVision } from "../../chains/vision.chain.js";
 import { validateCoffeeGrounds } from "../../chains/validation.chain.js";
 import { consumeCreditsOfType, refundCreditsOfType } from "../credits/service.js";
 import { splitMessage } from "../../utils/message-splitter.js";
+import { sanitizeTelegramHtml } from "../../utils/html-formatter.js";
 import {
   QUEUE_ANALYZE_PHOTO,
   TELEGRAM_PHOTO_SIZE_LIMIT,
@@ -444,7 +445,8 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
     }
 
     // Step 10: Edit loading message with interpretation result
-    const resultText = interpretation.text;
+    // Sanitize HTML to remove unsupported tags (e.g. <br> from LLM output)
+    const resultText = sanitizeTelegramHtml(interpretation.text);
 
     // Split message if longer than Telegram limit
     const messages = splitMessage(resultText);

@@ -22,6 +22,7 @@ import { getLogger } from "../../core/logger.js";
 import { registerWorker } from "../../core/queue.js";
 import { consumeCreditsOfType, refundCreditsOfType } from "../credits/service.js";
 import { splitMessage } from "../../utils/message-splitter.js";
+import { sanitizeTelegramHtml } from "../../utils/html-formatter.js";
 import { QUEUE_RETOPIC_PHOTO } from "../../config/constants.js";
 import type { RetopicJobData } from "../../types/job-schemas.js";
 import type { VisionAnalysisResult } from "../../types/langchain.js";
@@ -263,7 +264,7 @@ export async function processRetopicJob(job: Job<RetopicJobData>): Promise<void>
     );
 
     // Step 10: Deliver interpretation via splitMessage (keyboard on last chunk)
-    const messages = splitMessage(interpretation.text);
+    const messages = splitMessage(sanitizeTelegramHtml(interpretation.text));
 
     if (messages.length === 0) {
       throw new Error("Message splitting resulted in empty array");
