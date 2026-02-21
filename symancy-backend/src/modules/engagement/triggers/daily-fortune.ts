@@ -4,6 +4,8 @@
  */
 import { getSupabase } from "../../../core/database.js";
 import { getLogger } from "../../../core/logger.js";
+import { createModel } from "../../../core/langchain/models.js";
+import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 
 const logger = getLogger().child({ module: "engagement-daily" });
 
@@ -83,24 +85,24 @@ export async function findDailyFortuneUsers(): Promise<DailyFortuneUser[]> {
  *
  * @returns Formatted message in Russian
  */
-export function createDailyFortuneMessage(): string {
-  // Array of daily fortune variations
-  const fortunes = [
-    "Сегодня звёзды благоволят к решительным действиям.\nНе бойтесь делать первый шаг — удача на вашей стороне.",
-    "День наполнен возможностями для новых начинаний.\nДоверьтесь своей интуиции.",
-    "Сегодня особенно важно прислушаться к своему сердцу.\nОно подскажет верный путь.",
-    "Энергия этого дня способствует творчеству и самовыражению.\nПокажите миру свой талант.",
-    "Сегодня благоприятный день для общения и новых знакомств.\nБудьте открыты.",
-    "День приносит гармонию и равновесие.\nНаслаждайтесь моментом.",
-    "Сегодня ваша сила в терпении и настойчивости.\nПродолжайте двигаться к цели.",
-  ];
+export async function createDailyFortuneMessage(userName: string | null = null): Promise<string> {
+  const defaultMessage = `✨ Совет дня\n\nСегодня звёзды благоволят к решительным действиям.\nНе бойтесь делать первый шаг — удача на вашей стороне.\n\n🌙 Хорошего дня!`;
+  const nameStr = userName ? ` Имя пользователя: ${userName}.` : "";
 
-  // Select fortune based on day of year (consistent for same day)
-  const dayOfYear = Math.floor(
-    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) /
-      (1000 * 60 * 60 * 24)
-  );
-  const selectedFortune = fortunes[dayOfYear % fortunes.length];
-
-  return `✨ Совет дня\n\n${selectedFortune}\n\n🌙 Хорошего дня!`;
+  try {
+    const model = createModel("openai/gpt-oss-120b", { temperature: 0.9, maxTokens: 150 });
+    const response = await model.invoke([
+      new SystemMessage(
+        "Ты — мудрая гадалка на кофейной гуще. Твоя задача — написать короткое, уникальное и вдохновляющее " +
+        "предсказание или совет на день (daily fortune). Сообщение должно быть коротким (до 3-4 предложений), " +
+        "загадочным, но позитивным. Используй подходящие эмодзи."
+      ),
+      new HumanMessage(`Напиши совет на день.${nameStr}`),
+    ]);
+    
+    return `✨ Совет дня\n\n${(response.content as string).trim()}\n\n🌙 Хорошего дня!`;
+  } catch (error) {
+    logger.error({ error }, "Failed to generate AI daily fortune, using default");
+    return defaultMessage;
+  }
 }

@@ -4,6 +4,8 @@
  */
 import { getSupabase } from "../../../core/database.js";
 import { getLogger } from "../../../core/logger.js";
+import { createModel } from "../../../core/langchain/models.js";
+import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 
 const logger = getLogger().child({ module: "engagement-weekly" });
 
@@ -95,12 +97,26 @@ export async function findWeeklyCheckInUsers(): Promise<WeeklyCheckInUser[]> {
  * @param userName - User's name (or null)
  * @returns Formatted message in Russian
  */
-export function createWeeklyCheckInMessage(userName: string | null): string {
+export async function createWeeklyCheckInMessage(userName: string | null): Promise<string> {
   const name = userName || "друг";
+  const defaultMessage = `🌟 Доброе утро, ${name}!\n\nНовая неделя — новые возможности!\n\nХотите узнать, что принесёт эта неделя? ☕️`;
 
-  return (
-    `🌟 Доброе утро, ${name}!\n\n` +
-    `Новая неделя — новые возможности!\n\n` +
-    `Хотите узнать, что принесёт эта неделя? ☕️`
-  );
+  try {
+    const model = createModel("openai/gpt-oss-120b", { temperature: 0.9, maxTokens: 150 });
+    const response = await model.invoke([
+      new SystemMessage(
+        "Ты — дружелюбная гадалка на кофейной гуще. Твоя задача — написать короткое, " +
+        "уникальное и ободряющее утреннее сообщение для пользователя в начале новой недели (понедельник). " +
+        "Обязательно упомяни его по имени (если оно есть), пожелай отличной недели и предложи " +
+        "сделать расклад на кофейной гуще на эту неделю. Сообщение должно быть коротким (до 3-4 предложений), " +
+        "позитивным и использовать эмодзи."
+      ),
+      new HumanMessage(`Напиши сообщение для начала недели пользователю с именем: ${name}`),
+    ]);
+    
+    return (response.content as string).trim();
+  } catch (error) {
+    logger.error({ error }, "Failed to generate AI weekly check-in, using default");
+    return defaultMessage;
+  }
 }

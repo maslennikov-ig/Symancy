@@ -4,6 +4,8 @@
  */
 import { getSupabase } from "../../../core/database.js";
 import { getLogger } from "../../../core/logger.js";
+import { createModel } from "../../../core/langchain/models.js";
+import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 
 const logger = getLogger().child({ module: "engagement-inactive" });
 
@@ -99,12 +101,26 @@ export async function findInactiveUsers(): Promise<InactiveUser[]> {
  * @param userName - User's name (or null)
  * @returns Formatted message in Russian
  */
-export function createInactiveReminderMessage(userName: string | null): string {
+export async function createInactiveReminderMessage(userName: string | null): Promise<string> {
   const name = userName || "друг";
+  const defaultMessage = `☕️ Привет, ${name}!\n\nМы скучаем по вам! Не хотите заглянуть в будущее?\n\nОтправьте фото кофейной гущи, и я раскрою её тайны ✨`;
 
-  return (
-    `☕️ Привет, ${name}!\n\n` +
-    `Мы скучаем по вам! Не хотите заглянуть в будущее?\n\n` +
-    `Отправьте фото кофейной гущи, и я раскрою её тайны ✨`
-  );
+  try {
+    const model = createModel("openai/gpt-oss-120b", { temperature: 0.9, maxTokens: 150 });
+    const response = await model.invoke([
+      new SystemMessage(
+        "Ты — дружелюбная и слегка загадочная гадалка на кофейной гуще. Твоя задача — написать короткое, " +
+        "уникальное и привлекательное напоминание для пользователя, который давно не заходил. " +
+        "Обязательно упомяни его по имени (если оно есть), скажи, что скучаешь, и предложи прислать фото кофейной гущи " +
+        "для предсказания будущего. Сообщение должно быть коротким (до 3-4 предложений), теплым и использовать эмодзи."
+      ),
+      new HumanMessage(`Напиши напоминание для пользователя с именем: ${name}`),
+    ]);
+    
+    return (response.content as string).trim();
+  } catch (error) {
+    logger.error({ error }, "Failed to generate AI inactive reminder, using default");
+    return defaultMessage;
+  }
 }
+

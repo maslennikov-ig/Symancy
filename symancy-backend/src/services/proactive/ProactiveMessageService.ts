@@ -383,7 +383,7 @@ export class ProactiveMessageService {
   public async sendBatchEngagementMessages(
     users: ProactiveEligibleUser[],
     messageType: ProactiveMessageType,
-    contentGenerator: (user: ProactiveEligibleUser) => string
+    contentGenerator: (user: ProactiveEligibleUser) => string | Promise<string>
   ): Promise<{
     total: number;
     success: number;
@@ -399,7 +399,7 @@ export class ProactiveMessageService {
     let blockedCount = 0;
 
     for (const user of users) {
-      const content = contentGenerator(user);
+      const content = await contentGenerator(user);
       const result = await this.sendEngagementMessage(user, messageType, content);
 
       if (result.success) {
