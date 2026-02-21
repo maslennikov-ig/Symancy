@@ -41,18 +41,6 @@ const History: React.FC<HistoryProps> = ({ language: propLanguage, t: propT }) =
   const language = propLanguage || 'ru';
   const t = propT || ((key: keyof typeof translations.en) => i18n_t(key, language));
 
-  // State for initial expanded item from RecentActivity
-  const [initialExpandedId, setInitialExpandedId] = useState<string | null>(() => {
-    return (location.state as any)?.selectedAnalysis?.id || null;
-  });
-
-  // Sync state if location state changes while mounted
-  useEffect(() => {
-    if ((location.state as any)?.selectedAnalysis?.id) {
-      setInitialExpandedId((location.state as any).selectedAnalysis.id);
-    }
-  }, [location.state]);
-
   // Show loading while auth is initializing
   if (authLoading) {
     return (
@@ -107,7 +95,6 @@ const History: React.FC<HistoryProps> = ({ language: propLanguage, t: propT }) =
             <HistoryDisplay
               t={t as (key: string) => string}
               language={language}
-              initialExpandedId={initialExpandedId}
             />
           </Suspense>
         )}

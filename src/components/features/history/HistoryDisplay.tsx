@@ -37,20 +37,13 @@ function stripHtmlAndMarkdown(text: string): string {
 interface HistoryDisplayProps {
   t: (key: string) => string;
   language: Lang;
-  initialExpandedId?: string | null;
 }
 
-const HistoryDisplay: React.FC<HistoryDisplayProps> = ({ t, language, initialExpandedId }) => {
+const HistoryDisplay: React.FC<HistoryDisplayProps> = ({ t, language }) => {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(initialExpandedId || null);
-
-  useEffect(() => {
-    if (initialExpandedId) {
-      setExpandedId(initialExpandedId);
-    }
-  }, [initialExpandedId]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchHistory = async () => {
