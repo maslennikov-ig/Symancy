@@ -99,30 +99,30 @@ function MoodPromptCardComponent({ t, language, className }: MoodPromptCardProps
               </Button>
             </>
           ) : (
-            <>
+            <div className="flex flex-col items-center justify-center py-2 gap-4">
               {/* Not logged state */}
-              <div className="flex items-center gap-2">
-                <span className="text-xl" aria-hidden="true">
+              <div className="flex flex-col items-center gap-1 text-center">
+                <span className="text-4xl drop-shadow-md mb-2" aria-hidden="true" style={{ animation: 'pulse 3s infinite' }}>
                   {'\u{1F31C}'}
                 </span>
-                <h3 className="text-base font-semibold text-white">
+                <h3 className="text-lg font-bold text-white tracking-tight drop-shadow-sm">
                   {t('home.moodPrompt')}
                 </h3>
+                <p className="text-sm font-medium text-white/90 px-4 mt-1">
+                  {t('mood.entry.title')}
+                </p>
               </div>
-
-              <p className="text-sm text-white/80">
-                {t('mood.entry.title')}
-              </p>
 
               <Button
                 onClick={handleNavigate}
                 variant="secondary"
-                size="sm"
-                className="self-start bg-white/20 hover:bg-white/30 text-white border-0"
+                size="lg"
+                className="w-full mt-2 font-bold shadow-lg text-indigo-700 bg-white hover:bg-white/90 hover:scale-[1.02] transition-all duration-300 active:scale-95 border-0"
               >
+                <span className="text-xl mr-2">✨</span>
                 {t('home.logMood')}
               </Button>
-            </>
+            </div>
           )}
         </div>
       </CardContent>
