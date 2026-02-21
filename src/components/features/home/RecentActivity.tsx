@@ -80,11 +80,10 @@ function RecentActivityComponent({ t, className }: RecentActivityProps) {
 
   const handleOpen = () => {
     if (lastItem) {
-      // Navigate to history detail or chat with context
-      navigate('/chat', {
+      // Navigate to history detail
+      navigate('/history', {
         state: {
-          historyItemId: lastItem.id,
-          context: 'history_review',
+          selectedAnalysis: lastItem,
         },
       });
     }
@@ -156,8 +155,8 @@ function RecentActivityComponent({ t, className }: RecentActivityProps) {
           </div>
         </div>
       </CardContent>
-      <CardFooter className="pt-0">
-        <Button onClick={handleOpen} variant="ghost" size="sm" className="w-full">
+      <CardFooter className="pt-0 pb-3 px-3">
+        <Button onClick={handleOpen} variant="outline" size="sm" className="w-full font-medium shadow-sm hover:bg-accent/50">
           {t('home.recentActivity.open')}
         </Button>
       </CardFooter>

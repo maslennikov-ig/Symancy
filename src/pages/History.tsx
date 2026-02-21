@@ -15,8 +15,8 @@
  *
  * @module pages/History
  */
-import React, { useState, useCallback, Suspense, lazy } from 'react';
-import { useNavigate } from 'react-router';
+import React, { useState, useCallback, Suspense, lazy, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router';
 import { translations, Lang, t as i18n_t } from '../lib/i18n';
 import { useAuth } from '../contexts/AuthContext';
 import { useTelegramWebApp } from '../hooks/useTelegramWebApp';
@@ -45,6 +45,7 @@ interface HistoryProps {
  */
 const History: React.FC<HistoryProps> = ({ language: propLanguage, t: propT }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { isWebApp, close: closeWebApp } = useTelegramWebApp();
 
@@ -53,7 +54,16 @@ const History: React.FC<HistoryProps> = ({ language: propLanguage, t: propT }) =
   const t = propT || ((key: keyof typeof translations.en) => i18n_t(key, language));
 
   // State for selected analysis (when viewing a history item)
-  const [selectedAnalysis, setSelectedAnalysis] = useState<HistoryItem | null>(null);
+  const [selectedAnalysis, setSelectedAnalysis] = useState<HistoryItem | null>(() => {
+    return (location.state as any)?.selectedAnalysis || null;
+  });
+
+  // Sync state if location state changes while mounted
+  useEffect(() => {
+    if ((location.state as any)?.selectedAnalysis) {
+      setSelectedAnalysis((location.state as any).selectedAnalysis);
+    }
+  }, [location.state]);
 
   // Detect theme from document
   const [theme] = useState<'light' | 'dark'>(() => {
