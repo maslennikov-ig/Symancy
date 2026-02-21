@@ -9,28 +9,18 @@
  * 2. HistoryDisplay component (scrollable list)
  * 3. Bottom padding for BottomNav (80px + safe area)
  *
- * Navigation:
- * - When selecting a history item, shows the analysis in a modal or navigates to detail view
- * - Back button returns to previous screen
- *
  * @module pages/History
  */
-import React, { useState, useCallback, Suspense, lazy, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router';
+import React, { useState, Suspense, lazy, useEffect } from 'react';
+import { useLocation } from 'react-router';
 import { translations, Lang, t as i18n_t } from '../lib/i18n';
 import { useAuth } from '../contexts/AuthContext';
-import { useTelegramWebApp } from '../hooks/useTelegramWebApp';
 import { LoaderIcon } from '../components/icons/LoaderIcon';
 import { HistoryItem } from '../services/historyService';
 
 // Lazy load HistoryDisplay for code splitting
 const HistoryDisplay = lazy(
   () => import('../components/features/history/HistoryDisplay')
-);
-
-// Lazy load ResultDisplay for showing selected analysis
-const ResultDisplay = lazy(
-  () => import('../components/features/analysis/ResultDisplay')
 );
 
 interface HistoryProps {
@@ -44,66 +34,24 @@ interface HistoryProps {
  * History - Analysis history page for Telegram Mini App
  */
 const History: React.FC<HistoryProps> = ({ language: propLanguage, t: propT }) => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const { isWebApp, close: closeWebApp } = useTelegramWebApp();
 
   // Use props or fallback to defaults
   const language = propLanguage || 'ru';
   const t = propT || ((key: keyof typeof translations.en) => i18n_t(key, language));
 
-  // State for selected analysis (when viewing a history item)
-  const [selectedAnalysis, setSelectedAnalysis] = useState<HistoryItem | null>(() => {
-    return (location.state as any)?.selectedAnalysis || null;
+  // State for initial expanded item from RecentActivity
+  const [initialExpandedId, setInitialExpandedId] = useState<string | null>(() => {
+    return (location.state as any)?.selectedAnalysis?.id || null;
   });
 
   // Sync state if location state changes while mounted
   useEffect(() => {
-    if ((location.state as any)?.selectedAnalysis) {
-      setSelectedAnalysis((location.state as any).selectedAnalysis);
+    if ((location.state as any)?.selectedAnalysis?.id) {
+      setInitialExpandedId((location.state as any).selectedAnalysis.id);
     }
   }, [location.state]);
-
-  // Detect theme from document
-  const [theme] = useState<'light' | 'dark'>(() => {
-    if (typeof window !== 'undefined') {
-      return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-    }
-    return 'light';
-  });
-
-  /**
-   * Handle selecting a history item
-   * Shows the analysis result in detail view
-   */
-  const handleSelectAnalysis = useCallback((item: HistoryItem) => {
-    setSelectedAnalysis(item);
-  }, []);
-
-  /**
-   * Handle closing the detail view
-   * Returns to history list
-   */
-  const handleCloseDetail = useCallback(() => {
-    setSelectedAnalysis(null);
-  }, []);
-
-  /**
-   * Handle "Analyze another" action
-   * - In Telegram WebApp: Close WebApp (user returns to chat to send another photo)
-   * - In Web: Navigate to analysis flow
-   */
-  const handleAnalyzeAnother = useCallback(() => {
-    if (isWebApp) {
-      // In Telegram WebApp, close the app to return to chat
-      closeWebApp();
-    } else {
-      // In web, navigate to analysis page
-      navigate('/analysis');
-    }
-  }, [isWebApp, closeWebApp, navigate]);
-
 
   // Show loading while auth is initializing
   if (authLoading) {
@@ -119,65 +67,7 @@ const History: React.FC<HistoryProps> = ({ language: propLanguage, t: propT }) =
     );
   }
 
-  // If viewing a selected analysis, show ResultDisplay
-  if (selectedAnalysis) {
-    return (
-      <div
-        className="min-h-screen bg-background"
-        style={{
-          paddingTop: 'var(--tg-content-safe-area-inset-top, 0px)',
-          paddingBottom: '100px', // Space for BottomNav + safe area
-        }}
-      >
-        {/* Header with back button */}
-        <header className="px-4 pt-4 pb-2 flex items-center gap-3">
-          <button
-            onClick={handleCloseDetail}
-            className="p-2 -ml-2 rounded-full hover:bg-accent transition-colors"
-            aria-label={t('history.back')}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-foreground"
-            >
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <h1 className="text-xl font-bold text-foreground">
-            {t('history.viewAnalysis')}
-          </h1>
-        </header>
-
-        {/* Analysis result */}
-        <main className="px-4">
-          <Suspense
-            fallback={
-              <div className="flex items-center justify-center p-8">
-                <LoaderIcon className="w-8 h-8 animate-spin text-primary" />
-              </div>
-            }
-          >
-            <ResultDisplay
-              analysis={selectedAnalysis.analysis}
-              onReset={handleAnalyzeAnother}
-              theme={theme}
-              t={t as (key: string) => string}
-            />
-          </Suspense>
-        </main>
-      </div>
-    );
-  }
-
-  // Main history list view
+  // Main history list view (accordion)
   return (
     <div
       className="bg-background"
@@ -215,9 +105,9 @@ const History: React.FC<HistoryProps> = ({ language: propLanguage, t: propT }) =
             }
           >
             <HistoryDisplay
-              onSelectAnalysis={handleSelectAnalysis}
               t={t as (key: string) => string}
               language={language}
+              initialExpandedId={initialExpandedId}
             />
           </Suspense>
         )}

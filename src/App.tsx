@@ -451,8 +451,6 @@ const App: React.FC = () => {
         {currentView === 'history' ? (
           <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><LoaderIcon className="w-8 h-8 animate-spin" /></div>}>
             <HistoryDisplay
-              onSelectAnalysis={handleSelectHistoryItem}
-              onClose={() => setCurrentView('uploader')}
               t={t}
               language={language}
             />
