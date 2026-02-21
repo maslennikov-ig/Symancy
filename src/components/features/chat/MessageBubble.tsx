@@ -66,13 +66,14 @@ export function MessageBubble({ message, showChannelIndicator = false, t }: Mess
       ALLOWED_ATTR: [], // No attributes allowed
     });
 
-    // Basic markdown support: **bold**, *italic*
+    // Basic markdown and HTML support: **bold**, *italic*, <b>bold</b>, <i>italic</i>
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let key = 0;
 
-    // Match **bold** and *italic*
-    const regex = /(\*\*(.+?)\*\*|\*(.+?)\*)/g;
+    // Match **bold**, *italic*, <b>bold</b>, <i>italic</i>, <strong>bold</strong>, <em>italic</em>
+    // We match literal HTML or escaped HTML since it might come from DOMPurify
+    const regex = /(\*\*(.*?)\*\*|\*(.*?)\*|<b>(.*?)<\/b>|&lt;b&gt;(.*?)&lt;\/b&gt;|<i>(.*?)<\/i>|&lt;i&gt;(.*?)&lt;\/i&gt;|<strong>(.*?)<\/strong>|&lt;strong&gt;(.*?)&lt;\/strong&gt;|<em>(.*?)<\/em>|&lt;em&gt;(.*?)&lt;\/em&gt;)/gi;
     let match;
 
     while ((match = regex.exec(sanitized)) !== null) {
@@ -82,18 +83,22 @@ export function MessageBubble({ message, showChannelIndicator = false, t }: Mess
       }
 
       // Add formatted text (escaped to prevent XSS)
-      if (match[2]) {
-        // **bold**
+      // group 2 = **bold**, group 3 = *italic*
+      // group 4 = <b>, group 5 = &lt;b&gt;, group 6 = <i>, group 7 = &lt;i&gt;
+      // group 8 = <strong>, group 9 = &lt;strong&gt;, group 10 = <em>, group 11 = &lt;em&gt;
+      const boldText = match[2] || match[4] || match[5] || match[8] || match[9];
+      const italicText = match[3] || match[6] || match[7] || match[10] || match[11];
+
+      if (boldText) {
         parts.push(
           <strong key={`bold-${key++}`} style={{ fontWeight: 700 }}>
-            {escapeHtml(match[2])}
+            {escapeHtml(boldText)}
           </strong>
         );
-      } else if (match[3]) {
-        // *italic*
+      } else if (italicText) {
         parts.push(
           <em key={`italic-${key++}`} style={{ fontStyle: 'italic' }}>
-            {escapeHtml(match[3])}
+            {escapeHtml(italicText)}
           </em>
         );
       }

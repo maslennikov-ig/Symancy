@@ -45,6 +45,18 @@ function formatRelativeTime(dateString: string, t: (key: string) => string): str
 }
 
 /**
+ * Strip HTML tags and markdown asterisks for plain text preview
+ */
+function stripHtmlAndMarkdown(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/<[^>]*>?/gm, '') // Strip literal HTML tags
+    .replace(/&lt;[^&]*&gt;/gm, '') // Strip escaped HTML tags
+    .replace(/\*\*/g, '') // Strip bold markdown
+    .replace(/\*/g, ''); // Strip italic markdown
+}
+
+/**
  * RecentActivity - Last activity card
  */
 function RecentActivityComponent({ t, className }: RecentActivityProps) {
@@ -122,10 +134,12 @@ function RecentActivityComponent({ t, className }: RecentActivityProps) {
   }
 
   // Get analysis summary - AnalysisResponse has intro and sections
-  const analysisSummary = lastItem.analysis?.intro?.substring(0, 80) ||
+  const rawSummary = lastItem.analysis?.intro?.substring(0, 80) ||
     (lastItem.analysis?.sections?.[0]?.content?.substring(0, 80)) ||
     lastItem.focus_area ||
     t('home.recentActivity.analysisCompleted');
+    
+  const analysisSummary = stripHtmlAndMarkdown(rawSummary);
 
   const timeAgo = formatRelativeTime(lastItem.created_at, t);
 

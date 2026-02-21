@@ -10,6 +10,25 @@ import { Button } from '../../ui/button';
 import { AnalysisResponse } from '../../../services/analysisService';
 import { isTelegramWebApp } from '../../../hooks/useTelegramWebApp';
 
+// Helper function to convert simple HTML tags to Markdown
+// since react-markdown escapes HTML by default
+const parseHtmlToMarkdown = (text: string) => {
+  if (!text) return '';
+  return text
+    // Handle literal HTML tags (allowing newlines inside)
+    .replace(/<b>([\s\S]*?)<\/b>/gi, '**$1**')
+    .replace(/<strong>([\s\S]*?)<\/strong>/gi, '**$1**')
+    .replace(/<i>([\s\S]*?)<\/i>/gi, '*$1*')
+    .replace(/<em>([\s\S]*?)<\/em>/gi, '*$1*')
+    .replace(/<br\s*\/?>/gi, '\n')
+    // Handle escaped HTML tags from API
+    .replace(/&lt;b&gt;([\s\S]*?)&lt;\/b&gt;/gi, '**$1**')
+    .replace(/&lt;strong&gt;([\s\S]*?)&lt;\/strong&gt;/gi, '**$1**')
+    .replace(/&lt;i&gt;([\s\S]*?)&lt;\/i&gt;/gi, '*$1*')
+    .replace(/&lt;em&gt;([\s\S]*?)&lt;\/em&gt;/gi, '*$1*')
+    .replace(/&lt;br\s*\/?&gt;/gi, '\n');
+};
+
 interface ResultDisplayProps {
   analysis: AnalysisResponse;
   onReset: () => void;
@@ -79,7 +98,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme,
          <div className="font-sans text-foreground leading-relaxed prose prose-sm sm:prose dark:prose-invert prose-stone max-w-none">
             {analysis.intro && (
               <AnimatedContent delay={150}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysis.intro}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{parseHtmlToMarkdown(analysis.intro)}</ReactMarkdown>
               </AnimatedContent>
             )}
             {analysis.sections.map((section, index) => (
@@ -88,7 +107,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ analysis, onReset, theme,
                     <h3 className="font-display text-xl font-bold text-foreground mb-3">
                     {section.title}
                     </h3>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{section.content}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{parseHtmlToMarkdown(section.content)}</ReactMarkdown>
                 </div>
               </AnimatedContent>
             ))}
