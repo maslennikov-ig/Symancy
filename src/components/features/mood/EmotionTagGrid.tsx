@@ -40,7 +40,7 @@ function EmotionTagGridComponent({ selected, onChange, t }: EmotionTagGridProps)
       <label className="text-sm font-medium text-foreground">
         {t('mood.entry.emotions')}
       </label>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {EMOTIONS.map((emotion) => {
           const isSelected = selected.includes(emotion.id);
 
@@ -64,7 +64,7 @@ function EmotionTagGridComponent({ selected, onChange, t }: EmotionTagGridProps)
               aria-label={t(emotion.labelKey)}
             >
               <span aria-hidden="true">{emotion.emoji}</span>
-              <span className="truncate">{t(emotion.labelKey)}</span>
+              <span className="break-words text-left leading-tight">{t(emotion.labelKey)}</span>
             </button>
           );
         })}
