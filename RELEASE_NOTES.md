@@ -2,6 +2,37 @@
 
 User-facing release notes for all versions.
 
+## v0.6.17
+
+_Released on 2026-02-27_
+
+### ✨ New Features
+
+- **Interface**: Redesign mood prompt card to be more engaging and centered
+- **history**: Update history display to an accordion layout for better UX
+- **engagement**: Personalize reminder messages with AI
+- **mood**: Add visualization charts and complete CR fixes
+- **mood**: Add mood diary feature — UI, backend, and database
+- **retopic**: Add duplicate topic prevention and unit tests
+- **retopic**: Add "Try Another Topic" feature for reusing vision analysis
+- **interpretation**: Add truncation handling, model tiers, and prompt improvements
+- **monitoring**: Add Sentry error tracking and system health dashboard
+
+### 🐛 Bug Fixes
+
+- **history**: Remove auto-expand so items are always collapsed by default
+- **Interface**: Parse literal and escaped HTML formatting tags into markdown for correct rendering
+- **mood**: Resolve unified_user_id bug in upsert RPC and improve emotion UI
+- **Database**: Add missing RLS policies, fix unified_user_id resolution, and optimize initplans
+- **photo-analysis**: Sanitize unsupported HTML tags in LLM output for Telegram
+- **mood**: Address code review issues CR-001 through CR-012
+- **retopic**: Address code review issues CR-001 through CR-012
+- **CI/CD**: Regenerate pnpm-lock.yaml for Sentry dependencies
+
+---
+
+_This release was automatically generated from 31 commits._
+
 ## v0.6.16
 
 _Released on 2026-02-11_

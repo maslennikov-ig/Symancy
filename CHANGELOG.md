@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.6.17] - 2026-02-27
+
+### Added
+- **ui**: redesign mood prompt card to be more engaging and centered (b4005b2)
+- **history**: update history display to an accordion layout for better UX (14a861d)
+- **engagement**: personalize reminder messages with AI (e5cc0b6)
+- **mood**: add visualization charts and complete CR fixes (9003412)
+- **mood**: add mood diary feature — UI, backend, and database (20af294)
+- **retopic**: add duplicate topic prevention and unit tests (d21e7a9)
+- **retopic**: add "Try Another Topic" feature for reusing vision analysis (f3f931b)
+- **interpretation**: add truncation handling, model tiers, and prompt improvements (4c4b8ea)
+- **monitoring**: add Sentry error tracking and system health dashboard (723cd41)
+
+### Fixed
+- **history**: remove auto-expand so items are always collapsed by default (b3c4fa1)
+- **ui**: parse literal and escaped HTML formatting tags into markdown for correct rendering (abfdd70)
+- **mood**: resolve unified_user_id bug in upsert RPC and improve emotion UI (88de35d)
+- **db**: add missing RLS policies, fix unified_user_id resolution, and optimize initplans (e2a85f5)
+- **photo-analysis**: sanitize unsupported HTML tags in LLM output for Telegram (dee86a5)
+- **mood**: address code review issues CR-001 through CR-012 (b707e81)
+- **retopic**: address code review issues CR-001 through CR-012 (b719e35)
+- **ci**: regenerate pnpm-lock.yaml for Sentry dependencies (8160ddf)
+
+### Other
+- update business plan with round 2 Q&A and refinements (880ab3e)
+- update business plan docs, remove obsolete mcp templates, and fix recent activity ui navigation (95d8083)
+- sync beads database and documentation plans (91b675a)
+- add structured logging for mood + fix search_path on all functions (51012eb)
+- **beads**: sync retopic improvements completion (57a2312)
+- add client status report and TZ gap analysis (c3fc4bf)
+- **beads**: sync code review fixes completion (f655155)
+- **beads**: sync retopic task completion (53dfcf0)
+- rewrite monitoring instructions as neutral task assignment (d52ea1e)
+- add monitoring setup instructions for project owner (ca8d6fb)
+- **beads**: sync monitoring task completion (9df11d3)
+- add YooKassa go-live checklist for production switch (38cd26c)
+- **beads**: create full task plan with dependencies for remaining MVP work (3c324c9)
+- add project status and completion plan document (2323b37)
+
 ## [0.6.16] - 2026-02-11
 
 ### Added
