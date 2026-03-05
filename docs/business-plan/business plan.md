@@ -1,8 +1,40 @@
-БИЗНЕС-ПЛАН: SYMANCY AI
+<div style="text-align:center;margin:2em 0">
+<img src="../../whisk-images/00-symancy-logo.png" alt="Symancy AI Logo" style="max-width:400px">
+</div>
 
-Юрисдикция: Международный финансовый центр «Астана» (МФЦА / AIFC), Республика Казахстан
-Организационно-правовая форма: Symancy Limited (Private Company Limited by Shares) -- в процессе регистрации
-Дата: Февраль 2026 г.
+# БИЗНЕС-ПЛАН: SYMANCY AI
+
+<div style="text-align:center;margin:1em 0">
+
+**Юрисдикция:** Международный финансовый центр «Астана» (МФЦА / AIFC), Республика Казахстан
+**Организационно-правовая форма:** Symancy Limited (Private Company Limited by Shares) -- в процессе регистрации
+**Дата:** Февраль 2026 г.
+**Классификация:** КОНФИДЕНЦИАЛЬНО
+
+</div>
+
+<div style="text-align:center;margin:2em 0">
+<img src="../../whisk-images/01-hero-coffee-ai.png" alt="Symancy AI" style="max-width:100%;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+</div>
+
+---
+
+## Содержание
+
+1. [Исполнительное резюме](#1-исполнительное-резюме)
+2. [Компания и команда](#2-компания-и-команда)
+3. [Интеллектуальная собственность (IP)](#3-интеллектуальная-собственность-ip)
+4. [Технологическое описание](#4-технологическое-описание)
+5. [Анализ рынка и позиционирование](#5-анализ-рынка-и-позиционирование)
+6. [Бизнес-модель](#6-бизнес-модель)
+7. [Стратегия выхода на рынок](#7-стратегия-выхода-на-рынок-go-to-market)
+8. [Финансовый план](#8-финансовый-план)
+9. [Управление рисками](#9-управление-рисками)
+10. [Комплаенс AFSA (AIFC)](#10-комплаенс-afsa-aifc)
+11. [План развития (Roadmap)](#11-план-развития-roadmap)
+12. [План найма на 2026--2028 гг.](#12-план-найма-employment-plan-на-2026-2028-гг)
+13. [Заключение](#13-заключение)
+14. [Приложение А: Технологическое описание](#приложение-а-технологическое-описание)
 
 ---
 
@@ -44,6 +76,23 @@
   2. Symancy Limited приобретает 100% долю в ООО «СИМАНТИЯ».
   3. ООО «СИМАНТИЯ» получает неисключительную лицензию на использование платформы на территории РФ и СНГ с уплатой роялти 15--20% от выручки.
 
+```mermaid
+flowchart TB
+    SYM["Symancy Limited<br/>(AIFC, Kazakhstan)<br/>IP Holder"]
+    LLC["LLC SIMANTIA<br/>(Russia)<br/>R&D Center"]
+
+    SYM -->|"100% ownership"| LLC
+    LLC -->|"Royalties 15-20%"| SYM
+
+    subgraph Equity["Equity Structure"]
+        CEO["CEO — Anna Voznesenskaya<br/>80% shares"]
+        CTO["CTO — Igor Maslennikov<br/>20% option (vesting)"]
+    end
+
+    Equity --> SYM
+    BP["Benefits & Partners<br/>(Legal Agent)"] -.->|"Regulatory services"| SYM
+```
+
 ### Акционерный капитал и мотивация
 
 Уставный капитал Symancy Limited: 1 000 обыкновенных акций номинальной стоимостью $1 каждая. На момент регистрации 100% акций принадлежат Анне Вознесенской.
@@ -83,6 +132,21 @@ Symancy Limited выкупает долю за номинальную стоим
 
 **Все будущие разработки** (MVP, v2.0 и далее) передаются напрямую от CTO к Symancy Limited по отдельным договорам, что централизует IP в юрисдикции AIFC.
 
+```mermaid
+flowchart LR
+    subgraph S1["Stage 1: IP Assignment"]
+        LLC1["LLC SIMANTIA"] -->|"Exclusive rights<br/>464,000 RUB"| SYM1["Symancy Limited"]
+    end
+    subgraph S2["Stage 2: 100% Acquisition"]
+        SYM2["Symancy Limited"] -->|"Nominal value<br/>10,000 RUB"| LLC2["100% stake in<br/>LLC SIMANTIA"]
+    end
+    subgraph S3["Future Development"]
+        CTO["CTO"] -->|"Direct IP transfer<br/>under agreements"| SYM3["Symancy Limited"]
+    end
+
+    S1 --> S2 --> S3
+```
+
 ### Состав интеллектуальной собственности
 
 | Компонент | Описание |
@@ -116,6 +180,22 @@ Symancy -- AI-платформа для визуального анализа и
 | Data Layer | PostgreSQL (Supabase), Supabase Auth | Профили, история, аналитика, аутентификация |
 | Payments | YooKassa (РФ), Paddle (global), Razorpay (India) | Модульная система приёма платежей |
 
+<div style="text-align:center;margin:2em 0">
+<img src="../../whisk-images/05-tech-stack.png" alt="Омниканальная архитектура платформы" style="max-width:100%;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>Омниканальная архитектура платформы</em></p>
+</div>
+
+<div style="display:flex;justify-content:center;gap:2em;flex-wrap:wrap;margin:2em 0">
+<div style="text-align:center">
+<img src="../../whisk-images/07-product-desktop.png" alt="Desktop Interface" style="max-width:500px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>Web-приложение — Desktop</em></p>
+</div>
+<div style="text-align:center">
+<img src="../../whisk-images/08-product-mobile-dark.png" alt="Mobile Interface" style="max-width:200px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>Mobile — Dark Theme</em></p>
+</div>
+</div>
+
 **AI-персонажи (Persona Engine):**
 
 | Персона | Стилистика | Позиционирование |
@@ -123,9 +203,25 @@ Symancy -- AI-платформа для визуального анализа и
 | **Арина** | Тёплая, поддерживающая, эмпатичная | Digital Wellness -- рефлексия, самоанализ, работа с паттернами |
 | **Кассандра** | Аналитическая, глубокая, с культурными референсами | Creative Narrative AI -- художественная интерпретация, развлекательная функция |
 
+<div style="display:flex;justify-content:center;gap:2em;flex-wrap:wrap;margin:2em 0">
+<div style="text-align:center">
+<img src="../../whisk-images/03-persona-arina.png" alt="Арина" style="width:180px;height:180px;border-radius:50%;object-fit:cover;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>Арина — Digital Wellness</em></p>
+</div>
+<div style="text-align:center">
+<img src="../../whisk-images/04-persona-kassandra.png" alt="Кассандра" style="width:180px;height:180px;border-radius:50%;object-fit:cover;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>Кассандра — Creative Narrative AI</em></p>
+</div>
+</div>
+
 ### 4.2. Защита от галлюцинаций
 
 Языковые модели (LLM) могут генерировать правдоподобный, но не обоснованный текст -- «галлюцинации». Symancy применяет многоуровневую систему защиты:
+
+<div style="text-align:center;margin:2em 0">
+<img src="../../whisk-images/06-anti-hallucination.png" alt="AI Hallucination Protection" style="max-width:100%;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>Механизм фильтрации и верификации AI-выводов</em></p>
+</div>
 
 1. **Структурированный ввод** -- LLM получает результаты предобработки изображения со строгими инструкциями по зонированному анализу.
 2. **Prompt Engineering** -- специализированные промпты ограничивают контекст генерации, температура минимальна.
@@ -141,6 +237,11 @@ Symancy -- AI-платформа для визуального анализа и
 - Feature Extraction (зоны, плотность, текстура, направление потока, паттерны) -- scikit-image
 - Verification Layer (парсинг атрибуций, валидация ID, Audit Score ≥95%)
 - Visual Proof UI (интерактивный overlay с подсветкой зон)
+
+<div style="text-align:center;margin:2em 0">
+<img src="../../whisk-images/02-cv-zones.png" alt="CV Zone Detection" style="max-width:300px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>Computer Vision Zone Detection: RIM / CENTER / BOTTOM</em></p>
+</div>
 
 **Соответствие требованиям:**
 
@@ -182,6 +283,19 @@ Symancy -- AI-платформа для визуального анализа и
 | **SAM** (Serviceable Available Market) | ~$2.5--3.5 млрд | Мобильные приложения в категории «mind & body» / «lifestyle» с AI на целевых рынках (РФ/СНГ, Индия, ОАЭ, англоязычные) |
 | **SOM** (Serviceable Obtainable Market) | $4--15 млн к 3-му году | Реалистичная доля с учётом нишевой специализации на тассеографии и выхода на 3 региона |
 
+```mermaid
+flowchart TB
+    TAM["TAM — Total Addressable Market<br/>~$10 billion<br/>Global digital spiritual practices & AI wellness"]
+    SAM["SAM — Serviceable Available Market<br/>~$2.5-3.5 billion<br/>Mobile apps in target markets"]
+    SOM["SOM — Serviceable Obtainable Market<br/>$4-15 million by Year 3<br/>Niche specialization in 3 regions"]
+
+    TAM --> SAM --> SOM
+
+    style TAM fill:#4a90d9,color:#fff
+    style SAM fill:#7ab648,color:#fff
+    style SOM fill:#f5a623,color:#fff
+```
+
 ### 5.3. Конкурентный анализ
 
 | Конкурент | Рынок | Загрузки | Выручка (год) | Модель | Наш дифференциатор |
@@ -218,6 +332,11 @@ Symancy AI -- **этичный, технологичный инструмент 
 | **ОАЭ** | Высокое проникновение смартфонов, экспат-аудитория | English + Telr/Stripe | H2 2027 |
 | **Казахстан** | €104.6 млн рынок Digital Wellness, господдержка | RU + Paddle | 2027 |
 
+<div style="text-align:center;margin:2em 0">
+<img src="../../whisk-images/09-market-map.jpg" alt="Target Markets Map" style="max-width:100%;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>Целевые рынки: Россия, Казахстан, Индия, ОАЭ</em></p>
+</div>
+
 ---
 
 ## 6. БИЗНЕС-МОДЕЛЬ
@@ -250,6 +369,11 @@ Symancy AI -- **этичный, технологичный инструмент 
 
 **Сценарий использования:** На чеке или стаканчике кофейни размещается QR-код с призывом «Узнай, что твоя чашка говорит о тебе». Посетитель переходит в Telegram-бот, загружает фото остатков кофе и получает инсайт от персоны Арина. Дополнительно предлагается скидка на следующий визит. Для сетей с приложением (Drinkit) -- интеграция через API.
 
+<div style="text-align:center;margin:2em 0">
+<img src="../../whisk-images/11-b2b-use-case.jpg" alt="B2B Use Case" style="max-width:100%;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>B2B-интеграция: QR-код на стаканчике → Telegram-бот → AI-инсайт</em></p>
+</div>
+
 **Ценность для B2B-партнёра:**
 - Повышение лояльности и вовлечённости гостей (уникальный интерактивный опыт).
 - Вирусный маркетинг -- пользователи делятся карточками результатов в соцсетях (stories), обеспечивая бесплатный охват и привлекая новую аудиторию.
@@ -274,6 +398,35 @@ Symancy AI -- **этичный, технологичный инструмент 
 ### 6.5. Модель развития
 
 Bootstrap (самофинансирование). Подтверждённый source of wealth -- доход от предпринимательской деятельности. Привлечение внешних инвестиций не планируется на первом этапе; возможно на этапе масштабирования (2028, Series A).
+
+```mermaid
+flowchart TB
+    subgraph B2C["B2C Subscriptions"]
+        Basic["Basic<br/>$2.99/mo"]
+        Standard["Standard<br/>$5.99/mo"]
+        Premium["Premium<br/>$9.99/mo"]
+    end
+    subgraph B2B["B2B Licensing & API"]
+        Small["Small Business<br/>$100/mo"]
+        Medium["Medium Business<br/>$300/mo"]
+        Large["Large Chains<br/>$1,000+/mo"]
+    end
+    subgraph Roy["Royalties"]
+        R["LLC SIMANTIA<br/>15-20% of revenue"]
+    end
+
+    B2C --> SYM["Symancy Limited<br/>(AIFC)"]
+    B2B --> SYM
+    Roy --> SYM
+
+    subgraph Pay["Payment Providers"]
+        YK["YooKassa<br/>(Russia)"]
+        PD["Paddle<br/>(Global)"]
+        RP["Razorpay<br/>(India)"]
+        ST["Stripe / Telr<br/>(UAE)"]
+    end
+    SYM -.-> Pay
+```
 
 ---
 
@@ -304,8 +457,36 @@ Bootstrap (самофинансирование). Подтверждённый s
 | Яндекс.Директ | 20% | 100 руб. (~$1.11) | Высокое качество трафика |
 | TikTok | 15% | 40 руб. (~$0.44) | Вирусный потенциал |
 
+```mermaid
+pie title Phase 3 Marketing Budget Allocation
+    "Telegram Ads" : 40
+    "VK" : 25
+    "Yandex.Direct" : 20
+    "TikTok" : 15
+```
+
 - Бюджет: $12 000.
 - **Средний CAC по году: $3 за платящего пользователя** (за счёт тёплого таргетинга на уже заинтересованную аудиторию).
+
+> **Примечание:** Указанные CAC — стоимость привлечения одного платящего пользователя с учётом конверсии из регистраций 2.5–3% и оптимизации таргетинга на тёплую аудиторию.
+
+```mermaid
+journey
+    title Go-to-Market Journey
+    section Phase 1 - Soft Launch (M1-M2)
+        Friends and Family: 5: Team
+        Telegram channels: 4: Marketing
+        Micro-influencers: 3: Marketing
+    section Phase 2 - Growth Hacking (M3-M4)
+        Content marketing: 4: Marketing
+        Referral program: 5: Marketing
+        Telegram communities: 4: Marketing
+    section Phase 3 - Scaling (M5-M12)
+        Telegram Ads: 5: Marketing
+        VK Ads: 4: Marketing
+        Yandex Direct: 4: Marketing
+        TikTok: 3: Marketing
+```
 
 **Общий маркетинговый бюджет (1-й год): $15 000.**
 
@@ -334,6 +515,11 @@ Bootstrap (самофинансирование). Подтверждённый s
 7. Получает ежедневные утренние/вечерние AI-инсайты (retention).
 8. Оформляет подписку для продолжения анализов.
 
+<div style="text-align:center;margin:2em 0">
+<img src="../../whisk-images/10-how-it-works.jpg" alt="How Symancy AI Works" style="max-width:100%;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>Как работает Symancy AI: от фото кофейной гущи до персонализированного инсайта</em></p>
+</div>
+
 ### 7.4. Каналы доставки продукта
 
 | Канал | Статус | Приоритет |
@@ -343,6 +529,11 @@ Bootstrap (самофинансирование). Подтверждённый s
 | App Store / Google Play (Capacitor hybrid) | Расширение охвата | Q4 2026 |
 | WhatsApp / WeChat | Международные рынки | 2027 |
 | B2B API (tRPC / REST) | Для партнёров | Q3 2026 |
+
+<div style="text-align:center;margin:2em 0">
+<img src="../../whisk-images/12-telegram-bot.png" alt="Telegram Bot & Mini App" style="max-width:500px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>Symancy Telegram Bot: AI-анализ в чате + интерфейс Mini App</em></p>
+</div>
 
 ### 7.5. Retention-механики
 
@@ -437,6 +628,36 @@ Bootstrap (самофинансирование). Подтверждённый s
 | Выручка B2B | $75 000 | $250 000 | $500 000 |
 | Роялти | $15 000 | $45 000 | $90 000 |
 | **Итого 3-й год** | **$440 000** | **$1 240 000** | **$2 210 000** |
+
+```mermaid
+flowchart LR
+    subgraph Y1["Year 1 — 2026"]
+        Y1P["Pessimistic<br/>$17,500"]
+        Y1B["Base<br/>$50,500"]
+        Y1O["Optimistic<br/>$117,000"]
+    end
+    subgraph Y2["Year 2 — 2027"]
+        Y2P["Pessimistic<br/>$130,000"]
+        Y2B["Base<br/>$455,000"]
+        Y2O["Optimistic<br/>$1,070,000"]
+    end
+    subgraph Y3["Year 3 — 2028"]
+        Y3P["Pessimistic<br/>$440,000"]
+        Y3B["Base<br/>$1,240,000"]
+        Y3O["Optimistic<br/>$2,210,000"]
+    end
+    Y1 --> Y2 --> Y3
+
+    style Y1P fill:#ffcccc,color:#333
+    style Y1B fill:#fff3cd,color:#333
+    style Y1O fill:#d4edda,color:#333
+    style Y2P fill:#ffcccc,color:#333
+    style Y2B fill:#fff3cd,color:#333
+    style Y2O fill:#d4edda,color:#333
+    style Y3P fill:#ffcccc,color:#333
+    style Y3B fill:#fff3cd,color:#333
+    style Y3O fill:#d4edda,color:#333
+```
 
 #### Помесячный прогноз на 1-й год (оптимистичный сценарий)
 
@@ -566,14 +787,42 @@ Bootstrap (самофинансирование). Подтверждённый s
 | **2027** | Выход на рынки Индии и ОАЭ. Расширение команды (штат в Казахстане). Разработка Visual Proof Module (v2.0). 10--15 B2B-партнёров. |
 | **2028** | Операционная безубыточность. Масштабирование B2B-портфеля (30--50 партнёров). Подготовка к привлечению инвестиций (Series A). Добавление хинди. |
 
+```mermaid
+gantt
+    title Symancy Development Roadmap
+    dateFormat YYYY-MM-DD
+    axisFormat %b %Y
+
+    section Registration
+        AIFC Registration           :done, reg1, 2026-01-01, 2026-03-31
+        Astana Hub Application      :active, reg2, 2026-04-01, 2026-06-30
+
+    section Product
+        IP Assignment               :ip1, 2026-04-01, 2026-06-30
+        MVP Development             :mvp, 2026-04-01, 2026-09-30
+        Beta Testing (200-500 users):beta, 2026-07-01, 2026-09-30
+        Public Launch (PWA)         :launch, 2026-10-01, 2026-12-31
+        Visual Proof Module v2.0    :v2, 2027-01-01, 2027-12-31
+
+    section Market
+        Soft Launch                 :soft, 2026-04-01, 2026-06-30
+        B2B Pilots                  :b2b, 2026-10-01, 2026-12-31
+        India & UAE Entry           :intl, 2027-01-01, 2027-12-31
+
+    section Scaling
+        10-15 B2B Partners          :partners, 2027-01-01, 2027-12-31
+        30-50 B2B Partners          :scale, 2028-01-01, 2028-12-31
+        Series A Preparation        :series, 2028-01-01, 2028-12-31
+```
+
 ---
 
 ## 12. ПЛАН НАЙМА (EMPLOYMENT PLAN) НА 2026--2028 ГГ.
 
 | Должность | 2026 | 2027 | 2028 | Зарплата (gross, Казахстан) |
 |-----------|------|------|------|-----------------------------|
-| CEO (Анна Вознесенская) | 1 | 1 | 1 | Учредитель |
-| CTO (Игорь Масленников) | 1 | 1 | 1 | Опцион 20%; зарплата с 2027 |
+| CEO (Анна Вознесенская) | 1 | 1 | 1 | Без зарплаты до окупаемости; sweat equity |
+| CTO (Игорь Масленников) | 1 | 1 | 1 | Без зарплаты до окупаемости; опцион 20% |
 | Разработчик (Middle/Senior) | аутсорс | 2 | 3 | $1 200--2 500/мес |
 | Маркетолог (Director of Marketing) | 0 | 1 | 1 | $2 000--3 500/мес |
 | Служба поддержки (Support) | 0 | 2 | 3 | $500--800/мес |
@@ -581,7 +830,30 @@ Bootstrap (самофинансирование). Подтверждённый s
 | Юрист (аутсорс) | + | + | + | По необходимости |
 | **ИТОГО штатных** | **2** | **7** | **9** | |
 
-**Зарплаты** соответствуют среднерыночным в Казахстане (Астана/Алматы) по данным hh.kz и Glassdoor на 2026 год.
+```mermaid
+flowchart LR
+    subgraph Y2026["2026 — 2 FTE"]
+        A1["CEO"]
+        A2["CTO"]
+    end
+    subgraph Y2027["2027 — 7 FTE"]
+        B1["CEO + CTO"]
+        B2["2 Developers"]
+        B3["Marketing Manager"]
+        B4["2 Support"]
+    end
+    subgraph Y2028["2028 — 9 FTE"]
+        C1["CEO + CTO"]
+        C2["3 Developers"]
+        C3["Marketing Manager"]
+        C4["3 Support"]
+    end
+    Y2026 -->|"+5"| Y2027 -->|"+2"| Y2028
+```
+
+> **Примечание:** Учредители (CEO и CTO) работают без зарплаты до выхода на окупаемость или привлечения инвестиций. CTO мотивирован опционом 20%, CEO — sweat equity. Это честно отражает bootstrap-модель проекта.
+
+**Зарплаты** (для нанятых сотрудников) соответствуют среднерыночным в Казахстане (Астана/Алматы) по данным hh.kz и Glassdoor на 2026 год.
 
 **Substance в AIFC** обеспечивается:
 - Физическим нахождением CEO в офисе на территории AIFC.
@@ -613,20 +885,9 @@ Symancy AI представляет собой технологически ун
 
 ## ПРИЛОЖЕНИЕ А: ТЕХНОЛОГИЧЕСКОЕ ОПИСАНИЕ
 
-<div style="text-align:center;margin:2em 0">
-<img src="../../whisk-images/01-hero-coffee-ai.png" alt="Symancy AI Coffee Analysis" style="max-width:100%;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
-</div>
-
----
-
 ### ЗАЩИТА ОТ ГАЛЛЮЦИНАЦИЙ: Как мы контролируем AI
 
 > **Для AFSA: Ответ на вопрос о предсказуемости AI-системы**
-
-<div style="text-align:center;margin:2em 0">
-<img src="../../whisk-images/06-anti-hallucination.png" alt="AI Hallucination Protection" style="max-width:100%;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
-<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>Механизм фильтрации и верификации выходных данных AI</em></p>
-</div>
 
 #### Проблема: Галлюцинации LLM
 
@@ -726,15 +987,7 @@ flowchart LR
 
 ### ТЕКУЩАЯ АРХИТЕКТУРА: Интеллектуальная мультимодальная платформа
 
-**Обзор платформы:**
-Symancy — AI-платформа нового поколения для визуального анализа и персонализированной интерпретации образов на основе искусства тассеографии (анализ кофейной гущи). Система объединяет передовые технологии Computer Vision, обработки естественного языка (NLP), мультиязычной генерации и персонализированного AI-ассистирования в единой омниканальной платформе.
-
-<div style="text-align:center;margin:2em 0">
-<img src="../../whisk-images/05-tech-stack.png" alt="Tech Stack Architecture" style="max-width:100%;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
-<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>Омниканальная архитектура платформы Symancy</em></p>
-</div>
-
----
+> Обзор платформы см. в [Разделе 4.1 — Текущая архитектура](#41-текущая-архитектура-v10).
 
 #### Архитектурные компоненты платформы
 
@@ -815,27 +1068,7 @@ flowchart TB
 
 **C. Система AI-персонажей (Persona Engine) — уникальная разработка**
 
-Проприетарная система персонализированных AI-ассистентов:
-
-<div style="display:flex;justify-content:center;gap:2em;margin:1.5em 0;flex-wrap:wrap">
-<div style="text-align:center;max-width:200px">
-<img src="../../whisk-images/03-persona-arina.png" alt="Арина" style="width:180px;height:180px;border-radius:50%;object-fit:cover;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
-<p style="font-weight:bold;margin:0.5em 0 0.2em">АРИНА</p>
-<p style="font-size:0.85em;color:#666">Тёплая, поддерживающая</p>
-</div>
-<div style="text-align:center;max-width:200px">
-<img src="../../whisk-images/04-persona-kassandra.png" alt="Кассандра" style="width:180px;height:180px;border-radius:50%;object-fit:cover;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
-<p style="font-weight:bold;margin:0.5em 0 0.2em">КАССАНДРА</p>
-<p style="font-size:0.85em;color:#666">Аналитическая, глубокая</p>
-</div>
-</div>
-
-| Персона | Стилистика | Применение |
-|---------|-----------|------------|
-| **Арина** | Тёплая, поддерживающая | Акцент на позитивных аспектах, эмпатичные формулировки |
-| **Кассандра** | Аналитическая, глубокая | Детальный разбор, исторические и культурные референсы |
-
-Каждая персона — результат исследований в области стилистической настройки LLM через prompt engineering.
+Проприетарная система персонализированных AI-ассистентов (см. [Раздел 4.1](#41-текущая-архитектура-v10) для обзора персон). Каждая персона — результат исследований в области стилистической настройки LLM через prompt engineering.
 
 **D. Омниканальная платформа (Omnichannel Delivery)**
 
@@ -1030,11 +1263,6 @@ flowchart TB
 - **Технологии**: OpenCV contour detection, возможно Segment Anything Model (SAM) для точности
 
 **C. Zone Detection Module**
-
-<div style="text-align:center;margin:1.5em 0">
-<img src="../../whisk-images/02-cv-zones.png" alt="CV Zone Detection" style="max-width:300px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
-<p style="font-size:0.9em;color:#666;margin-top:0.5em"><em>Алгоритмическое разделение чашки на семантические зоны</em></p>
-</div>
 
 - **Алгоритмическое разделение чашки на семантические зоны**:
   - **RIM (край)**: Внешнее кольцо — символизирует ближайшее будущее
