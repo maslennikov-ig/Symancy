@@ -3,12 +3,7 @@
 // Handles both one-time payments and subscription payments
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2"
-
-// CORS headers (inlined to avoid shared module issues in deployment)
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { webhookCorsHeaders } from "../_shared/cors.ts"
 
 // Types
 type ProductType = 'basic' | 'pack5' | 'pro' | 'cassandra'
@@ -586,14 +581,14 @@ function isSubscriptionPayment(metadata: YooKassaPayment['metadata']): boolean {
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight (for testing, production webhooks don't send OPTIONS)
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: webhookCorsHeaders })
   }
 
   // Only allow POST method
   if (req.method !== 'POST') {
     return new Response(
       JSON.stringify({ error: 'Method not allowed', code: 'METHOD_NOT_ALLOWED' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 405, headers: { ...webhookCorsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 
@@ -621,7 +616,7 @@ Deno.serve(async (req: Request) => {
       console.error('Invalid JSON in webhook body')
       return new Response(
         JSON.stringify({ error: 'Invalid JSON', code: 'INVALID_REQUEST' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...webhookCorsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -672,7 +667,7 @@ Deno.serve(async (req: Request) => {
       console.error('Could not verify payment with YooKassa API:', payment.id)
       return new Response(
         JSON.stringify({ error: 'Payment verification failed', code: 'VERIFICATION_FAILED' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...webhookCorsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -683,7 +678,7 @@ Deno.serve(async (req: Request) => {
       })
       return new Response(
         JSON.stringify({ error: 'Status mismatch', code: 'STATUS_MISMATCH' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...webhookCorsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 

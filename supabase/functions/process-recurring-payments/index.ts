@@ -3,25 +3,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "npm:@supabase/supabase-js@2"
 
-// Subscription tier prices (monthly, in RUB)
-const TIER_PRICES: Record<string, number> = { basic: 299, advanced: 799, premium: 3333 }
-const BILLING_DISCOUNTS: Record<number, number> = { 1: 0, 3: 15, 6: 25, 12: 50 }
-
-// Fiscal receipt configuration (54-FZ)
-const RECEIPT_TAX_SYSTEM_CODE = 2  // УСН (доходы)
-const RECEIPT_VAT_CODE = 1  // Без НДС
-
-const TIER_NAMES: Record<string, string> = {
-  basic: 'Базовый',
-  advanced: 'Продвинутый',
-  premium: 'Премиум',
-}
-
-function calculatePrice(tier: string, billingPeriodMonths: number): number {
-  const monthlyPrice = TIER_PRICES[tier] || 0
-  const discountPercent = BILLING_DISCOUNTS[billingPeriodMonths] || 0
-  return Math.round(monthlyPrice * billingPeriodMonths * (1 - discountPercent / 100))
-}
+import {
+  RECEIPT_TAX_SYSTEM_CODE,
+  RECEIPT_VAT_CODE,
+  TIER_NAMES,
+  calculatePrice,
+} from "../_shared/subscription-config.ts"
 
 Deno.serve(async (req: Request) => {
   try {
@@ -232,7 +219,7 @@ async function processRenewalPayment(
   secretKey: string,
   isRetry: boolean
 ): Promise<void> {
-  const amountRub = calculatePrice(sub.tier, sub.billing_period_months)
+  const amountRub = calculatePrice(sub.tier, sub.billing_period_months).total
 
   // Calculate new period dates
   const periodStart = sub.current_period_end

@@ -1,6 +1,6 @@
 # Symancy Tariffs & Credits System
 
-> **Last Updated**: 2026-01-06
+> **Last Updated**: 2026-03-10
 > **Status**: Active
 > **Related Files**:
 > - `symancy-backend/src/modules/credits/service.ts` - Credit operations
@@ -11,7 +11,7 @@
 
 ## Overview
 
-Symancy uses a **pay-per-use credit system** (no subscriptions). Users purchase credits which are consumed for coffee reading analyses.
+Symancy uses a **dual credit system**: pay-per-use purchases AND recurring subscriptions. Both models coexist — subscribers can also buy additional credit packs. All credits go to a shared balance.
 
 ## Basic vs Pro Differentiation
 
@@ -58,6 +58,54 @@ After sending a photo, users see a topic selection keyboard:
 | Пакет "Любитель" | 300₽ | 5 basic | `pack5` | 5 single-topic readings |
 | Разовый "Внутренний мудрец" | 500₽ | 1 pro | `pro` | 1 full analysis (all 6 topics) |
 | Предсказание "Кассандра" | 1000₽ | 1 cassandra | `cassandra` | Esoteric prediction by Cassandra |
+
+## Subscription Tiers (Recurring)
+
+Subscriptions provide monthly credit grants via automatic recurring payments through YooKassa.
+
+### Tiers
+
+| Tier | Monthly Price | Basic Credits/month | Cassandra Credits/month | PRO Access |
+|------|--------------|---------------------|------------------------|------------|
+| Free | 0₽ | 4 | 0 | No |
+| Базовый (Basic) | 299₽ | 21 | 0 | No |
+| Продвинутый (Advanced) | 799₽ | 68 | 0 | Yes |
+| Премиум (Premium) | 3333₽ | 121 | 7 | Yes |
+
+### Billing Period Discounts
+
+| Period | Discount |
+|--------|----------|
+| 1 month | 0% |
+| 3 months | 15% |
+| 6 months | 25% |
+| 12 months | 50% |
+
+### Subscription Lifecycle
+
+1. **Initial payment**: User selects tier + billing period → YooKassa payment with `save_payment_method: true`
+2. **Activation**: Webhook confirms payment → subscription activated, credits granted, payment method saved
+3. **Renewal**: Cron function (`process-recurring-payments`) charges saved payment method before period end
+4. **Failed renewal**: 3-day grace period, 3 retry attempts, then subscription expires
+5. **Cancellation**: User cancels → access continues until current period end, then expires
+
+### Key Architecture Decisions
+
+- **Shared balance**: Subscription credits go to the same `user_credits` table as one-time purchases
+- **Credits accumulate**: Unused credits carry over, they never expire
+- **PRO access via tier**: Advanced/Premium tiers unlock PRO analyses without consuming `pro_credits`
+- **One active subscription**: Partial unique index enforces max 1 active/pending subscription per user
+- **Coexistence**: Subscribers can buy additional credit packs on top of their subscription
+
+### Related Files
+
+- `src/types/subscription.ts` — TypeScript types and tier configs
+- `src/services/subscriptionService.ts` — Service layer
+- `supabase/functions/create-subscription/` — Initial payment Edge Function
+- `supabase/functions/cancel-subscription/` — Cancellation Edge Function
+- `supabase/functions/process-recurring-payments/` — Cron renewal function
+- `supabase/functions/payment-webhook/index.ts` — Handles both one-time and subscription webhooks
+- `supabase/migrations/20260311000001-3_*` — Database schema
 
 ## Free Tier
 

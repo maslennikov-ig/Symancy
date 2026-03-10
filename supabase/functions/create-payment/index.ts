@@ -2,12 +2,7 @@
 // Creates YooKassa payment and returns confirmation_token for widget initialization
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "npm:@supabase/supabase-js@2"
-
-// CORS headers (inlined to avoid shared module issues in deployment)
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { getCorsHeaders } from "../_shared/cors.ts"
 
 // Types
 type ProductType = 'basic' | 'pack5' | 'pro' | 'cassandra'
@@ -73,7 +68,7 @@ function isValidProductType(type: string): type is ProductType {
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders })
+    return new Response("ok", { headers: getCorsHeaders(req) })
   }
 
   try {
@@ -81,7 +76,7 @@ Deno.serve(async (req: Request) => {
     if (req.method !== "POST") {
       return new Response(
         JSON.stringify({ error: "Method not allowed", code: "METHOD_NOT_ALLOWED" }),
-        { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 405, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -90,7 +85,7 @@ Deno.serve(async (req: Request) => {
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return new Response(
         JSON.stringify({ error: "Missing or invalid authorization header", code: "UNAUTHORIZED" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -113,7 +108,7 @@ Deno.serve(async (req: Request) => {
       console.error("Auth error:", authError)
       return new Response(
         JSON.stringify({ error: "Invalid token", code: "UNAUTHORIZED" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -126,7 +121,7 @@ Deno.serve(async (req: Request) => {
     } catch {
       return new Response(
         JSON.stringify({ error: "Invalid JSON body", code: "INVALID_REQUEST" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -139,7 +134,7 @@ Deno.serve(async (req: Request) => {
           error: `Invalid product type. Must be one of: ${VALID_PRODUCT_TYPES.join(', ')}`,
           code: "INVALID_PRODUCT_TYPE"
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -160,7 +155,7 @@ Deno.serve(async (req: Request) => {
       console.error("YooKassa credentials not configured")
       return new Response(
         JSON.stringify({ error: "Payment service not configured", code: "YUKASSA_ERROR" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -229,7 +224,7 @@ Deno.serve(async (req: Request) => {
           error: "Failed to create payment",
           code: "YUKASSA_ERROR"
         }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -243,7 +238,7 @@ Deno.serve(async (req: Request) => {
           error: "Invalid payment gateway response",
           code: "YUKASSA_ERROR"
         }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -309,7 +304,7 @@ Deno.serve(async (req: Request) => {
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" }
       }
     )
 
@@ -322,7 +317,7 @@ Deno.serve(async (req: Request) => {
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" }
       }
     )
   }

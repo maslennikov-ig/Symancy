@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { SubscriptionTier, BillingPeriod } from '../../../types/subscription';
 import { SUBSCRIPTION_TIERS } from '../../../types/subscription';
 import { BillingPeriodSelector } from './BillingPeriodSelector';
@@ -21,6 +21,18 @@ export function SubscriptionSelector({
   t,
 }: SubscriptionSelectorProps) {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>(1);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [onClose]);
 
   return (
     <div

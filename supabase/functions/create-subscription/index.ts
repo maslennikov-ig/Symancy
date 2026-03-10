@@ -2,15 +2,19 @@
 // Creates a subscription with YooKassa payment (save_payment_method for recurring billing)
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "npm:@supabase/supabase-js@2"
+import { getCorsHeaders } from "../_shared/cors.ts"
 
-// CORS headers (inlined to avoid shared module issues in deployment)
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-// Types
-type SubscriptionTier = 'basic' | 'advanced' | 'premium'
+import {
+  TIER_PRICES,
+  BILLING_DISCOUNTS,
+  RECEIPT_TAX_SYSTEM_CODE,
+  RECEIPT_VAT_CODE,
+  TIER_NAMES,
+  VALID_TIERS,
+  VALID_BILLING_PERIODS,
+  calculatePrice,
+  type SubscriptionTier,
+} from "../_shared/subscription-config.ts"
 
 interface CreateSubscriptionRequest {
   tier: SubscriptionTier
@@ -18,39 +22,10 @@ interface CreateSubscriptionRequest {
   return_url?: string
 }
 
-// Subscription tier prices (monthly, in RUB)
-const TIER_PRICES: Record<string, number> = { basic: 299, advanced: 799, premium: 3333 }
-const BILLING_DISCOUNTS: Record<number, number> = { 1: 0, 3: 15, 6: 25, 12: 50 }
-
-const TIER_NAMES: Record<string, string> = {
-  basic: 'Базовый',
-  advanced: 'Продвинутый',
-  premium: 'Премиум',
-}
-
-const VALID_TIERS: SubscriptionTier[] = ['basic', 'advanced', 'premium']
-const VALID_BILLING_PERIODS = [1, 3, 6, 12]
-
-// Fiscal receipt configuration (54-FZ)
-const RECEIPT_TAX_SYSTEM_CODE = 2  // УСН (доходы)
-const RECEIPT_VAT_CODE = 1  // Без НДС
-
-function isValidTier(tier: string): tier is SubscriptionTier {
-  return VALID_TIERS.includes(tier as SubscriptionTier)
-}
-
-function calculatePrice(tier: string, billingPeriodMonths: number): { total: number; base: number; discount: number } {
-  const monthlyPrice = TIER_PRICES[tier]
-  const discountPercent = BILLING_DISCOUNTS[billingPeriodMonths] || 0
-  const base = monthlyPrice * billingPeriodMonths
-  const total = Math.round(base * (1 - discountPercent / 100))
-  return { total, base, discount: discountPercent }
-}
-
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders })
+    return new Response("ok", { headers: getCorsHeaders(req) })
   }
 
   try {
@@ -58,7 +33,7 @@ Deno.serve(async (req: Request) => {
     if (req.method !== "POST") {
       return new Response(
         JSON.stringify({ error: "Method not allowed", code: "METHOD_NOT_ALLOWED" }),
-        { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 405, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -67,7 +42,7 @@ Deno.serve(async (req: Request) => {
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return new Response(
         JSON.stringify({ error: "Missing or invalid authorization header", code: "UNAUTHORIZED" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -90,7 +65,7 @@ Deno.serve(async (req: Request) => {
       console.error("Auth error:", authError)
       return new Response(
         JSON.stringify({ error: "Invalid token", code: "UNAUTHORIZED" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -103,20 +78,20 @@ Deno.serve(async (req: Request) => {
     } catch {
       return new Response(
         JSON.stringify({ error: "Invalid JSON body", code: "INVALID_REQUEST" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
     // Validate tier
     const { tier, billing_period_months, return_url } = body
 
-    if (!tier || !isValidTier(tier)) {
+    if (!tier || !VALID_TIERS.includes(tier as SubscriptionTier)) {
       return new Response(
         JSON.stringify({
           error: `Invalid subscription tier. Must be one of: ${VALID_TIERS.join(', ')}`,
           code: "INVALID_TIER"
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -127,7 +102,7 @@ Deno.serve(async (req: Request) => {
           error: `Invalid billing period. Must be one of: ${VALID_BILLING_PERIODS.join(', ')}`,
           code: "INVALID_BILLING_PERIOD"
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -153,7 +128,7 @@ Deno.serve(async (req: Request) => {
           error: `You already have an ${existingSub.status} subscription (${existingSub.tier}). Cancel it first before subscribing to a new plan.`,
           code: "EXISTING_SUBSCRIPTION"
         }),
-        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 409, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -180,7 +155,7 @@ Deno.serve(async (req: Request) => {
       console.error("Error creating subscription:", subError)
       return new Response(
         JSON.stringify({ error: "Failed to create subscription", code: "DB_ERROR" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -207,7 +182,7 @@ Deno.serve(async (req: Request) => {
       await supabaseAdmin.from('subscriptions').delete().eq('id', subscriptionId)
       return new Response(
         JSON.stringify({ error: "Failed to create payment record", code: "DB_ERROR" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -221,7 +196,7 @@ Deno.serve(async (req: Request) => {
       console.error("YooKassa credentials not configured")
       return new Response(
         JSON.stringify({ error: "Payment service not configured", code: "YUKASSA_ERROR" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -306,7 +281,7 @@ Deno.serve(async (req: Request) => {
       await supabaseAdmin.from('subscriptions').delete().eq('id', subscriptionId)
       return new Response(
         JSON.stringify({ error: "Failed to create payment", code: "YUKASSA_ERROR" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -317,7 +292,7 @@ Deno.serve(async (req: Request) => {
       console.error("Invalid YooKassa response:", yukassaPayment)
       return new Response(
         JSON.stringify({ error: "Invalid payment gateway response", code: "YUKASSA_ERROR" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       )
     }
 
@@ -371,7 +346,7 @@ Deno.serve(async (req: Request) => {
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" }
       }
     )
 
@@ -381,7 +356,7 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({ error: "Internal server error", code: "INTERNAL_ERROR" }),
       {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" }
       }
     )
   }

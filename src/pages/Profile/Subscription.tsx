@@ -6,7 +6,7 @@
  *
  * @module pages/Profile/Subscription
  */
-import React, { useState, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router';
 import { SubscriptionManagement } from '../../components/features/subscription/SubscriptionManagement';
 import { SubscriptionSelector } from '../../components/features/subscription/SubscriptionSelector';
@@ -44,6 +44,7 @@ export function Subscription({ language, t }: SubscriptionPageProps): React.Reac
   const [showSelector, setShowSelector] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [paymentData, setPaymentData] = useState<{
     confirmationToken: string;
     subscriptionId: string;
@@ -52,6 +53,20 @@ export function Subscription({ language, t }: SubscriptionPageProps): React.Reac
   const handleBack = useCallback(() => {
     navigate(-1);
   }, [navigate]);
+
+  // Escape key + scroll lock for payment modal
+  useEffect(() => {
+    if (!paymentData) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPaymentData(null);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [paymentData]);
 
   const handleSelectSubscription = useCallback(async (tier: SubscriptionTier, period: BillingPeriod) => {
     setIsLoading(true);
@@ -128,6 +143,7 @@ export function Subscription({ language, t }: SubscriptionPageProps): React.Reac
           t={t as (key: string) => string}
           language={language}
           onChangePlan={() => setShowSelector(true)}
+          refreshKey={refreshKey}
         />
       </div>
 
@@ -180,7 +196,7 @@ export function Subscription({ language, t }: SubscriptionPageProps): React.Reac
                 purchaseId={paymentData.subscriptionId}
                 onComplete={() => {
                   setPaymentData(null);
-                  navigate(0); // refresh page
+                  setRefreshKey((k) => k + 1);
                 }}
                 onError={(err) => {
                   console.error('Payment error:', err);

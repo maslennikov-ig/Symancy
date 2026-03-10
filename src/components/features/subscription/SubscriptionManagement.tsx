@@ -15,6 +15,7 @@ interface SubscriptionManagementProps {
   t: (key: string) => string;
   language?: string;
   onChangePlan?: () => void;
+  refreshKey?: number;
 }
 
 const statusStyles: Record<string, string> = {
@@ -31,7 +32,7 @@ function formatDate(dateStr: string | null, locale?: string): string {
   return new Date(dateStr).toLocaleDateString(loc, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-export function SubscriptionManagement({ t, language, onChangePlan }: SubscriptionManagementProps) {
+export function SubscriptionManagement({ t, language, onChangePlan, refreshKey }: SubscriptionManagementProps) {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [payments, setPayments] = useState<SubscriptionPayment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +60,7 @@ export function SubscriptionManagement({ t, language, onChangePlan }: Subscripti
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, refreshKey]);
 
   const handleCancel = useCallback(async () => {
     if (!subscription) return;
