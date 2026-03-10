@@ -857,6 +857,7 @@ export const translations = {
     'subscription.billing.discount': '-{percent}%',
     'subscription.billing.perMonth': '/month',
     'subscription.billing.total': 'Total: {amount} RUB',
+    'subscription.billing.cadence': 'Charged once every {months} months',
 
     // Status
     'subscription.status.title': 'Status',
@@ -1757,6 +1758,7 @@ export const translations = {
     'subscription.billing.discount': '-{percent}%',
     'subscription.billing.perMonth': '/мес',
     'subscription.billing.total': 'Итого: {amount} руб.',
+    'subscription.billing.cadence': 'Списывается раз в {months} мес.',
 
     // Status
     'subscription.status.title': 'Статус',
@@ -2657,6 +2659,7 @@ export const translations = {
     'subscription.billing.discount': '-{percent}%',
     'subscription.billing.perMonth': '/月',
     'subscription.billing.total': '总计: {amount} 卢布',
+    'subscription.billing.cadence': '每{months}个月扣款一次',
 
     // Status
     'subscription.status.title': '状态',

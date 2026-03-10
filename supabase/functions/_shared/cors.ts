@@ -12,6 +12,8 @@ export function getCorsHeaders(req: Request): Record<string, string> {
   }
 }
 
+// Webhook CORS headers: wildcard is harmless since YooKassa server-to-server
+// calls don't send Origin header. Kept for CORS preflight testing convenience.
 export const webhookCorsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',

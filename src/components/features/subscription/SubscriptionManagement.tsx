@@ -9,7 +9,7 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { LoaderIcon } from '../../icons/LoaderIcon';
-import { cn } from '../../../lib/utils';
+import { cn, formatDate } from '../../../lib/utils';
 
 interface SubscriptionManagementProps {
   t: (key: string) => string;
@@ -25,12 +25,6 @@ const statusStyles: Record<string, string> = {
   expired: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
   pending: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
 };
-
-function formatDate(dateStr: string | null, locale?: string): string {
-  if (!dateStr) return '-';
-  const loc = locale === 'zh' ? 'zh-CN' : locale || undefined;
-  return new Date(dateStr).toLocaleDateString(loc, { year: 'numeric', month: 'short', day: 'numeric' });
-}
 
 export function SubscriptionManagement({ t, language, onChangePlan, refreshKey }: SubscriptionManagementProps) {
   const [subscription, setSubscription] = useState<Subscription | null>(null);

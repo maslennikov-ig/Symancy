@@ -69,9 +69,14 @@ export function SubscriptionTierCard({
                 </div>
               )}
               {billingPeriod > 1 && (
-                <p className="text-xs text-muted-foreground">
-                  {t('subscription.billing.total').replace('{amount}', String(pricing.totalAmount))}
-                </p>
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    {t('subscription.billing.total').replace('{amount}', String(pricing.totalAmount))}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('subscription.billing.cadence').replace('{months}', String(billingPeriod))}
+                  </p>
+                </>
               )}
             </div>
           ) : null}
