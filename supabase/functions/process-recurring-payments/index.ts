@@ -20,14 +20,13 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // Verify this is called with service role key (cron or admin)
-    const authHeader = req.headers.get("authorization")
+    // Verify this is called with correct cron secret
+    const cronKey = req.headers.get("x-cron-key")
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    const cronSecret = Deno.env.get("CRON_SECRET")
 
-    // Accept either service role key in Bearer token or the correct service role key
-    const expectedAuth = `Bearer ${supabaseServiceKey}`
-    if (authHeader !== expectedAuth) {
+    if (!cronSecret || cronKey !== cronSecret) {
       console.error("Unauthorized cron call")
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
