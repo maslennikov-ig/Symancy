@@ -87,58 +87,23 @@ export function Subscription({ language, t }: SubscriptionPageProps): React.Reac
   }, []);
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        backgroundColor: 'var(--tg-theme-secondary-bg-color, hsl(var(--background)))',
-        paddingBottom: '80px',
-      }}
-    >
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <header
-        style={{
-          backgroundColor: 'var(--tg-theme-bg-color, hsl(var(--card)))',
-          borderBottom: '1px solid var(--tg-theme-hint-color, hsl(var(--border)))',
-          padding: '12px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-        }}
-      >
+      <header className="bg-card border-b border-border px-4 py-3 flex items-center gap-3 sticky top-0 z-50">
         <button
           onClick={handleBack}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: '8px',
-            margin: '-8px',
-            cursor: 'pointer',
-            color: 'var(--tg-theme-text-color, hsl(var(--foreground)))',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          className="p-2 -m-2 cursor-pointer text-foreground flex items-center justify-center bg-transparent border-none"
           aria-label="Back"
         >
           <BackIcon />
         </button>
-        <h1
-          style={{
-            margin: 0,
-            fontSize: '18px',
-            fontWeight: 600,
-            color: 'var(--tg-theme-text-color, hsl(var(--foreground)))',
-          }}
-        >
+        <h1 className="m-0 text-lg font-semibold text-foreground">
           {t('subscription.manage.title' as keyof typeof translations.en)}
         </h1>
       </header>
 
       {/* Content */}
-      <div style={{ padding: '16px' }}>
+      <div className="p-4">
         <SubscriptionManagement
           t={t as (key: string) => string}
           language={language}

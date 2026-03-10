@@ -239,6 +239,7 @@ async function processRenewalPayment(
       period_start: periodStart.toISOString(),
       period_end: periodEnd.toISOString(),
       is_initial: false,
+      payment_type: 'subscription_renewal',
     })
     .select('id')
     .single()

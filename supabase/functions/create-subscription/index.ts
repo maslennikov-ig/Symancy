@@ -172,6 +172,7 @@ Deno.serve(async (req: Request) => {
         period_start: now.toISOString(),
         period_end: periodEnd.toISOString(),
         is_initial: true,
+        payment_type: 'subscription_initial',
       })
       .select('id')
       .single()

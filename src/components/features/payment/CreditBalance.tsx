@@ -9,11 +9,7 @@ import { Button } from '../../ui/button';
 import { LoaderIcon } from '../../icons/LoaderIcon';
 import { cn } from '../../../lib/utils';
 
-/**
- * Credit type configuration with icons and styles
- * Note: labels are now translation keys, resolved at render time
- */
-const getCreditTypeConfig = (t: (key: string) => string) => ({
+const CREDIT_TYPE_CONFIG = {
   basic: {
     labelKey: 'credits.type.basic',
     icon: (
@@ -73,7 +69,7 @@ const getCreditTypeConfig = (t: (key: string) => string) => ({
     badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
     iconBgClass: 'bg-amber-500/20 text-amber-600 dark:text-amber-400',
   },
-});
+};
 
 interface CreditBalanceProps {
   /** Translation function */
@@ -163,7 +159,7 @@ export function CreditBalance({ t, onBuyCredits, className }: CreditBalanceProps
   ];
 
   const totalCredits = credits.basic_credits + credits.pro_credits + credits.cassandra_credits;
-  const creditTypeConfig = getCreditTypeConfig(t);
+  const creditTypeConfig = CREDIT_TYPE_CONFIG;
 
   return (
     <Card className={cn('w-full', className)}>
