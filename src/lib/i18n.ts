@@ -891,6 +891,11 @@ export const translations = {
     'subscription.selector.free': 'Free',
     'subscription.selector.popular': 'Popular',
 
+    // Payment processing
+    'subscription.payment.processing': 'Processing payment...',
+    'subscription.payment.success': 'Subscription activated!',
+    'subscription.payment.timeout': 'Payment is being processed. Check back in a few minutes.',
+
     // CreditBalance badge
     'subscription.badge.active': 'Active',
   },
@@ -1786,6 +1791,11 @@ export const translations = {
     'subscription.selector.free': 'Бесплатно',
     'subscription.selector.popular': 'Популярный',
 
+    // Payment processing
+    'subscription.payment.processing': 'Обработка платежа...',
+    'subscription.payment.success': 'Подписка активирована!',
+    'subscription.payment.timeout': 'Платёж обрабатывается. Проверьте через несколько минут.',
+
     // CreditBalance badge
     'subscription.badge.active': 'Активна',
   },
@@ -2680,6 +2690,11 @@ export const translations = {
     'subscription.selector.subscribe': '订阅',
     'subscription.selector.free': '免费',
     'subscription.selector.popular': '热门',
+
+    // Payment processing
+    'subscription.payment.processing': '正在处理付款...',
+    'subscription.payment.success': '订阅已激活！',
+    'subscription.payment.timeout': '付款正在处理中，请几分钟后再查看。',
 
     // CreditBalance badge
     'subscription.badge.active': '活跃',

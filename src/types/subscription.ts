@@ -126,8 +126,9 @@ export function calculateSubscriptionPrice(
 
   const baseMonthly = config.priceMonthly;
   const discount = BILLING_DISCOUNTS[billingPeriod];
-  const monthlyAmount = Math.round(baseMonthly * (1 - discount / 100));
-  const totalAmount = monthlyAmount * billingPeriod;
+  const base = baseMonthly * billingPeriod;
+  const totalAmount = Math.round(base * (1 - discount / 100));
+  const monthlyAmount = Math.round(totalAmount / billingPeriod);
 
   return { totalAmount, monthlyAmount, baseMonthly, discount };
 }

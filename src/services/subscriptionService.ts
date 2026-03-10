@@ -10,8 +10,8 @@ import type {
 } from '../types/subscription';
 import { getStoredToken } from './authService';
 
-// Edge Function base URL - matches the Supabase project URL
-const EDGE_FUNCTION_URL = 'https://johspxgvkbrysxhilmbg.supabase.co/functions/v1';
+// Edge Function base URL - derived from env var
+const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 /**
  * Response from create-subscription Edge Function
@@ -85,7 +85,7 @@ export async function createSubscription(
     body: JSON.stringify({
       tier,
       billing_period_months: billingPeriod,
-      return_url: `${window.location.origin}/payment/success`,
+      return_url: `${window.location.origin}/profile/subscription?from_payment=1`,
     }),
   });
 

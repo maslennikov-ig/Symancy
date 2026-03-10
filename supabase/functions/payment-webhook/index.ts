@@ -483,7 +483,7 @@ async function handleSubscriptionPaymentCanceled(
   // Track analytics
   try {
     await supabase.from('payment_analytics').insert({
-      event: 'subscription_renewal_failed',
+      event: isInitial ? 'subscription_initial_failed' : 'subscription_renewal_failed',
       user_id,
       product_type: tier || null,
       amount_rub: parseInt(payment.amount.value),
@@ -603,8 +603,8 @@ Deno.serve(async (req: Request) => {
     if (!shopId || !secretKey) {
       console.error('YooKassa credentials not configured')
       return new Response(
-        JSON.stringify({ ok: true }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Payment service not configured' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
       )
     }
 

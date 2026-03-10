@@ -78,9 +78,11 @@ interface CreditBalanceProps {
   onBuyCredits?: () => void;
   /** Optional className for container */
   className?: string;
+  /** Increment to trigger data refresh */
+  refreshKey?: number;
 }
 
-export function CreditBalance({ t, onBuyCredits, className }: CreditBalanceProps) {
+export function CreditBalance({ t, onBuyCredits, className, refreshKey }: CreditBalanceProps) {
   const [credits, setCredits] = useState<UserCredits | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
@@ -106,7 +108,7 @@ export function CreditBalance({ t, onBuyCredits, className }: CreditBalanceProps
     }
 
     fetchData();
-  }, []);
+  }, [refreshKey]);
 
   // Loading state
   if (loading) {

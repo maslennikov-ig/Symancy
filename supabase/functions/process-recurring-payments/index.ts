@@ -51,8 +51,26 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    const summary = { processed: 0, retried: 0, expired: 0, errors: 0 }
+    const summary = { processed: 0, retried: 0, expired: 0, stale_pending: 0, errors: 0 }
     const now = new Date().toISOString()
+
+    // ============================================================
+    // STEP 0: Expire stale pending subscriptions (no payment within 2 hours)
+    // ============================================================
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+    const { data: stalePending, error: stalePendingError } = await supabase
+      .from('subscriptions')
+      .update({ status: 'expired', expires_at: now })
+      .eq('status', 'pending')
+      .lt('created_at', twoHoursAgo)
+      .select('id')
+
+    if (stalePendingError) {
+      console.error("Error expiring stale pending subscriptions:", stalePendingError)
+    } else if (stalePending?.length) {
+      summary.stale_pending = stalePending.length
+      console.log("Expired stale pending subscriptions:", stalePending.map(s => s.id))
+    }
 
     // ============================================================
     // STEP 1: Process active subscriptions due for renewal
@@ -93,11 +111,13 @@ Deno.serve(async (req: Request) => {
       console.error("Error fetching past_due subscriptions:", pastDueError)
     }
 
+    const retriedIds: Set<string> = new Set()
     for (const sub of pastDueSubscriptions || []) {
       try {
         // retry_count is incremented by the webhook handler on payment failure
         // so we don't increment here to avoid double-counting
         await processRenewalPayment(sub, supabase, shopId, secretKey, true)
+        retriedIds.add(sub.id)
         summary.retried++
       } catch (error) {
         console.error("Error retrying payment for subscription:", sub.id, error)
@@ -118,6 +138,9 @@ Deno.serve(async (req: Request) => {
     }
 
     for (const sub of expiredSubscriptions || []) {
+      // Skip subscriptions that were just retried in Step 2
+      if (retriedIds.has(sub.id)) continue
+
       const shouldExpire = sub.retry_count >= 3 || (sub.grace_period_end && new Date(sub.grace_period_end) <= new Date())
 
       if (shouldExpire) {
@@ -265,11 +288,13 @@ async function processRenewalPayment(
   }
 
   if (!customerEmail) {
-    console.warn("54-FZ warning: no customer email available for receipt, subscription:", sub.id, "user:", sub.user_id)
+    console.error("54-FZ VIOLATION: no customer email for receipt, subscription:", sub.id, "user:", sub.user_id)
+    // 54-FZ requires customer contact (email or phone) on fiscal receipts.
+    // Skip this payment to avoid regulatory violation — it will be retried next cron run.
+    throw new Error(`54-FZ: no customer email for subscription ${sub.id}`)
   }
 
-  // Build receipt customer object with email if available
-  const receiptCustomer: Record<string, string> = customerEmail ? { email: customerEmail } : {}
+  const receiptCustomer = { email: customerEmail }
 
   // Create YooKassa autopayment (no confirmation needed - uses saved payment method)
   const yukassaPayload = {

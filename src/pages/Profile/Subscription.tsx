@@ -6,11 +6,11 @@
  *
  * @module pages/Profile/Subscription
  */
-import React, { useState, useCallback, useEffect, lazy, Suspense } from 'react';
-import { useNavigate } from 'react-router';
+import React, { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
 import { SubscriptionManagement } from '../../components/features/subscription/SubscriptionManagement';
 import { SubscriptionSelector } from '../../components/features/subscription/SubscriptionSelector';
-import { createSubscription } from '../../services/subscriptionService';
+import { createSubscription, getActiveSubscription } from '../../services/subscriptionService';
 import type { SubscriptionTier, BillingPeriod } from '../../types/subscription';
 import { translations, Lang } from '../../lib/i18n';
 import { LoaderIcon } from '../../components/icons/LoaderIcon';
@@ -41,6 +41,7 @@ function BackIcon(): React.ReactElement {
 
 export function Subscription({ language, t }: SubscriptionPageProps): React.ReactElement {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showSelector, setShowSelector] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
@@ -49,6 +50,59 @@ export function Subscription({ language, t }: SubscriptionPageProps): React.Reac
     confirmationToken: string;
     subscriptionId: string;
   } | null>(null);
+  const [pollingStatus, setPollingStatus] = useState<'idle' | 'polling' | 'success' | 'timeout'>('idle');
+  const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollingTimerRef.current) {
+      clearInterval(pollingTimerRef.current);
+      pollingTimerRef.current = null;
+    }
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
+      pollingTimeoutRef.current = null;
+    }
+  }, []);
+
+  const startPolling = useCallback(() => {
+    stopPolling();
+    setPollingStatus('polling');
+
+    pollingTimerRef.current = setInterval(async () => {
+      try {
+        const sub = await getActiveSubscription();
+        if (sub && sub.status === 'active') {
+          stopPolling();
+          setPollingStatus('success');
+          setRefreshKey((k) => k + 1);
+          setTimeout(() => setPollingStatus('idle'), 5000);
+        }
+      } catch {
+        // continue polling
+      }
+    }, 2000);
+
+    pollingTimeoutRef.current = setTimeout(() => {
+      stopPolling();
+      setPollingStatus('timeout');
+      setRefreshKey((k) => k + 1);
+      setTimeout(() => setPollingStatus('idle'), 10000);
+    }, 30000);
+  }, [stopPolling]);
+
+  // Detect return from 3DS redirect
+  useEffect(() => {
+    if (searchParams.get('from_payment') === '1') {
+      setSearchParams({}, { replace: true });
+      startPolling();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => stopPolling();
+  }, [stopPolling]);
 
   const handleBack = useCallback(() => {
     navigate(-1);
@@ -101,6 +155,38 @@ export function Subscription({ language, t }: SubscriptionPageProps): React.Reac
           {t('subscription.manage.title' as keyof typeof translations.en)}
         </h1>
       </header>
+
+      {/* Payment processing banner */}
+      {pollingStatus === 'polling' && (
+        <div className="mx-4 mt-4 p-4 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-3">
+          <LoaderIcon className="w-5 h-5 animate-spin text-primary flex-shrink-0" />
+          <span className="text-sm font-medium text-primary">
+            {t('subscription.payment.processing' as keyof typeof translations.en)}
+          </span>
+        </div>
+      )}
+      {pollingStatus === 'success' && (
+        <div className="mx-4 mt-4 p-4 rounded-lg bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 flex items-center gap-3">
+          <svg className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+          <span className="text-sm font-medium text-green-800 dark:text-green-200">
+            {t('subscription.payment.success' as keyof typeof translations.en)}
+          </span>
+        </div>
+      )}
+      {pollingStatus === 'timeout' && (
+        <div className="mx-4 mt-4 p-4 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 flex items-center gap-3">
+          <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+            {t('subscription.payment.timeout' as keyof typeof translations.en)}
+          </span>
+        </div>
+      )}
 
       {/* Content */}
       <div className="p-4">
@@ -161,7 +247,7 @@ export function Subscription({ language, t }: SubscriptionPageProps): React.Reac
                 purchaseId={paymentData.subscriptionId}
                 onComplete={() => {
                   setPaymentData(null);
-                  setRefreshKey((k) => k + 1);
+                  startPolling();
                 }}
                 onError={(err) => {
                   console.error('Payment error:', err);

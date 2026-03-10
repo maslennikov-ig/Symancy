@@ -105,8 +105,8 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // Verify subscription is in a cancellable state
-    if (!['active', 'past_due'].includes(subscription.status)) {
+    // Verify subscription is in a cancellable state (pending also allowed — user abandoned payment)
+    if (!['active', 'past_due', 'pending'].includes(subscription.status)) {
       return new Response(
         JSON.stringify({
           error: `Cannot cancel subscription with status: ${subscription.status}`,
@@ -116,14 +116,17 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // Cancel subscription: set status, canceled_at, expires_at = current_period_end
+    // Cancel subscription: set status, canceled_at, expires_at
+    // For pending: expire immediately (user never paid). For active/past_due: expire at period end.
     const now = new Date().toISOString()
-    const expiresAt = subscription.current_period_end || now
+    const isPending = subscription.status === 'pending'
+    const expiresAt = isPending ? now : (subscription.current_period_end || now)
+    const newStatus = isPending ? 'expired' : 'canceled'
 
     const { error: updateError } = await supabaseAdmin
       .from('subscriptions')
       .update({
-        status: 'canceled',
+        status: newStatus,
         canceled_at: now,
         expires_at: expiresAt,
       })

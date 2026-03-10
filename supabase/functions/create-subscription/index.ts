@@ -153,6 +153,13 @@ Deno.serve(async (req: Request) => {
 
     if (subError || !subscription) {
       console.error("Error creating subscription:", subError)
+      // Handle unique constraint violation (race condition: two simultaneous requests)
+      if (subError?.code === '23505') {
+        return new Response(
+          JSON.stringify({ error: "Subscription already exists", code: "EXISTING_SUBSCRIPTION" }),
+          { status: 409, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+        )
+      }
       return new Response(
         JSON.stringify({ error: "Failed to create subscription", code: "DB_ERROR" }),
         { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
@@ -206,7 +213,7 @@ Deno.serve(async (req: Request) => {
     if (return_url) {
       try { origin = new URL(return_url).origin } catch { /* use default */ }
     }
-    const paymentReturnUrl = `${origin}/subscription/result?subscription_id=${subscriptionId}`
+    const paymentReturnUrl = `${origin}/profile/subscription?from_payment=1&subscription_id=${subscriptionId}`
 
     const tierName = TIER_NAMES[tier]
     const periodLabel = billing_period_months === 1 ? '1 мес.' : `${billing_period_months} мес.`
