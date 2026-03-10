@@ -93,8 +93,13 @@ export async function consumeCredit(
  */
 export async function hasProAccessViaSubscription(): Promise<boolean> {
   const subscription = await getActiveSubscription();
-  if (!subscription || subscription.status !== 'active') return false;
-  return subscription.tier === 'advanced' || subscription.tier === 'premium';
+  if (!subscription) return false;
+  const hasProTier = subscription.tier === 'advanced' || subscription.tier === 'premium';
+  if (subscription.status === 'active') return hasProTier;
+  if (subscription.status === 'past_due' && subscription.grace_period_end) {
+    return hasProTier && new Date(subscription.grace_period_end) > new Date();
+  }
+  return false;
 }
 
 /**

@@ -294,19 +294,42 @@ async function handleSubscriptionPaymentSucceeded(
     throw updatePaymentError
   }
 
-  // Calculate period dates
-  const now = new Date()
+  // Determine period dates from subscription_payments record (avoids drift from now())
   const periodMonths = billing_period_months || 1
-  const periodEnd = new Date(now)
-  periodEnd.setMonth(periodEnd.getMonth() + periodMonths)
+  let periodStart: Date
+  let periodEnd: Date
+
+  if (!isInitial) {
+    // For renewals, read period_start/period_end from the subscription_payments record
+    const { data: paymentRecord } = await supabase
+      .from('subscription_payments')
+      .select('period_start, period_end')
+      .eq('id', subscription_payment_id)
+      .single()
+
+    if (paymentRecord?.period_start && paymentRecord?.period_end) {
+      periodStart = new Date(paymentRecord.period_start)
+      periodEnd = new Date(paymentRecord.period_end)
+    } else {
+      // Fallback to now() if payment record dates are missing
+      periodStart = new Date()
+      periodEnd = new Date(periodStart)
+      periodEnd.setMonth(periodEnd.getMonth() + periodMonths)
+    }
+  } else {
+    // Initial payment: use now()
+    periodStart = new Date()
+    periodEnd = new Date(periodStart)
+    periodEnd.setMonth(periodEnd.getMonth() + periodMonths)
+  }
 
   const nextBillingDate = new Date(periodEnd)
 
   // Build subscription update
   const subscriptionUpdate: Record<string, unknown> = {
     status: 'active',
-    started_at: isInitial ? now.toISOString() : undefined,
-    current_period_start: now.toISOString(),
+    started_at: isInitial ? periodStart.toISOString() : undefined,
+    current_period_start: periodStart.toISOString(),
     current_period_end: periodEnd.toISOString(),
     next_billing_date: nextBillingDate.toISOString(),
     retry_count: 0,

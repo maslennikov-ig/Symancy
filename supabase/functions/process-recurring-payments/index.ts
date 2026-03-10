@@ -70,6 +70,18 @@ Deno.serve(async (req: Request) => {
     } else if (stalePending?.length) {
       summary.stale_pending = stalePending.length
       console.log("Expired stale pending subscriptions:", stalePending.map(s => s.id))
+
+      // Cancel orphaned pending subscription_payments for expired stale subscriptions
+      const staleSubIds = stalePending.map(s => s.id)
+      const { error: orphanError } = await supabase
+        .from('subscription_payments')
+        .update({ status: 'canceled', failure_reason: 'Subscription expired (stale pending)' })
+        .in('subscription_id', staleSubIds)
+        .eq('status', 'pending')
+
+      if (orphanError) {
+        console.error("Error canceling orphaned payments for stale subs:", orphanError)
+      }
     }
 
     // ============================================================
@@ -290,7 +302,11 @@ async function processRenewalPayment(
   if (!customerEmail) {
     console.error("54-FZ VIOLATION: no customer email for receipt, subscription:", sub.id, "user:", sub.user_id)
     // 54-FZ requires customer contact (email or phone) on fiscal receipts.
-    // Skip this payment to avoid regulatory violation — it will be retried next cron run.
+    // Cancel the orphaned pending payment record before throwing.
+    await supabase
+      .from('subscription_payments')
+      .update({ status: 'canceled', failure_reason: '54-FZ: no customer email' })
+      .eq('id', subPayment.id)
     throw new Error(`54-FZ: no customer email for subscription ${sub.id}`)
   }
 

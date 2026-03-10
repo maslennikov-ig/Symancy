@@ -32,6 +32,13 @@ jobs:
             exit 1
           fi
 
+          # Check for errors in the response body
+          ERRORS=$(echo "$BODY" | jq -r '.errors // 0')
+          if [ "$ERRORS" != "0" ] && [ "$ERRORS" != "null" ]; then
+            echo "::warning::Recurring payments completed with $ERRORS error(s)"
+            exit 1
+          fi
+
           echo "summary=$BODY" >> $GITHUB_OUTPUT
 
   notify:

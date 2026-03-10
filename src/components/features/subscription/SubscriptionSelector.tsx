@@ -72,9 +72,9 @@ export function SubscriptionSelector({
           </div>
         )}
 
-        {/* Tier cards grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {SUBSCRIPTION_TIERS.map((tierConfig) => (
+        {/* Tier cards grid (free tier filtered out — it's not purchasable) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {SUBSCRIPTION_TIERS.filter((tc) => tc.tier !== 'free').map((tierConfig) => (
             <SubscriptionTierCard
               key={tierConfig.tier}
               config={tierConfig}
