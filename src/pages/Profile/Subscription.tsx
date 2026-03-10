@@ -43,6 +43,7 @@ export function Subscription({ language, t }: SubscriptionPageProps): React.Reac
   const navigate = useNavigate();
   const [showSelector, setShowSelector] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
   const [paymentData, setPaymentData] = useState<{
     confirmationToken: string;
     subscriptionId: string;
@@ -54,6 +55,7 @@ export function Subscription({ language, t }: SubscriptionPageProps): React.Reac
 
   const handleSelectSubscription = useCallback(async (tier: SubscriptionTier, period: BillingPeriod) => {
     setIsLoading(true);
+    setSubscriptionError(null);
     try {
       const result = await createSubscription(tier, period);
       setPaymentData({
@@ -63,6 +65,7 @@ export function Subscription({ language, t }: SubscriptionPageProps): React.Reac
       setShowSelector(false);
     } catch (err) {
       console.error('Subscription creation failed:', err);
+      setSubscriptionError(err instanceof Error ? err.message : 'Subscription creation failed');
     } finally {
       setIsLoading(false);
     }
@@ -123,9 +126,23 @@ export function Subscription({ language, t }: SubscriptionPageProps): React.Reac
       <div style={{ padding: '16px' }}>
         <SubscriptionManagement
           t={t as (key: string) => string}
+          language={language}
           onChangePlan={() => setShowSelector(true)}
         />
       </div>
+
+      {/* Error toast */}
+      {subscriptionError && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-destructive text-destructive-foreground px-4 py-3 rounded-lg shadow-lg flex items-center gap-3">
+          <span>{subscriptionError}</span>
+          <button
+            onClick={() => setSubscriptionError(null)}
+            className="text-destructive-foreground/80 hover:text-destructive-foreground"
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       {/* Subscription Selector Modal */}
       {showSelector && (

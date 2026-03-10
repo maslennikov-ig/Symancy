@@ -109,12 +109,8 @@ Deno.serve(async (req: Request) => {
 
     for (const sub of pastDueSubscriptions || []) {
       try {
-        // Increment retry count before attempting
-        await supabase
-          .from('subscriptions')
-          .update({ retry_count: sub.retry_count + 1 })
-          .eq('id', sub.id)
-
+        // retry_count is incremented by the webhook handler on payment failure
+        // so we don't increment here to avoid double-counting
         await processRenewalPayment(sub, supabase, shopId, secretKey, true)
         summary.retried++
       } catch (error) {
@@ -174,6 +170,34 @@ Deno.serve(async (req: Request) => {
           console.error("Error expiring subscription:", sub.id, error)
           summary.errors++
         }
+      }
+    }
+
+    // ============================================================
+    // STEP 4: Expire canceled subscriptions past their expires_at
+    // ============================================================
+    const { data: expiredCanceled, error: canceledError } = await supabase
+      .from('subscriptions')
+      .select('id, user_id, tier')
+      .eq('status', 'canceled')
+      .not('expires_at', 'is', null)
+      .lte('expires_at', now)
+
+    if (canceledError) {
+      console.error("Error fetching expired canceled subscriptions:", canceledError)
+    }
+
+    for (const sub of expiredCanceled || []) {
+      try {
+        await supabase
+          .from('subscriptions')
+          .update({ status: 'expired' })
+          .eq('id', sub.id)
+        summary.expired++
+        console.log("Canceled subscription expired:", sub.id)
+      } catch (error) {
+        console.error("Error expiring canceled subscription:", sub.id, error)
+        summary.errors++
       }
     }
 
@@ -242,6 +266,24 @@ async function processRenewalPayment(
   const description = `Symancy - Подписка "${tierName}" (${periodLabel})${isRetry ? ' [повтор]' : ''}`
   const idempotenceKey = crypto.randomUUID()
 
+  // Fetch user email for fiscal receipt (54-FZ compliance) BEFORE building payload
+  let customerEmail: string | null = null
+  try {
+    const { data: { user } } = await supabase.auth.admin.getUserById(sub.user_id)
+    if (user?.email) {
+      customerEmail = user.email
+    }
+  } catch (emailError) {
+    console.error("Could not fetch user email for receipt (non-critical):", emailError)
+  }
+
+  if (!customerEmail) {
+    console.warn("54-FZ warning: no customer email available for receipt, subscription:", sub.id, "user:", sub.user_id)
+  }
+
+  // Build receipt customer object with email if available
+  const receiptCustomer: Record<string, string> = customerEmail ? { email: customerEmail } : {}
+
   // Create YooKassa autopayment (no confirmation needed - uses saved payment method)
   const yukassaPayload = {
     amount: {
@@ -252,9 +294,7 @@ async function processRenewalPayment(
     payment_method_id: sub.yukassa_payment_method_id,
     description,
     receipt: {
-      customer: {
-        // For autopayments we may not have email readily; YooKassa allows merchant_customer_id
-      },
+      customer: receiptCustomer,
       items: [
         {
           description,
@@ -280,16 +320,6 @@ async function processRenewalPayment(
       billing_period_months: sub.billing_period_months,
       is_retry: isRetry,
     },
-  }
-
-  // Fetch user email for receipt (best effort)
-  try {
-    const { data: { user } } = await supabase.auth.admin.getUserById(sub.user_id)
-    if (user?.email) {
-      (yukassaPayload.receipt.customer as Record<string, string>).email = user.email
-    }
-  } catch (emailError) {
-    console.error("Could not fetch user email for receipt (non-critical):", emailError)
   }
 
   console.log("Creating YooKassa renewal payment:", {

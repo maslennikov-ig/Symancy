@@ -859,11 +859,13 @@ export const translations = {
     'subscription.billing.total': 'Total: {amount} RUB',
 
     // Status
+    'subscription.status.title': 'Status',
     'subscription.status.active': 'Active',
     'subscription.status.past_due': 'Payment issue',
     'subscription.status.canceled': 'Canceled',
     'subscription.status.expired': 'Expired',
     'subscription.status.pending': 'Pending',
+    'subscription.status.succeeded': 'Paid',
 
     // Management
     'subscription.manage.title': 'My Subscription',
@@ -879,6 +881,7 @@ export const translations = {
     'subscription.manage.subscribe': 'Subscribe',
     'subscription.manage.expiresOn': 'Expires on {date}',
     'subscription.manage.paymentHistory': 'Payment history',
+    'subscription.manage.period': 'Period',
 
     // Selector
     'subscription.selector.title': 'Choose a plan',
@@ -1751,11 +1754,13 @@ export const translations = {
     'subscription.billing.total': 'Итого: {amount} руб.',
 
     // Status
+    'subscription.status.title': 'Статус',
     'subscription.status.active': 'Активна',
     'subscription.status.past_due': 'Проблема с оплатой',
     'subscription.status.canceled': 'Отменена',
     'subscription.status.expired': 'Истекла',
     'subscription.status.pending': 'Ожидание',
+    'subscription.status.succeeded': 'Оплачено',
 
     // Management
     'subscription.manage.title': 'Моя подписка',
@@ -1771,6 +1776,7 @@ export const translations = {
     'subscription.manage.subscribe': 'Подписаться',
     'subscription.manage.expiresOn': 'Истекает {date}',
     'subscription.manage.paymentHistory': 'История платежей',
+    'subscription.manage.period': 'Период',
 
     // Selector
     'subscription.selector.title': 'Выберите план',
@@ -2643,11 +2649,13 @@ export const translations = {
     'subscription.billing.total': '总计: {amount} 卢布',
 
     // Status
+    'subscription.status.title': '状态',
     'subscription.status.active': '活跃',
     'subscription.status.past_due': '付款问题',
     'subscription.status.canceled': '已取消',
     'subscription.status.expired': '已过期',
     'subscription.status.pending': '待处理',
+    'subscription.status.succeeded': '已支付',
 
     // Management
     'subscription.manage.title': '我的订阅',
@@ -2663,6 +2671,7 @@ export const translations = {
     'subscription.manage.subscribe': '订阅',
     'subscription.manage.expiresOn': '到期日：{date}',
     'subscription.manage.paymentHistory': '付款记录',
+    'subscription.manage.period': '周期',
 
     // Selector
     'subscription.selector.title': '选择方案',

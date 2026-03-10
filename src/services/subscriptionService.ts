@@ -108,10 +108,28 @@ export async function createSubscription(
 export async function getActiveSubscription(): Promise<Subscription | null> {
   const client = await getAuthenticatedClient();
 
+  // First check for active/past_due subscriptions
+  const { data: activeSub, error: activeError } = await client
+    .from('subscriptions')
+    .select('*')
+    .in('status', ['active', 'past_due'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (activeError) {
+    console.error('Error fetching active subscription:', activeError);
+    return null;
+  }
+
+  if (activeSub) return activeSub as Subscription;
+
+  // Then check for canceled subscriptions that haven't expired yet
   const { data, error } = await client
     .from('subscriptions')
     .select('*')
-    .in('status', ['active', 'past_due', 'canceled'])
+    .eq('status', 'canceled')
+    .gt('expires_at', new Date().toISOString())
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();

@@ -44,16 +44,19 @@ BEGIN
     credits_granted_count = credits_granted_count + 1
   WHERE id = p_subscription_id;
 
-  -- Update subscription_payments record
+  -- Update subscription_payments record (latest succeeded without credits)
   UPDATE public.subscription_payments SET
     basic_credits_granted = v_basic,
     cassandra_credits_granted = v_cassandra,
     credits_granted_at = NOW()
-  WHERE subscription_id = p_subscription_id
-    AND status = 'succeeded'
-    AND credits_granted_at IS NULL
-  ORDER BY created_at DESC
-  LIMIT 1;
+  WHERE id = (
+    SELECT id FROM public.subscription_payments
+    WHERE subscription_id = p_subscription_id
+      AND status = 'succeeded'
+      AND credits_granted_at IS NULL
+    ORDER BY created_at DESC
+    LIMIT 1
+  );
 
   RETURN QUERY SELECT v_basic, v_cassandra;
 END;

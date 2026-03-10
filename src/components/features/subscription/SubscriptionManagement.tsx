@@ -13,6 +13,7 @@ import { cn } from '../../../lib/utils';
 
 interface SubscriptionManagementProps {
   t: (key: string) => string;
+  language?: string;
   onChangePlan?: () => void;
 }
 
@@ -24,12 +25,13 @@ const statusStyles: Record<string, string> = {
   pending: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
 };
 
-function formatDate(dateStr: string | null): string {
+function formatDate(dateStr: string | null, locale?: string): string {
   if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleDateString();
+  const loc = locale === 'zh' ? 'zh-CN' : locale || undefined;
+  return new Date(dateStr).toLocaleDateString(loc, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-export function SubscriptionManagement({ t, onChangePlan }: SubscriptionManagementProps) {
+export function SubscriptionManagement({ t, language, onChangePlan }: SubscriptionManagementProps) {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [payments, setPayments] = useState<SubscriptionPayment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -173,13 +175,13 @@ export function SubscriptionManagement({ t, onChangePlan }: SubscriptionManageme
               <p className="text-sm text-muted-foreground">
                 {t('subscription.manage.nextBilling')}
               </p>
-              <p className="font-medium">{formatDate(subscription.next_billing_date)}</p>
+              <p className="font-medium">{formatDate(subscription.next_billing_date, language)}</p>
             </div>
           )}
           {subscription.status === 'canceled' && subscription.expires_at && (
             <div>
               <p className="text-sm text-muted-foreground">
-                {t('subscription.manage.expiresOn').replace('{date}', formatDate(subscription.expires_at))}
+                {t('subscription.manage.expiresOn').replace('{date}', formatDate(subscription.expires_at, language))}
               </p>
             </div>
           )}
@@ -208,7 +210,7 @@ export function SubscriptionManagement({ t, onChangePlan }: SubscriptionManageme
               <p className="text-sm">
                 {t('subscription.manage.cancelConfirm').replace(
                   '{date}',
-                  formatDate(subscription.current_period_end)
+                  formatDate(subscription.current_period_end, language)
                 )}
               </p>
               <div className="flex gap-3">
@@ -251,13 +253,13 @@ export function SubscriptionManagement({ t, onChangePlan }: SubscriptionManageme
                 <thead>
                   <tr className="border-b">
                     <th className="text-left py-2 px-2 font-medium text-muted-foreground">
-                      {t('subscription.manage.paymentHistory')}
+                      {t('subscription.manage.period')}
                     </th>
                     <th className="text-right py-2 px-2 font-medium text-muted-foreground">
                       &#8381;
                     </th>
                     <th className="text-center py-2 px-2 font-medium text-muted-foreground">
-                      Status
+                      {t('subscription.status.title')}
                     </th>
                   </tr>
                 </thead>
@@ -265,7 +267,7 @@ export function SubscriptionManagement({ t, onChangePlan }: SubscriptionManageme
                   {payments.map((payment) => (
                     <tr key={payment.id} className="border-b last:border-0">
                       <td className="py-2 px-2">
-                        {formatDate(payment.period_start)} - {formatDate(payment.period_end)}
+                        {formatDate(payment.period_start, language)} - {formatDate(payment.period_end, language)}
                       </td>
                       <td className="py-2 px-2 text-right font-medium">
                         {payment.amount_rub}
@@ -281,7 +283,7 @@ export function SubscriptionManagement({ t, onChangePlan }: SubscriptionManageme
                                 : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                           )}
                         >
-                          {payment.status}
+                          {t(`subscription.status.${payment.status}`)}
                         </span>
                       </td>
                     </tr>

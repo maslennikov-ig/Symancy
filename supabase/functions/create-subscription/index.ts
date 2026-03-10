@@ -226,9 +226,10 @@ Deno.serve(async (req: Request) => {
     }
 
     // Build return URL for 3D Secure redirect
-    const origin = return_url
-      ? new URL(return_url).origin
-      : "https://symancy.ru"
+    let origin = "https://symancy.ru"
+    if (return_url) {
+      try { origin = new URL(return_url).origin } catch { /* use default */ }
+    }
     const paymentReturnUrl = `${origin}/subscription/result?subscription_id=${subscriptionId}`
 
     const tierName = TIER_NAMES[tier]
