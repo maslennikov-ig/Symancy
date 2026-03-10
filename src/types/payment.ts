@@ -1,7 +1,7 @@
 // types/payment.ts
 // TypeScript types for payment integration (Feature 002-pre-mvp-payments)
 
-export type ProductType = 'basic' | 'pack5' | 'pro' | 'cassandra';
+export type ProductType = 'basic' | 'pack5' | 'pro' | 'cassandra' | 'subscription';
 export type PaymentStatus = 'pending' | 'succeeded' | 'canceled';
 
 export type CancellationReason =

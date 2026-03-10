@@ -827,6 +827,69 @@ export const translations = {
     'mood.insights.period30': 'Last 30 days',
     'mood.insights.noData': 'Log mood for several days to see trends',
     'mood.insights.avgLabel': 'Average',
+
+    // Subscription tier names
+    'subscription.tier.free.name': 'Free',
+    'subscription.tier.basic.name': 'Basic',
+    'subscription.tier.advanced.name': 'Advanced',
+    'subscription.tier.premium.name': 'Premium',
+
+    // Subscription tier features
+    'subscription.tier.free.feature.1': '4 readings/month',
+    'subscription.tier.free.feature.2': 'Basic analysis',
+    'subscription.tier.basic.feature.1': '21 readings/month',
+    'subscription.tier.basic.feature.2': 'Basic analysis',
+    'subscription.tier.basic.feature.3': 'History saved',
+    'subscription.tier.advanced.feature.1': '68 readings/month',
+    'subscription.tier.advanced.feature.2': 'PRO analysis unlocked',
+    'subscription.tier.advanced.feature.3': 'History saved',
+    'subscription.tier.advanced.feature.4': 'Priority support',
+    'subscription.tier.premium.feature.1': '121 readings + 7 Cassandra/month',
+    'subscription.tier.premium.feature.2': 'PRO analysis unlocked',
+    'subscription.tier.premium.feature.3': 'Priority support',
+    'subscription.tier.premium.feature.4': 'Exclusive content',
+
+    // Billing
+    'subscription.billing.monthly': 'Monthly',
+    'subscription.billing.quarterly': '3 months',
+    'subscription.billing.semiannual': '6 months',
+    'subscription.billing.annual': 'Annual',
+    'subscription.billing.discount': '-{percent}%',
+    'subscription.billing.perMonth': '/month',
+    'subscription.billing.total': 'Total: {amount} RUB',
+
+    // Status
+    'subscription.status.active': 'Active',
+    'subscription.status.past_due': 'Payment issue',
+    'subscription.status.canceled': 'Canceled',
+    'subscription.status.expired': 'Expired',
+    'subscription.status.pending': 'Pending',
+
+    // Management
+    'subscription.manage.title': 'My Subscription',
+    'subscription.manage.currentPlan': 'Current plan',
+    'subscription.manage.nextBilling': 'Next billing',
+    'subscription.manage.creditsPerMonth': 'Credits per month',
+    'subscription.manage.changePlan': 'Change plan',
+    'subscription.manage.cancel': 'Cancel subscription',
+    'subscription.manage.cancelConfirm': 'Are you sure? Your subscription will remain active until {date}.',
+    'subscription.manage.cancelConfirmButton': 'Yes, cancel',
+    'subscription.manage.cancelKeep': 'Keep subscription',
+    'subscription.manage.noSubscription': 'No active subscription',
+    'subscription.manage.subscribe': 'Subscribe',
+    'subscription.manage.expiresOn': 'Expires on {date}',
+    'subscription.manage.paymentHistory': 'Payment history',
+
+    // Selector
+    'subscription.selector.title': 'Choose a plan',
+    'subscription.selector.subtitle': 'Select the best plan for you',
+    'subscription.selector.currentPlan': 'Current plan',
+    'subscription.selector.subscribe': 'Subscribe',
+    'subscription.selector.free': 'Free',
+    'subscription.selector.popular': 'Popular',
+
+    // CreditBalance badge
+    'subscription.badge.active': 'Active',
   },
   ru: {
     'header.title': 'Кофейный Психолог',
@@ -1656,6 +1719,69 @@ export const translations = {
     'mood.insights.period30': 'Последние 30 дней',
     'mood.insights.noData': 'Записывайте настроение несколько дней для аналитики',
     'mood.insights.avgLabel': 'Среднее',
+
+    // Subscription tier names
+    'subscription.tier.free.name': 'Бесплатный',
+    'subscription.tier.basic.name': 'Базовый',
+    'subscription.tier.advanced.name': 'Продвинутый',
+    'subscription.tier.premium.name': 'Премиум',
+
+    // Subscription tier features
+    'subscription.tier.free.feature.1': '4 гадания/месяц',
+    'subscription.tier.free.feature.2': 'Базовый анализ',
+    'subscription.tier.basic.feature.1': '21 гадание/месяц',
+    'subscription.tier.basic.feature.2': 'Базовый анализ',
+    'subscription.tier.basic.feature.3': 'История сохраняется',
+    'subscription.tier.advanced.feature.1': '68 гаданий/месяц',
+    'subscription.tier.advanced.feature.2': 'PRO анализ разблокирован',
+    'subscription.tier.advanced.feature.3': 'История сохраняется',
+    'subscription.tier.advanced.feature.4': 'Приоритетная поддержка',
+    'subscription.tier.premium.feature.1': '121 гадание + 7 Кассандра/месяц',
+    'subscription.tier.premium.feature.2': 'PRO анализ разблокирован',
+    'subscription.tier.premium.feature.3': 'Приоритетная поддержка',
+    'subscription.tier.premium.feature.4': 'Эксклюзивный контент',
+
+    // Billing
+    'subscription.billing.monthly': 'Месяц',
+    'subscription.billing.quarterly': '3 месяца',
+    'subscription.billing.semiannual': '6 месяцев',
+    'subscription.billing.annual': 'Год',
+    'subscription.billing.discount': '-{percent}%',
+    'subscription.billing.perMonth': '/мес',
+    'subscription.billing.total': 'Итого: {amount} руб.',
+
+    // Status
+    'subscription.status.active': 'Активна',
+    'subscription.status.past_due': 'Проблема с оплатой',
+    'subscription.status.canceled': 'Отменена',
+    'subscription.status.expired': 'Истекла',
+    'subscription.status.pending': 'Ожидание',
+
+    // Management
+    'subscription.manage.title': 'Моя подписка',
+    'subscription.manage.currentPlan': 'Текущий план',
+    'subscription.manage.nextBilling': 'Следующее списание',
+    'subscription.manage.creditsPerMonth': 'Кредитов в месяц',
+    'subscription.manage.changePlan': 'Сменить план',
+    'subscription.manage.cancel': 'Отменить подписку',
+    'subscription.manage.cancelConfirm': 'Вы уверены? Подписка будет активна до {date}.',
+    'subscription.manage.cancelConfirmButton': 'Да, отменить',
+    'subscription.manage.cancelKeep': 'Оставить подписку',
+    'subscription.manage.noSubscription': 'Нет активной подписки',
+    'subscription.manage.subscribe': 'Подписаться',
+    'subscription.manage.expiresOn': 'Истекает {date}',
+    'subscription.manage.paymentHistory': 'История платежей',
+
+    // Selector
+    'subscription.selector.title': 'Выберите план',
+    'subscription.selector.subtitle': 'Выберите лучший план для вас',
+    'subscription.selector.currentPlan': 'Текущий план',
+    'subscription.selector.subscribe': 'Подписаться',
+    'subscription.selector.free': 'Бесплатно',
+    'subscription.selector.popular': 'Популярный',
+
+    // CreditBalance badge
+    'subscription.badge.active': 'Активна',
   },
   zh: {
     'header.title': '咖啡心理学家',
@@ -2485,6 +2611,69 @@ export const translations = {
     'mood.insights.period30': '最近30天',
     'mood.insights.noData': '记录几天心情后查看趋势',
     'mood.insights.avgLabel': '平均',
+
+    // Subscription tier names
+    'subscription.tier.free.name': '免费',
+    'subscription.tier.basic.name': '基础',
+    'subscription.tier.advanced.name': '高级',
+    'subscription.tier.premium.name': '尊享',
+
+    // Subscription tier features
+    'subscription.tier.free.feature.1': '每月4次占卜',
+    'subscription.tier.free.feature.2': '基础分析',
+    'subscription.tier.basic.feature.1': '每月21次占卜',
+    'subscription.tier.basic.feature.2': '基础分析',
+    'subscription.tier.basic.feature.3': '保存历史记录',
+    'subscription.tier.advanced.feature.1': '每月68次占卜',
+    'subscription.tier.advanced.feature.2': '解锁PRO分析',
+    'subscription.tier.advanced.feature.3': '保存历史记录',
+    'subscription.tier.advanced.feature.4': '优先支持',
+    'subscription.tier.premium.feature.1': '每月121次占卜 + 7次卡桑德拉',
+    'subscription.tier.premium.feature.2': '解锁PRO分析',
+    'subscription.tier.premium.feature.3': '优先支持',
+    'subscription.tier.premium.feature.4': '独家内容',
+
+    // Billing
+    'subscription.billing.monthly': '月付',
+    'subscription.billing.quarterly': '季付',
+    'subscription.billing.semiannual': '半年付',
+    'subscription.billing.annual': '年付',
+    'subscription.billing.discount': '-{percent}%',
+    'subscription.billing.perMonth': '/月',
+    'subscription.billing.total': '总计: {amount} 卢布',
+
+    // Status
+    'subscription.status.active': '活跃',
+    'subscription.status.past_due': '付款问题',
+    'subscription.status.canceled': '已取消',
+    'subscription.status.expired': '已过期',
+    'subscription.status.pending': '待处理',
+
+    // Management
+    'subscription.manage.title': '我的订阅',
+    'subscription.manage.currentPlan': '当前方案',
+    'subscription.manage.nextBilling': '下次扣款',
+    'subscription.manage.creditsPerMonth': '每月额度',
+    'subscription.manage.changePlan': '更换方案',
+    'subscription.manage.cancel': '取消订阅',
+    'subscription.manage.cancelConfirm': '确定吗？您的订阅将在{date}之前保持有效。',
+    'subscription.manage.cancelConfirmButton': '确认取消',
+    'subscription.manage.cancelKeep': '保留订阅',
+    'subscription.manage.noSubscription': '没有活跃的订阅',
+    'subscription.manage.subscribe': '订阅',
+    'subscription.manage.expiresOn': '到期日：{date}',
+    'subscription.manage.paymentHistory': '付款记录',
+
+    // Selector
+    'subscription.selector.title': '选择方案',
+    'subscription.selector.subtitle': '选择最适合您的方案',
+    'subscription.selector.currentPlan': '当前方案',
+    'subscription.selector.subscribe': '订阅',
+    'subscription.selector.free': '免费',
+    'subscription.selector.popular': '热门',
+
+    // CreditBalance badge
+    'subscription.badge.active': '活跃',
   },
 };
 

@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { getUserCredits } from '../../../services/paymentService';
+import { getActiveSubscription } from '../../../services/subscriptionService';
 import { UserCredits } from '../../../types/payment';
+import type { Subscription } from '../../../types/subscription';
+import { SUBSCRIPTION_TIERS } from '../../../types/subscription';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { LoaderIcon } from '../../icons/LoaderIcon';
@@ -83,16 +86,21 @@ interface CreditBalanceProps {
 
 export function CreditBalance({ t, onBuyCredits, className }: CreditBalanceProps) {
   const [credits, setCredits] = useState<UserCredits | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchCredits() {
+    async function fetchData() {
       try {
         setLoading(true);
         setError(null);
-        const result = await getUserCredits();
-        setCredits(result);
+        const [creditsResult, subResult] = await Promise.all([
+          getUserCredits(),
+          getActiveSubscription(),
+        ]);
+        setCredits(creditsResult);
+        setSubscription(subResult);
       } catch (err) {
         console.error('Failed to fetch credits:', err);
         setError(err instanceof Error ? err.message : t('credits.balance.error.default'));
@@ -101,7 +109,7 @@ export function CreditBalance({ t, onBuyCredits, className }: CreditBalanceProps
       }
     }
 
-    fetchCredits();
+    fetchData();
   }, []);
 
   // Loading state
@@ -164,6 +172,19 @@ export function CreditBalance({ t, onBuyCredits, className }: CreditBalanceProps
           <span>{t('credits.balance.title')}</span>
           <span className="text-2xl font-bold text-primary">{totalCredits}</span>
         </CardTitle>
+        {subscription && subscription.status === 'active' && (() => {
+          const tierConfig = SUBSCRIPTION_TIERS.find((tc) => tc.tier === subscription.tier);
+          return (
+            <div className="flex items-center gap-2 mt-1">
+              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary">
+                {tierConfig ? t(tierConfig.nameKey) : subscription.tier}
+              </span>
+              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                {t('subscription.badge.active')}
+              </span>
+            </div>
+          );
+        })()}
       </CardHeader>
       <CardContent className="space-y-3">
         {creditTypes.map(({ key, value }) => {

@@ -3,6 +3,7 @@
 
 import { supabase } from '../lib/supabaseClient';
 import { getUserCredits } from './paymentService';
+import { getActiveSubscription } from './subscriptionService';
 
 /**
  * Result of consuming a credit
@@ -83,6 +84,17 @@ export async function consumeCredit(
     credit_type: result?.credit_type ?? null,
     remaining: result?.remaining ?? 0,
   };
+}
+
+/**
+ * Check if user has PRO access via an active subscription (advanced or premium tier).
+ *
+ * @returns Promise<boolean> - true if user has active advanced or premium subscription
+ */
+export async function hasProAccessViaSubscription(): Promise<boolean> {
+  const subscription = await getActiveSubscription();
+  if (!subscription || subscription.status !== 'active') return false;
+  return subscription.tier === 'advanced' || subscription.tier === 'premium';
 }
 
 /**

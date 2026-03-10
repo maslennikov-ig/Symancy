@@ -29,6 +29,7 @@ const History = lazy(() => import('./pages/History'));
 const Link = lazy(() => import('./pages/Link'));
 const Profile = lazy(() => import('./pages/Profile'));
 const ProfileCredits = lazy(() => import('./pages/Profile/Credits'));
+const ProfileSubscription = lazy(() => import('./pages/Profile/Subscription'));
 const AdminApp = lazy(() => import('./admin/AdminApp'));
 
 // Telegram Mini App pages
@@ -627,6 +628,10 @@ const App: React.FC = () => {
           <Route
             path="/profile/credits"
             element={withAppLayout(<ProfileCredits language={language} t={t} />)}
+          />
+          <Route
+            path="/profile/subscription"
+            element={withAppLayout(<ProfileSubscription language={language} t={t} />)}
           />
           <Route
             path="/mood"
