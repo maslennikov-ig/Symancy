@@ -299,13 +299,18 @@ export function setupRouter(): void {
     const botCtx = ctx as BotContext;
     logger.info({ telegramUserId: ctx.from?.id }, "Received photo message");
 
-    // If onboarding not completed - save photo and start friendly onboarding
-    if (requiresOnboarding(botCtx)) {
-      await handlePhotoBeforeOnboarding(botCtx);
-      return;
-    }
+    try {
+      // If onboarding not completed - save photo and start friendly onboarding
+      if (requiresOnboarding(botCtx)) {
+        await handlePhotoBeforeOnboarding(botCtx);
+        return;
+      }
 
-    await handlePhotoMessage(botCtx);
+      await handlePhotoMessage(botCtx);
+    } catch (error) {
+      logger.error({ error, telegramUserId: ctx.from?.id }, "Error handling photo message");
+      await ctx.reply("Произошла ошибка. Попробуйте отправить фото ещё раз.");
+    }
   });
 
   // Handle text messages - route based on onboarding state
