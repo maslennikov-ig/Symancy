@@ -325,6 +325,11 @@ async function main() {
   process.on("SIGINT", () => shutdown(fastify));
   
   logger.info("Application started successfully");
+
+  // Signal PM2 that the app is ready (required when wait_ready: true in ecosystem.config)
+  if (process.send) {
+    process.send("ready");
+  }
 }
 
 main().catch((error) => {

@@ -81,7 +81,14 @@ export async function handleTopicCallback(ctx: BotContext): Promise<void> {
   const parsed = parseTopicCallback(callbackData);
   if (!parsed) {
     logger.warn({ telegramUserId, callbackData }, "Failed to parse topic callback data");
-    await ctx.answerCallbackQuery({ text: "Invalid callback data" });
+    const userLanguage = ctx.profile?.language_code || ctx.from.language_code || "ru";
+    const expiredMessages: Record<string, string> = {
+      ru: "Эта кнопка устарела. Пожалуйста, отправьте фото ещё раз.",
+      en: "This button has expired. Please send the photo again.",
+      zh: "此按钮已过期。请重新发送照片。",
+    };
+    const msg = expiredMessages[userLanguage] || expiredMessages["ru"]!;
+    await ctx.answerCallbackQuery({ text: msg, show_alert: true });
     return;
   }
 
