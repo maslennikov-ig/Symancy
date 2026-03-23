@@ -583,7 +583,7 @@ const App: React.FC = () => {
           {/* Info pages - with BottomNav for Telegram Mini App navigation consistency */}
           <Route
             path="/pricing"
-            element={withAppLayout(<Pricing language={language} t={t} />)}
+            element={withAppLayout(<Pricing language={language} t={t} onBuyTariff={(productType) => handleSelectTariff(productType as ProductType)} />)}
           />
           <Route
             path="/offer"

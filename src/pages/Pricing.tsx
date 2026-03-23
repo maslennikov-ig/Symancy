@@ -11,6 +11,7 @@ import {
 import { translations, Lang, t as i18n_t } from '../lib/i18n';
 
 interface Tariff {
+  type: string;
   nameKey: string;
   price: string;
   descriptionKey: string;
@@ -21,10 +22,12 @@ interface Tariff {
 interface PricingProps {
   language?: Lang;
   t?: (key: keyof typeof translations.en) => string;
+  onBuyTariff?: (productType: string) => void;
 }
 
 const TARIFFS: Tariff[] = [
   {
+    type: 'basic',
     nameKey: 'pricing.tariff.basic.name',
     price: '100 ₽',
     descriptionKey: 'pricing.tariff.basic.description',
@@ -35,6 +38,7 @@ const TARIFFS: Tariff[] = [
     ],
   },
   {
+    type: 'pack5',
     nameKey: 'pricing.tariff.pack5.name',
     price: '300 ₽',
     descriptionKey: 'pricing.tariff.pack5.description',
@@ -47,6 +51,7 @@ const TARIFFS: Tariff[] = [
     highlighted: true,
   },
   {
+    type: 'pro',
     nameKey: 'pricing.tariff.pro.name',
     price: '500 ₽',
     descriptionKey: 'pricing.tariff.pro.description',
@@ -58,6 +63,7 @@ const TARIFFS: Tariff[] = [
     ],
   },
   {
+    type: 'cassandra',
     nameKey: 'pricing.tariff.cassandra.name',
     price: '1 000 ₽',
     descriptionKey: 'pricing.tariff.cassandra.description',
@@ -75,7 +81,7 @@ const TARIFFS: Tariff[] = [
  *
  * URL: /pricing
  */
-const Pricing: React.FC<PricingProps> = ({ language: propLanguage, t: propT }) => {
+const Pricing: React.FC<PricingProps> = ({ language: propLanguage, t: propT, onBuyTariff }) => {
   const navigate = useNavigate();
   
   // Fallback
@@ -140,6 +146,15 @@ const Pricing: React.FC<PricingProps> = ({ language: propLanguage, t: propT }) =
                     </li>
                   ))}
                 </ul>
+                {onBuyTariff && (
+                  <Button
+                    onClick={() => onBuyTariff(tariff.type)}
+                    className="w-full mt-4"
+                    variant={tariff.highlighted ? 'default' : 'outline'}
+                  >
+                    {t('pricing.button.buy' as any)}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}
