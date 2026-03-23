@@ -23,6 +23,7 @@ interface PricingProps {
   language?: Lang;
   t?: (key: keyof typeof translations.en) => string;
   onBuyTariff?: (productType: string) => void;
+  isAuthenticated?: boolean;
 }
 
 const TARIFFS: Tariff[] = [
@@ -81,7 +82,7 @@ const TARIFFS: Tariff[] = [
  *
  * URL: /pricing
  */
-const Pricing: React.FC<PricingProps> = ({ language: propLanguage, t: propT, onBuyTariff }) => {
+const Pricing: React.FC<PricingProps> = ({ language: propLanguage, t: propT, onBuyTariff, isAuthenticated }) => {
   const navigate = useNavigate();
   
   // Fallback
@@ -146,15 +147,19 @@ const Pricing: React.FC<PricingProps> = ({ language: propLanguage, t: propT, onB
                     </li>
                   ))}
                 </ul>
-                {onBuyTariff && (
-                  <Button
-                    onClick={() => onBuyTariff(tariff.type)}
-                    className="w-full mt-4"
-                    variant={tariff.highlighted ? 'default' : 'outline'}
-                  >
-                    {t('pricing.button.buy' as any)}
-                  </Button>
-                )}
+                <Button
+                  onClick={() => {
+                    if (isAuthenticated && onBuyTariff) {
+                      onBuyTariff(tariff.type);
+                    } else {
+                      navigate('/');
+                    }
+                  }}
+                  className="w-full mt-4"
+                  variant={tariff.highlighted ? 'default' : 'outline'}
+                >
+                  {isAuthenticated ? t('pricing.button.buy' as any) : t('pricing.button.login' as any)}
+                </Button>
               </CardContent>
             </Card>
           ))}
