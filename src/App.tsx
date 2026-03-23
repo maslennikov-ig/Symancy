@@ -21,7 +21,6 @@ const PaymentWidget = lazy(() => import('./components/features/payment/PaymentWi
 const Pricing = lazy(() => import('./pages/Pricing'));
 const Terms = lazy(() => import('./pages/Terms'));
 const Contacts = lazy(() => import('./pages/Contacts'));
-const TestPayment = lazy(() => import('./pages/TestPayment'));
 const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
 const PaymentResult = lazy(() => import('./pages/PaymentResult'));
 const Chat = lazy(() => import('./pages/Chat'));
@@ -579,7 +578,6 @@ const App: React.FC = () => {
           {/* Payment result pages - no BottomNav */}
           <Route path="/payment/success" element={<PaymentSuccess />} />
           <Route path="/payment/result" element={<PaymentResult />} />
-          <Route path="/test-payment" element={<TestPayment />} />
           <Route path="/link" element={<Link language={language} t={t} />} />
 
           {/* Info pages - with BottomNav for Telegram Mini App navigation consistency */}
