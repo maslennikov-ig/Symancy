@@ -41,8 +41,8 @@ const STATUS_CONFIGS: Record<PaymentStatus, StatusConfig> = {
   },
 };
 
-const POLL_INTERVAL_MS = 3000;
-const MAX_POLL_ATTEMPTS = 10;
+const POLL_INTERVAL_MS = 1500;
+const MAX_POLL_ATTEMPTS = 20;
 
 const PaymentResult: React.FC<PaymentResultProps> = ({ language: propLanguage, t: propT }) => {
   const navigate = useNavigate();

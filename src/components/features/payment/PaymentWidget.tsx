@@ -49,7 +49,7 @@ export function PaymentWidget({
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 1500);
+    }, 500);
     return () => clearTimeout(timer);
   }, [widgetKey]);
 
@@ -116,7 +116,7 @@ export function PaymentWidget({
       {!error && (
         <div
           className={cn(
-            'transition-opacity duration-300',
+            'transition-opacity duration-150',
             isLoading ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'
           )}
         >

@@ -5,11 +5,14 @@
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2344403c'%3E%3Cpath fill-rule='evenodd' d='M9.3,3.62_C_9.69,3.23,10.29,3,10.92,3_h_6.58_c_2.11,0,3.83,1.72,3.83,3.83_v_2.67_c_0,1.06-0.86,1.92-1.92,1.92_h_-1.91_v_-1.91_c_0-2.11-1.72-3.83-3.83-3.83_H_9.3_z_M_5.47,5.54_C_5.47,4.48,6.34,3.62,7.39,3.62_h_1.91_v_9.58_c_0,1.06-0.86,1.92-1.92,1.92_H_5.47_C_3.36,15.11,1.64,13.39,1.64,11.28_v_-1.91_C_1.64,7.26,3.36,5.54,5.47,5.54_z_M_7.39,17.02_h_8.61_c_1.06,0,1.92,0.86,1.92,1.92_v_0.96_c_0,1.06-0.86,1.92-1.92,1.92_H_7.39_c_-1.06,0-1.92-0.86-1.92-1.92_v_-0.96_C_5.47,17.88,6.34,17.02,7.39,17.02_z' clip-rule='evenodd'/%3E%3C/svg%3E" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Coffee Cup Psychologist</title>
+    <link rel="dns-prefetch" href="https://telegram.org">
+    <link rel="preconnect" href="https://telegram.org" crossorigin>
+    <link rel="dns-prefetch" href="https://ui-avatars.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <!-- Telegram WebApp SDK - MUST be loaded before React -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js" async></script>
     <script>
       if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
         document.documentElement.classList.add('dark')

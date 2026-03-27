@@ -81,13 +81,13 @@ export function Subscription({ language, t }: SubscriptionPageProps): React.Reac
       } catch {
         // continue polling
       }
-    }, 2000);
+    }, 1500);
 
     pollingTimeoutRef.current = setTimeout(() => {
       stopPolling();
       setPollingStatus('timeout');
       setRefreshKey((k) => k + 1);
-      setTimeout(() => setPollingStatus('idle'), 10000);
+      setTimeout(() => setPollingStatus('idle'), 3000);
     }, 30000);
   }, [stopPolling]);
 

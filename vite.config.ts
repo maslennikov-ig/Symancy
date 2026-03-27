@@ -27,6 +27,9 @@ export default defineConfig(({ mode }) => {
           output: {
             manualChunks: {
               vendor_react: ['react', 'react-dom', 'react-router'],
+              vendor_charts: ['recharts', '@tremor/react'],
+              vendor_chat: ['@chatscope/chat-ui-kit-react'],
+              vendor_supabase: ['@supabase/supabase-js'],
             }
           }
         }
