@@ -5,25 +5,10 @@
  * Handles engagement messages:
  * 1. inactive-reminder: Users inactive for 7+ days
  * 2. weekly-checkin: Monday morning check-in
- * 3. morning-insight: Personalized daily morning advice (legacy batch)
- * 4. evening-insight: Personalized evening reflection (legacy batch)
- * 5. photo-cleanup: Clean up expired photos
- * 6. insight-dispatcher: Hourly timezone-aware dispatch (new)
- * 7. morning-insight-single: Single user morning insight (new)
- * 8. evening-insight-single: Single user evening insight (new)
- *
- * Updated for Omnichannel (Phase 7):
- * - Uses ProactiveMessageService for user queries (unified_users table)
- * - Checks is_telegram_linked before sending (per spec US5)
- * - Handles bot blocked errors and marks users inactive
- *
- * Updated for Daily Insights (spec 009):
- * - morning-insight: AI-generated personalized advice
- * - evening-insight: Reflection based on morning advice
- *
- * Updated for Timezone Support (spec 010):
- * - insight-dispatcher: Hourly cron that dispatches individual jobs
- * - morning-insight-single / evening-insight-single: Process per-user with idempotency
+ * 3. photo-cleanup: Clean up expired photos
+ * 4. insight-dispatcher: Hourly timezone-aware dispatch
+ * 5. morning-insight-single: Single user morning insight (per-user with idempotency)
+ * 6. evening-insight-single: Single user evening insight (per-user with idempotency)
  */
 import type { Job } from "pg-boss";
 import { getLogger } from "../../core/logger.js";
@@ -36,7 +21,6 @@ import {
 import {
   createWeeklyCheckInMessage,
 } from "./triggers/weekly-checkin.js";
-import { BATCH_RATE_LIMIT_DELAY_MS } from "../../config/insight-constants.js";
 import { cleanupExpiredPhotos } from "./triggers/photo-cleanup.js";
 import {
   generateMorningAdvice,
@@ -78,29 +62,6 @@ interface SingleInsightJobData {
 }
 
 /**
- * Joined user data from daily_insights query
- */
-interface JoinedUnifiedUser {
-  id: string;
-  telegram_id: number | null;
-  display_name: string | null;
-  language_code: string;
-  is_telegram_linked: boolean;
-}
-
-/**
- * Daily insight row with joined unified_users data
- * Type for Supabase query result with !inner join
- * Note: Supabase returns joined data as array with !inner
- */
-interface DailyInsightWithUserRaw {
-  id: string;
-  unified_user_id: string;
-  morning_advice: string | null;
-  unified_users: JoinedUnifiedUser[];
-}
-
-/**
  * Message header translations for insights
  */
 const INSIGHT_HEADERS: Record<string, { morning: string; evening: string }> = {
@@ -116,13 +77,6 @@ function getInsightHeader(type: "morning" | "evening", languageCode: string): st
   const defaultHeaders = { morning: "☀️ Morning Advice", evening: "🌙 Evening Insight" };
   const headers = INSIGHT_HEADERS[languageCode] ?? defaultHeaders;
   return headers[type];
-}
-
-/**
- * Sleep helper for rate limiting
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -219,264 +173,6 @@ export async function processWeeklyCheckIn(job: Job): Promise<void> {
   }
 }
 
-/**
- * Process morning insight job
- * Generates and sends personalized AI-powered morning advice
- *
- * Updated for Daily Insights (spec 009):
- * - Uses DailyInsightChain for AI-generated content
- * - Saves insights to daily_insights table
- * - Sends to Telegram via ProactiveMessageService
- */
-export async function processMorningInsight(job: Job): Promise<void> {
-  const jobLogger = logger.child({ jobId: job.id, type: "morning-insight" });
-  jobLogger.info("Starting morning insight processing");
-
-  try {
-    const proactiveService = getProactiveMessageService();
-    const supabase = getSupabase();
-    // Use same user query as daily fortune (all Telegram-linked users)
-    const users = await proactiveService.findDailyFortuneUsers();
-
-    if (users.length === 0) {
-      jobLogger.info("No users for morning insight");
-      return;
-    }
-
-    jobLogger.info({ count: users.length }, "Generating morning insights");
-
-    let successCount = 0;
-    let failedCount = 0;
-
-    for (const user of users) {
-      try {
-        // Generate personalized advice with retry and fallback
-        let insight;
-        let usedFallback = false;
-
-        try {
-          insight = await generateWithRetry(() =>
-            generateMorningAdvice({
-              userId: user.id,
-              telegramId: user.telegramId,
-              displayName: user.displayName,
-              languageCode: user.languageCode,
-            })
-          );
-        } catch (error) {
-          jobLogger.warn(
-            { error, userId: user.id },
-            "AI generation failed after retries, using static fallback"
-          );
-          insight = getStaticMorningInsight(user.languageCode);
-          usedFallback = true;
-        }
-
-        // Debug logging for context data
-        jobLogger.debug({
-          userId: user.id,
-          insightType: 'morning',
-          messageCount: insight.contextData.message_ids.length,
-          memoryCount: insight.contextData.memory_ids.length,
-          hasLastAnalysis: !!insight.contextData.last_analysis_id,
-          tokensUsed: insight.tokensUsed,
-          textLength: insight.text.length,
-          usedFallback,
-        }, "Generated morning insight");
-
-        const today = new Date().toISOString().split("T")[0];
-
-        // Save to database (upsert)
-        await supabase
-          .from("daily_insights")
-          .upsert({
-            unified_user_id: user.id,
-            date: today,
-            morning_advice: insight.text,
-            morning_advice_short: insight.shortText,
-            morning_sent_at: new Date().toISOString(),
-            morning_tokens_used: insight.tokensUsed,
-            context_data: insight.contextData,
-          }, { onConflict: "unified_user_id,date" });
-
-        // Send to Telegram with localized header
-        const header = getInsightHeader("morning", user.languageCode);
-        const message = `${header}\n\n${insight.text}`;
-        await proactiveService.sendEngagementMessage(user, "morning-insight", message);
-
-        successCount++;
-
-        // Rate limiting
-        await sleep(BATCH_RATE_LIMIT_DELAY_MS);
-      } catch (error) {
-        failedCount++;
-        jobLogger.error({ error, userId: user.id }, "Failed to process user");
-      }
-    }
-
-    jobLogger.info(
-      { total: users.length, success: successCount, failed: failedCount },
-      "Morning insight processing completed"
-    );
-  } catch (error) {
-    jobLogger.error({ error }, "Morning insight processing failed");
-    throw error;
-  }
-}
-
-/**
- * Process evening insight job
- * Generates and sends personalized AI-powered evening reflection
- *
- * Updated for Daily Insights (spec 009):
- * - Finds users who received morning advice today
- * - Uses DailyInsightChain to generate evening reflection
- * - Links to morning advice for coherent daily cycle
- */
-export async function processEveningInsight(job: Job): Promise<void> {
-  const jobLogger = logger.child({ jobId: job.id, type: "evening-insight" });
-  jobLogger.info("Starting evening insight processing");
-
-  try {
-    const supabase = getSupabase();
-    const proactiveService = getProactiveMessageService();
-    const today = new Date().toISOString().split("T")[0];
-
-    // Find users who received morning insight today but not evening yet
-    const { data: todaysInsights, error } = await supabase
-      .from("daily_insights")
-      .select(`
-        id,
-        unified_user_id,
-        morning_advice,
-        unified_users!inner(
-          id,
-          telegram_id,
-          display_name,
-          language_code,
-          is_telegram_linked
-        )
-      `)
-      .eq("date", today)
-      .not("morning_advice", "is", null)
-      .is("evening_insight", null);
-
-    if (error) {
-      throw new Error(`Failed to query daily insights: ${error.message}`);
-    }
-
-    if (!todaysInsights || todaysInsights.length === 0) {
-      jobLogger.info("No users for evening insight");
-      return;
-    }
-
-    jobLogger.info({ count: todaysInsights.length }, "Generating evening insights");
-
-    let successCount = 0;
-    let failedCount = 0;
-
-    for (const row of todaysInsights as DailyInsightWithUserRaw[]) {
-      // Supabase !inner join returns unified_users as array, extract first element
-      const user = row.unified_users[0];
-
-      if (!user || !user.is_telegram_linked || !user.telegram_id) {
-        continue;
-      }
-
-      const insight = {
-        id: row.id,
-        unified_user_id: row.unified_user_id,
-        morning_advice: row.morning_advice,
-        unified_users: user,
-      };
-
-      // Safety check: morning_advice should exist (query filters it)
-      if (!insight.morning_advice) {
-        jobLogger.warn({ insightId: insight.id }, "Morning advice is null, skipping");
-        continue;
-      }
-
-      try {
-        // Generate evening insight with retry and fallback
-        let eveningInsight;
-        let usedFallback = false;
-
-        try {
-          // user.telegram_id is guaranteed non-null after the check above
-          eveningInsight = await generateWithRetry(() =>
-            generateEveningInsight(
-              {
-                userId: user.id,
-                telegramId: user.telegram_id!,
-                displayName: user.display_name,
-                languageCode: user.language_code,
-              },
-              insight.morning_advice!
-            )
-          );
-        } catch (error) {
-          jobLogger.warn(
-            { error, insightId: insight.id },
-            "Evening AI generation failed after retries, using static fallback"
-          );
-          eveningInsight = getStaticEveningInsight(user.language_code);
-          usedFallback = true;
-        }
-
-        // Debug logging for context data
-        jobLogger.debug({
-          userId: user.id,
-          insightId: insight.id,
-          insightType: 'evening',
-          messageCount: eveningInsight.contextData.message_ids.length,
-          tokensUsed: eveningInsight.tokensUsed,
-          textLength: eveningInsight.text.length,
-          usedFallback,
-        }, "Generated evening insight");
-
-        // Update database
-        await supabase
-          .from("daily_insights")
-          .update({
-            evening_insight: eveningInsight.text,
-            evening_insight_short: eveningInsight.shortText,
-            evening_sent_at: new Date().toISOString(),
-            evening_tokens_used: eveningInsight.tokensUsed,
-          })
-          .eq("id", insight.id);
-
-        // Send to Telegram with localized header
-        const header = getInsightHeader("evening", user.language_code);
-        const message = `${header}\n\n${eveningInsight.text}`;
-        await proactiveService.sendEngagementMessage(
-          {
-            id: user.id,
-            telegramId: user.telegram_id!,
-            displayName: user.display_name,
-            languageCode: user.language_code,
-            lastActiveAt: new Date(),
-          },
-          "evening-insight",
-          message
-        );
-
-        successCount++;
-        await sleep(BATCH_RATE_LIMIT_DELAY_MS);
-      } catch (error) {
-        failedCount++;
-        jobLogger.error({ error, insightId: insight.id }, "Failed to process user");
-      }
-    }
-
-    jobLogger.info(
-      { total: todaysInsights.length, success: successCount, failed: failedCount },
-      "Evening insight processing completed"
-    );
-  } catch (error) {
-    jobLogger.error({ error }, "Evening insight processing failed");
-    throw error;
-  }
-}
 
 /**
  * Process photo cleanup job
@@ -875,30 +571,6 @@ export async function registerEngagementWorkers(): Promise<string[]> {
   );
   workerIds.push(weeklyWorkerId);
   logger.info({ workerId: weeklyWorkerId }, "Weekly check-in worker registered");
-
-  // Register morning insight worker
-  const morningWorkerId = await registerWorker(
-    "morning-insight",
-    processMorningInsight,
-    {
-      batchSize: 1,
-      pollingIntervalSeconds: 60,
-    }
-  );
-  workerIds.push(morningWorkerId);
-  logger.info({ workerId: morningWorkerId }, "Morning insight worker registered");
-
-  // Register evening insight worker
-  const eveningWorkerId = await registerWorker(
-    "evening-insight",
-    processEveningInsight,
-    {
-      batchSize: 1,
-      pollingIntervalSeconds: 60,
-    }
-  );
-  workerIds.push(eveningWorkerId);
-  logger.info({ workerId: eveningWorkerId }, "Evening insight worker registered");
 
   // Register photo cleanup worker
   const photoCleanupWorkerId = await registerWorker(
