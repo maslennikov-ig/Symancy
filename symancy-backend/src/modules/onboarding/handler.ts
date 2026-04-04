@@ -17,6 +17,7 @@ import { getBotApi } from "../../core/telegram.js";
 import type { PhotoAnalysisJobData } from "../../types/telegram.js";
 import { QUEUE_ANALYZE_PHOTO } from "../../config/constants.js";
 import { grantInitialCredits } from "../credits/service.js";
+import { findOrCreateByTelegramId } from "../../services/user/UnifiedUserService.js";
 import { z } from "zod";
 
 const logger = getLogger().child({ module: "onboarding:handler" });
@@ -599,6 +600,17 @@ export async function handleOnboardingCallback(
             { telegramUserId, balance: grantResult.balance },
             "Initial free credit granted on onboarding completion"
           );
+        }
+
+        // Ensure unified_users record exists (defensive backup for complete.ts)
+        // Trigger auto-copies credits from backend_user_credits
+        try {
+          await findOrCreateByTelegramId({
+            telegramId: telegramUserId,
+            displayName: result.name || "User",
+          });
+        } catch (unifiedError) {
+          logger.warn({ telegramUserId, error: unifiedError }, "Failed to create unified user in handler");
         }
       }
 
