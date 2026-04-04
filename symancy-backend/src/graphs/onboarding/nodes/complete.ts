@@ -7,6 +7,7 @@ import { getBotApi } from "../../../core/telegram.js";
 import { getSupabase } from "../../../core/database.js";
 import { grantInitialCredits } from "../../../modules/credits/service.js";
 import { getLogger } from "../../../core/logger.js";
+import { findOrCreateByTelegramId } from "../../../services/user/UnifiedUserService.js";
 
 const logger = getLogger().child({ module: "onboarding:complete" });
 
@@ -40,6 +41,37 @@ export async function complete(
       logger.info({ telegramUserId, balance: grantResult.balance }, "Credits already granted (idempotent)");
     } else {
       logger.info({ telegramUserId, balance: grantResult.balance }, "Initial credits granted successfully");
+    }
+
+    // Create unified_users record — trigger auto-copies credits from backend_user_credits
+    try {
+      await findOrCreateByTelegramId({
+        telegramId: telegramUserId,
+        displayName: name || "User",
+        languageCode: "ru",
+      });
+      logger.info({ telegramUserId }, "Unified user record created/updated");
+    } catch (unifiedError) {
+      logger.warn({ telegramUserId, error: unifiedError }, "Failed to create unified user record, credits may not sync to Mini App");
+    }
+
+    // Mark free credit as granted in unified_user_credits
+    try {
+      const supabaseForUpdate = getSupabase();
+      const { data: unifiedUser } = await supabaseForUpdate
+        .from("unified_users")
+        .select("id")
+        .eq("telegram_id", telegramUserId)
+        .single();
+
+      if (unifiedUser) {
+        await supabaseForUpdate
+          .from("unified_user_credits")
+          .update({ free_credit_granted: true })
+          .eq("unified_user_id", unifiedUser.id);
+      }
+    } catch (flagError) {
+      logger.warn({ telegramUserId, error: flagError }, "Failed to set free_credit_granted flag");
     }
 
     // Mark onboarding as complete
