@@ -121,9 +121,9 @@ bd close <id> --reason "Done"         # Releases lock
 # SESSION END (MANDATORY CHECKLIST)
 # [ ] git status
 # [ ] git add <files>
-# [ ] bd sync
+# [ ] if this repo commits .beads/issues.jsonl: bd export -o .beads/issues.jsonl
 # [ ] git commit -m "..."
-# [ ] bd sync
+# [ ] if git hooks still call old Beads subcommands after an upgrade: bd hooks install
 # [ ] git push
 ```
 
@@ -153,7 +153,7 @@ bd close <id> --reason "Done"         # Releases lock
 ### Automation
 
 - **Daemon auto-sync**: Enabled (auto-commit, auto-push, auto-pull for beads)
-- **Hooks**: SessionStart/PreCompact → `bd prime`, Stop → `bd sync`
+- **Hooks**: SessionStart/PreCompact → `bd prime`. If git hooks still call old Beads subcommands after an upgrade, run `bd hooks install`. If this repo commits `.beads/issues.jsonl`, refresh it explicitly with `bd export -o .beads/issues.jsonl` at session end.
 - **Exclusive Lock**: Prevents conflicts in multi-terminal work
 - **Emergent work**: `bd create "Issue" -t bug --deps discovered-from:<current-id>`
 

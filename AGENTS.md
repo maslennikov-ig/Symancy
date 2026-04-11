@@ -34,7 +34,14 @@ Never commit secrets. Local runs require `.env.local` entries for `VITE_SUPABASE
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   bd sync
+   # If the local Beads DB looks empty or broken after clone/upgrade:
+   bd bootstrap --yes
+   # If .beads/issues.jsonl has data but the local DB is empty:
+   bd import
+   # If git hooks still point at old subcommands after a bd upgrade:
+   bd hooks install
+   # If this repo commits .beads/issues.jsonl, refresh it before push:
+   bd export -o .beads/issues.jsonl
    git push
    git status  # MUST show "up to date with origin"
    ```
@@ -47,3 +54,4 @@ Never commit secrets. Local runs require `.env.local` entries for `VITE_SUPABASE
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
+- Beads 1.0.0 requires explicit `bd bootstrap`, `bd import`, `bd export`, and `bd hooks install` steps as needed
