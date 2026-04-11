@@ -175,7 +175,7 @@ const Pricing: React.FC<PricingProps> = ({
             style={{ animation: 'pricing-fade 0.6s ease-out both' }}
           >
             <p className="text-xs tracking-[0.3em] uppercase text-primary/70 mb-3 font-medium">
-              Coffee Oracle
+              Coffee Oracle v2
             </p>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-foreground tracking-tight mb-4">
               {t('pricing.title')}
