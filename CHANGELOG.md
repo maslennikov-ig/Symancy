@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.6.18] - 2026-04-11
+
+### Added
+- **pricing**: redesign pricing page with Mystical Luxury aesthetic (3e53333)
+- **pricing**: add buy buttons to /pricing page (c1fd457)
+- **subscription**: apply migrations, add cron, optimize UI (b298b67)
+- implement subscription system with recurring YooKassa payments (4dfa9ca)
+
+### Changed
+- **subscription**: apply remaining code review recommendations (54caf37)
+- optimize payment UX and nginx configuration (1db4957)
+
+### Fixed
+- **src/App.tsx**: update 2 source file(s), update docs (c57f189)
+- **onboarding**: add defensive findOrCreateByTelegramId in handler.ts (26e7f1d)
+- **credits**: sync free credit to unified_user_credits on onboarding (abc6e21)
+- **engagement**: remove legacy insight batch causing duplicate "Совет дня" (ce15db8)
+- **pricing**: add auth gate to buy buttons (4380ae9)
+- **bot**: add process.send('ready') for PM2 + improve expired topic UX (f5483b7)
+- **bot**: add try/catch to photo handler + restart production bot (3eda83d)
+- **subscriptions**: address 4 code review findings + 2 improvements (10f6cf7)
+- **subscription**: resolve all code review findings (10 issues) (e8d80ce)
+- **cron**: use dedicated CRON_SECRET for recurring payments auth (5a14698)
+- **subscription**: apply code review fixes across subscription system (1d8ae55)
+
+### Other
+- sync beads JSONL, AGENTS.md, CLAUDE.md (cf962c2)
+- remove /test-payment page (no longer needed in production) (4f44895)
+- fix testing guide — use /pricing instead of /test-payment (c5e2c85)
+- add YooKassa live payment testing guide for owner (9c18f23)
+- **testing**: update subscription guide — 3 tiers, free filtered out (cc29450)
+- **subscription**: implement code review improvements (I-1 through I-6) (f1cc3ee)
+- push all local changes (46f29b9)
+
 ## [0.6.17] - 2026-02-27
 
 ### Added

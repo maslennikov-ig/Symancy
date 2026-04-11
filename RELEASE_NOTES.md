@@ -2,6 +2,40 @@
 
 User-facing release notes for all versions.
 
+## v0.6.18
+
+_Released on 2026-04-11_
+
+### ✨ New Features
+
+- **pricing**: Redesign pricing page with Mystical Luxury aesthetic
+- **pricing**: Add buy buttons to /pricing page
+- **subscription**: Apply migrations, add cron, optimize UI
+- Implement subscription system with recurring YooKassa payments
+
+### 🔧 Improvements
+
+- Optimize payment UX and nginx configuration
+- **subscription**: Apply remaining code review recommendations
+
+### 🐛 Bug Fixes
+
+- **src/App.tsx**: Update 2 source file(s), update docs
+- **onboarding**: Add defensive findOrCreateByTelegramId in handler.ts
+- **credits**: Sync free credit to unified_user_credits on onboarding
+- **engagement**: Remove legacy insight batch causing duplicate "Совет дня"
+- **pricing**: Add auth gate to buy buttons
+- **bot**: Add process.send('ready') for PM2 + improve expired topic UX
+- **bot**: Add try/catch to photo handler + restart production bot
+- **subscriptions**: Address 4 code review findings + 2 improvements
+- **subscription**: Resolve all code review findings (10 issues)
+- **cron**: Use dedicated CRON_SECRET for recurring payments auth
+- **subscription**: Apply code review fixes across subscription system
+
+---
+
+_This release was automatically generated from 24 commits._
+
 ## v0.6.17
 
 _Released on 2026-02-27_
