@@ -11,10 +11,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-    <!-- Telegram WebApp SDK - MUST be loaded before React -->
-    <script src="https://telegram.org/js/telegram-web-app.js" async></script>
+    <!-- Telegram WebApp SDK - MUST be loaded SYNCHRONOUSLY before React to prevent dark theme flash -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
-      if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      // Telegram Mini App dark mode (highest priority — SDK loaded synchronously above)
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.colorScheme === 'dark') {
+        document.documentElement.classList.add('dark')
+      } else if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
         document.documentElement.classList.add('dark')
       } else {
         document.documentElement.classList.remove('dark')

@@ -150,7 +150,7 @@ const TelegramRedirectGuard: React.FC<{ children: React.ReactNode }> = ({ childr
 };
 
 const App: React.FC = () => {
-  const { user, isAuthenticated: authIsAuthenticated } = useAuth();
+  const { user, isAuthenticated: authIsAuthenticated, loading: authLoading } = useAuth();
   const { onboardingCompleted, isLoading: cloudStorageLoading } = useCloudStorage();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -164,6 +164,7 @@ const App: React.FC = () => {
 
   // Auth modal state (triggered from Pricing page for unauthenticated users)
   const [showPricingAuth, setShowPricingAuth] = useState(false);
+  const [pendingTariff, setPendingTariff] = useState<string | null>(null);
 
   // Payment state
   const [showTariffSelector, setShowTariffSelector] = useState(false);
@@ -215,6 +216,15 @@ const App: React.FC = () => {
     localStorage.setItem('language', language);
     document.documentElement.lang = language;
   }, [language]);
+
+  // Auto-trigger purchase after login from Pricing page
+  useEffect(() => {
+    if (authIsAuthenticated && pendingTariff) {
+      setShowPricingAuth(false);
+      handleSelectTariff(pendingTariff as ProductType);
+      setPendingTariff(null);
+    }
+  }, [authIsAuthenticated, pendingTariff]);
 
   const toggleTheme = () => {
     setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
@@ -587,7 +597,7 @@ const App: React.FC = () => {
           {/* Info pages - with BottomNav for Telegram Mini App navigation consistency */}
           <Route
             path="/pricing"
-            element={withAppLayout(<Pricing language={language} t={t} onBuyTariff={(productType) => handleSelectTariff(productType as ProductType)} isAuthenticated={authIsAuthenticated} onLogin={() => setShowPricingAuth(true)} />)}
+            element={withAppLayout(<Pricing language={language} t={t} onBuyTariff={(productType) => handleSelectTariff(productType as ProductType)} isAuthenticated={authIsAuthenticated} isAuthLoading={authLoading} onLogin={(type) => { setPendingTariff(type); setShowPricingAuth(true); }} />)}
           />
           <Route
             path="/offer"
@@ -648,7 +658,7 @@ const App: React.FC = () => {
         {/* Auth modal triggered from Pricing page */}
         {showPricingAuth && (
           <Suspense fallback={null}>
-            <AuthModal onClose={() => setShowPricingAuth(false)} t={t} />
+            <AuthModal onClose={() => { setShowPricingAuth(false); setPendingTariff(null); }} t={t} />
           </Suspense>
         )}
       </TelegramRedirectGuard>

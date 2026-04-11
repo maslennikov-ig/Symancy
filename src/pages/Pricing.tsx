@@ -8,7 +8,6 @@ import { translations, Lang, t as i18n_t } from '../lib/i18n';
 interface Tariff {
   type: string;
   nameKey: string;
-  price: string;
   priceNum: number;
   credits: number;
   descriptionKey: string;
@@ -22,7 +21,8 @@ interface PricingProps {
   t?: (key: keyof typeof translations.en) => string;
   onBuyTariff?: (productType: string) => void;
   isAuthenticated?: boolean;
-  onLogin?: () => void;
+  isAuthLoading?: boolean;
+  onLogin?: (tariffType: string) => void;
 }
 
 /* ── Tariff data ───────────────────────────────────── */
@@ -31,7 +31,6 @@ const TARIFFS: Tariff[] = [
   {
     type: 'basic',
     nameKey: 'pricing.tariff.basic.name',
-    price: '100 ₽',
     priceNum: 100,
     credits: 1,
     descriptionKey: 'pricing.tariff.basic.description',
@@ -50,7 +49,6 @@ const TARIFFS: Tariff[] = [
   {
     type: 'pack5',
     nameKey: 'pricing.tariff.pack5.name',
-    price: '300 ₽',
     priceNum: 300,
     credits: 5,
     descriptionKey: 'pricing.tariff.pack5.description',
@@ -71,7 +69,6 @@ const TARIFFS: Tariff[] = [
   {
     type: 'pro',
     nameKey: 'pricing.tariff.pro.name',
-    price: '500 ₽',
     priceNum: 500,
     credits: 1,
     descriptionKey: 'pricing.tariff.pro.description',
@@ -91,7 +88,6 @@ const TARIFFS: Tariff[] = [
   {
     type: 'cassandra',
     nameKey: 'pricing.tariff.cassandra.name',
-    price: '1 000 ₽',
     priceNum: 1000,
     credits: 1,
     descriptionKey: 'pricing.tariff.cassandra.description',
@@ -141,6 +137,7 @@ const Pricing: React.FC<PricingProps> = ({
   t: propT,
   onBuyTariff,
   isAuthenticated,
+  isAuthLoading,
   onLogin,
 }) => {
   const navigate = useNavigate();
@@ -151,7 +148,9 @@ const Pricing: React.FC<PricingProps> = ({
     if (isAuthenticated && onBuyTariff) {
       onBuyTariff(type);
     } else if (onLogin) {
-      onLogin();
+      onLogin(type);
+    } else {
+      navigate('/');
     }
   };
 
@@ -206,15 +205,6 @@ const Pricing: React.FC<PricingProps> = ({
                     animationDelay: `${i * 100 + 100}ms`,
                   }}
                 >
-                  {/* Popular badge */}
-                  {isPopular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
-                      <span className="inline-block px-4 py-1 rounded-full text-[11px] font-semibold tracking-wide uppercase bg-primary text-primary-foreground shadow-md">
-                        {t('subscription.selector.popular' as any)}
-                      </span>
-                    </div>
-                  )}
-
                   <div
                     className={[
                       'group relative overflow-hidden rounded-xl border transition-all duration-300',
@@ -228,10 +218,16 @@ const Pricing: React.FC<PricingProps> = ({
                       animation: 'pricing-glow-pulse 4s ease-in-out infinite',
                     } : undefined}
                   >
-                    {/* Gradient strip at top */}
+                    {/* Gradient strip at top + Popular badge */}
                     <div
-                      className={`h-1 w-full bg-gradient-to-r ${tariff.accent.strip}`}
-                    />
+                      className={`w-full bg-gradient-to-r ${tariff.accent.strip} ${isPopular ? 'py-1.5 text-center' : 'h-1'}`}
+                    >
+                      {isPopular && (
+                        <span className="text-[11px] font-semibold tracking-wide uppercase text-white drop-shadow-sm">
+                          {t('subscription.selector.popular' as any)}
+                        </span>
+                      )}
+                    </div>
 
                     <div className="p-5 sm:p-6">
                       {/* Tier icon + name */}
@@ -291,6 +287,7 @@ const Pricing: React.FC<PricingProps> = ({
                       {/* CTA */}
                       <Button
                         onClick={() => handleBuy(tariff.type)}
+                        disabled={isAuthLoading}
                         className={[
                           'w-full transition-all duration-200',
                           isPopular
@@ -300,9 +297,11 @@ const Pricing: React.FC<PricingProps> = ({
                         variant={isPopular ? 'default' : 'outline'}
                         size="lg"
                       >
-                        {isAuthenticated
-                          ? t('pricing.button.buy' as any)
-                          : t('pricing.button.login' as any)}
+                        {isAuthLoading
+                          ? '...'
+                          : isAuthenticated
+                            ? t('pricing.button.buy' as any)
+                            : t('pricing.button.login' as any)}
                       </Button>
                     </div>
                   </div>
