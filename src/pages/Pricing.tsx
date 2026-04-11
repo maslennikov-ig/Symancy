@@ -145,14 +145,30 @@ const Pricing: React.FC<PricingProps> = ({
   const t = propT || ((key: any) => i18n_t(key, language));
 
   const handleBuy = (type: string) => {
+    console.log('[Pricing] handleBuy called:', { type, isAuthenticated, hasOnBuyTariff: !!onBuyTariff, hasOnLogin: !!onLogin, isAuthLoading });
     if (isAuthenticated && onBuyTariff) {
+      console.log('[Pricing] → calling onBuyTariff');
       onBuyTariff(type);
     } else if (onLogin) {
+      console.log('[Pricing] → calling onLogin');
       onLogin(type);
     } else {
+      console.log('[Pricing] → fallback navigate(/)');
       navigate('/');
     }
   };
+
+  // Debug: log theme state on render
+  if (typeof window !== 'undefined') {
+    const root = document.documentElement;
+    console.log('[Pricing] render debug:', {
+      hasDarkClass: root.classList.contains('dark'),
+      hasTgWebapp: root.classList.contains('tg-webapp'),
+      cardVar: getComputedStyle(root).getPropertyValue('--card'),
+      primaryVar: getComputedStyle(root).getPropertyValue('--primary'),
+      inputVar: getComputedStyle(root).getPropertyValue('--input'),
+    });
+  }
 
   return (
     <>

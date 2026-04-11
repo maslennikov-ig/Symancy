@@ -355,10 +355,13 @@ const App: React.FC = () => {
   };
 
   const handleSelectTariff = async (productType: ProductType) => {
+    console.log('[App] handleSelectTariff called:', productType);
     setIsPaymentLoading(true);
     setPaymentError(null);
     try {
+      console.log('[App] calling createPayment...');
       const result = await createPayment(productType);
+      console.log('[App] createPayment result:', result);
       setPaymentData({
         confirmationToken: result.confirmation_token,
         purchaseId: result.purchase_id,
