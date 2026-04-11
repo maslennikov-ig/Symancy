@@ -294,7 +294,7 @@ const Pricing: React.FC<PricingProps> = ({
                             ? 'shadow-sm hover:shadow-md'
                             : '',
                         ].join(' ')}
-                        variant={isPopular ? 'default' : 'outline'}
+                        variant="default"
                         size="lg"
                       >
                         {isAuthLoading

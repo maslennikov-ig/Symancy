@@ -484,67 +484,6 @@ const App: React.FC = () => {
           <p className="mt-1">{t('footer.disclaimer')}</p>
         </footer>
       </main>
-
-      {/* T022: TariffSelector Modal */}
-      {showTariffSelector && (
-        <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><LoaderIcon className="w-8 h-8 animate-spin" /></div>}>
-          <TariffSelector
-            onClose={() => {
-              setShowTariffSelector(false);
-              setPaymentMessage(''); // Clear message on close
-            }}
-            onSelectTariff={handleSelectTariff}
-            isLoading={isPaymentLoading}
-            message={paymentMessage}
-          />
-        </Suspense>
-      )}
-
-      {/* T023: PaymentWidget Modal */}
-      {paymentData && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={handleClosePaymentWidget}
-        >
-          <div
-            className="bg-popover rounded-lg shadow-2xl p-6 w-full max-w-lg relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close button */}
-            <button
-              onClick={handleClosePaymentWidget}
-              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground p-2 rounded-full text-2xl leading-none"
-              aria-label={t('payment.modal.close')}
-            >
-              &times;
-            </button>
-            <h2 className="text-xl font-display font-bold mb-4 text-center">
-              {t('payment.modal.title')}
-            </h2>
-            <Suspense fallback={<div className="flex items-center justify-center p-8"><LoaderIcon className="w-8 h-8 animate-spin" /></div>}>
-              <PaymentWidget
-                confirmationToken={paymentData.confirmationToken}
-                purchaseId={paymentData.purchaseId}
-                onComplete={handlePaymentComplete}
-                onError={handlePaymentError}
-              />
-            </Suspense>
-          </div>
-        </div>
-      )}
-
-      {/* Payment error toast */}
-      {paymentError && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-destructive text-destructive-foreground px-4 py-3 rounded-lg shadow-lg flex items-center gap-3">
-          <span>{paymentError}</span>
-          <button
-            onClick={() => setPaymentError(null)}
-            className="text-destructive-foreground/80 hover:text-destructive-foreground"
-          >
-            &times;
-          </button>
-        </div>
-      )}
     </div>
   );
 
@@ -660,6 +599,64 @@ const App: React.FC = () => {
           <Suspense fallback={null}>
             <AuthModal onClose={() => { setShowPricingAuth(false); setPendingTariff(null); }} t={t} />
           </Suspense>
+        )}
+
+        {/* Global payment modals — must be outside Routes so they work on ALL pages */}
+        {showTariffSelector && (
+          <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><LoaderIcon className="w-8 h-8 animate-spin" /></div>}>
+            <TariffSelector
+              onClose={() => {
+                setShowTariffSelector(false);
+                setPaymentMessage('');
+              }}
+              onSelectTariff={handleSelectTariff}
+              isLoading={isPaymentLoading}
+              message={paymentMessage}
+            />
+          </Suspense>
+        )}
+
+        {paymentData && (
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={handleClosePaymentWidget}
+          >
+            <div
+              className="bg-popover rounded-lg shadow-2xl p-6 w-full max-w-lg relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={handleClosePaymentWidget}
+                className="absolute top-2 right-2 text-muted-foreground hover:text-foreground p-2 rounded-full text-2xl leading-none"
+                aria-label={t('payment.modal.close')}
+              >
+                &times;
+              </button>
+              <h2 className="text-xl font-display font-bold mb-4 text-center">
+                {t('payment.modal.title')}
+              </h2>
+              <Suspense fallback={<div className="flex items-center justify-center p-8"><LoaderIcon className="w-8 h-8 animate-spin" /></div>}>
+                <PaymentWidget
+                  confirmationToken={paymentData.confirmationToken}
+                  purchaseId={paymentData.purchaseId}
+                  onComplete={handlePaymentComplete}
+                  onError={handlePaymentError}
+                />
+              </Suspense>
+            </div>
+          </div>
+        )}
+
+        {paymentError && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-destructive text-destructive-foreground px-4 py-3 rounded-lg shadow-lg flex items-center gap-3">
+            <span>{paymentError}</span>
+            <button
+              onClick={() => setPaymentError(null)}
+              className="text-destructive-foreground/80 hover:text-destructive-foreground"
+            >
+              &times;
+            </button>
+          </div>
         )}
       </TelegramRedirectGuard>
     </ErrorBoundary>
