@@ -22,6 +22,7 @@ interface PricingProps {
   t?: (key: keyof typeof translations.en) => string;
   onBuyTariff?: (productType: string) => void;
   isAuthenticated?: boolean;
+  onLogin?: () => void;
 }
 
 /* ── Tariff data ───────────────────────────────────── */
@@ -140,6 +141,7 @@ const Pricing: React.FC<PricingProps> = ({
   t: propT,
   onBuyTariff,
   isAuthenticated,
+  onLogin,
 }) => {
   const navigate = useNavigate();
   const language = propLanguage || 'en';
@@ -148,8 +150,8 @@ const Pricing: React.FC<PricingProps> = ({
   const handleBuy = (type: string) => {
     if (isAuthenticated && onBuyTariff) {
       onBuyTariff(type);
-    } else {
-      navigate('/');
+    } else if (onLogin) {
+      onLogin();
     }
   };
 
@@ -208,7 +210,7 @@ const Pricing: React.FC<PricingProps> = ({
                   {isPopular && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
                       <span className="inline-block px-4 py-1 rounded-full text-[11px] font-semibold tracking-wide uppercase bg-primary text-primary-foreground shadow-md">
-                        Popular
+                        {t('subscription.selector.popular' as any)}
                       </span>
                     </div>
                   )}
@@ -247,7 +249,10 @@ const Pricing: React.FC<PricingProps> = ({
                       {/* Price */}
                       <div className="mb-4">
                         <span className="font-display text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
-                          {tariff.price}
+                          {tariff.priceNum.toLocaleString('ru-RU')}
+                        </span>
+                        <span className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
+                          &nbsp;&#8381;
                         </span>
                       </div>
 

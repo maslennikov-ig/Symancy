@@ -1,0 +1,154 @@
+- generic [ref=e2]:
+  - generic [ref=e6]:
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - paragraph [ref=e11]: Coffee Oracle
+        - heading "Symancy Tariffs" [level=1] [ref=e12]
+        - paragraph [ref=e13]: Choose the right plan for AI coffee ground analysis
+        - generic [ref=e16]: ✦
+      - generic [ref=e18]:
+        - generic [ref=e22]:
+          - generic [ref=e23]:
+            - generic [ref=e24]: ☕
+            - heading "Novice" [level=3] [ref=e25]
+          - generic [ref=e26]: 100 ₽
+          - paragraph [ref=e27]: 1 basic reading (3-4 analysis blocks)
+          - list [ref=e28]:
+            - listitem [ref=e29]:
+              - img [ref=e30]
+              - generic [ref=e32]: 1 analysis
+            - listitem [ref=e33]:
+              - img [ref=e34]
+              - generic [ref=e36]: Basic blocks
+            - listitem [ref=e37]:
+              - img [ref=e38]
+              - generic [ref=e40]: History saved
+          - button "Sign in to buy" [active] [ref=e41]
+        - generic [ref=e42]:
+          - generic [ref=e44]: Popular
+          - generic [ref=e47]:
+            - generic [ref=e48]:
+              - generic [ref=e49]: ✦
+              - heading "Amateur" [level=3] [ref=e50]
+            - generic [ref=e51]: 300 ₽
+            - paragraph [ref=e52]: 5 basic readings (40% discount)
+            - list [ref=e53]:
+              - listitem [ref=e54]:
+                - img [ref=e55]
+                - generic [ref=e57]: 5 analyses
+              - listitem [ref=e58]:
+                - img [ref=e59]
+                - generic [ref=e61]: Save 40%
+              - listitem [ref=e62]:
+                - img [ref=e63]
+                - generic [ref=e65]: Basic blocks
+              - listitem [ref=e66]:
+                - img [ref=e67]
+                - generic [ref=e69]: History saved
+            - button "Sign in to buy" [ref=e70]
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - generic [ref=e76]: 🔮
+            - heading "Inner Sage" [level=3] [ref=e77]
+          - generic [ref=e78]: 500 ₽
+          - paragraph [ref=e79]: 1 PRO reading (6+ blocks, deep analysis)
+          - list [ref=e80]:
+            - listitem [ref=e81]:
+              - img [ref=e82]
+              - generic [ref=e84]: 1 PRO analysis
+            - listitem [ref=e85]:
+              - img [ref=e86]
+              - generic [ref=e88]: 6+ blocks
+            - listitem [ref=e89]:
+              - img [ref=e90]
+              - generic [ref=e92]: Deep analysis
+            - listitem [ref=e93]:
+              - img [ref=e94]
+              - generic [ref=e96]: History saved
+          - button "Sign in to buy" [ref=e97]
+        - generic [ref=e101]:
+          - generic [ref=e102]:
+            - generic [ref=e103]: 👁
+            - heading "Cassandra" [level=3] [ref=e104]
+          - generic [ref=e105]: 1 000 ₽
+          - paragraph [ref=e106]: 1 esoteric prediction (unique format)
+          - list [ref=e107]:
+            - listitem [ref=e108]:
+              - img [ref=e109]
+              - generic [ref=e111]: Esoteric
+            - listitem [ref=e112]:
+              - img [ref=e113]
+              - generic [ref=e115]: Unique format
+            - listitem [ref=e116]:
+              - img [ref=e117]
+              - generic [ref=e119]: Prediction
+            - listitem [ref=e120]:
+              - img [ref=e121]
+              - generic [ref=e123]: History saved
+          - button "Sign in to buy" [ref=e124]
+      - generic [ref=e127]: ✦ ✦ ✦
+      - generic [ref=e129]:
+        - heading "How It Works" [level=2] [ref=e130]
+        - generic [ref=e131]:
+          - generic [ref=e133]:
+            - generic [ref=e135]: "1"
+            - paragraph [ref=e136]: Choose a tariff and pay
+          - generic [ref=e137]:
+            - generic [ref=e139]: "2"
+            - paragraph [ref=e140]: Credits are credited to your account
+          - generic [ref=e141]:
+            - generic [ref=e143]: "3"
+            - paragraph [ref=e144]: Upload a photo of coffee grounds
+          - generic [ref=e145]:
+            - generic [ref=e147]: "4"
+            - paragraph [ref=e148]: Get a personal AI interpretation
+      - generic [ref=e149]:
+        - heading "Service Delivery" [level=2] [ref=e150]
+        - paragraph [ref=e151]: "Service is provided instantly after payment:"
+        - list [ref=e152]:
+          - listitem [ref=e153]:
+            - img [ref=e154]
+            - generic [ref=e156]: Credits are credited automatically
+          - listitem [ref=e157]:
+            - img [ref=e158]
+            - generic [ref=e160]: Analysis result is available immediately (1-2 mins)
+          - listitem [ref=e161]:
+            - img [ref=e162]
+            - generic [ref=e164]: All history is saved in your account
+      - button "Return to Home" [ref=e166]
+    - navigation "Main navigation" [ref=e167]:
+      - button "Home" [ref=e168] [cursor=pointer]:
+        - img [ref=e170]
+        - generic [ref=e173]: Home
+      - button "History" [ref=e174] [cursor=pointer]:
+        - img [ref=e176]
+        - generic [ref=e179]: History
+      - button "Profile" [ref=e180] [cursor=pointer]:
+        - img [ref=e182]
+        - generic [ref=e185]: Profile
+  - dialog "Sign in to your account" [ref=e186]:
+    - generic [ref=e187]:
+      - button "Close" [ref=e188]: ×
+      - heading "Sign in to your account" [level=2] [ref=e190]
+      - generic [ref=e191]:
+        - button "Continue with Google" [ref=e192]:
+          - img [ref=e193]
+          - generic [ref=e198]: Continue with Google
+        - button "Continue with Apple" [ref=e199]:
+          - img [ref=e200]
+          - generic [ref=e202]: Continue with Apple
+      - button "Show other ways to sign in" [ref=e204]:
+        - text: Show other ways to sign in
+        - img [ref=e205]
+      - generic [ref=e207]:
+        - paragraph [ref=e208]: "For automatic Telegram login, open via bot:"
+        - link "Open via Telegram Bot" [ref=e209] [cursor=pointer]:
+          - /url: https://t.me/coffeeveda_bot/app
+          - img [ref=e210]
+          - text: Open via Telegram Bot
+      - generic [ref=e214]: or
+      - generic [ref=e216]:
+        - generic [ref=e217]: Email
+        - textbox "Email" [ref=e218]:
+          - /placeholder: your@email.com
+        - button "Send Magic Link" [ref=e219]

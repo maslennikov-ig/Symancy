@@ -16,6 +16,7 @@ import { isTelegramWebApp } from './hooks/useTelegramWebApp';
 const HistoryDisplay = lazy(() => import('./components/features/history/HistoryDisplay'));
 const TariffSelector = lazy(() => import('./components/features/payment/TariffSelector'));
 const PaymentWidget = lazy(() => import('./components/features/payment/PaymentWidget'));
+const AuthModal = lazy(() => import('./components/features/auth/AuthModal'));
 
 // Pages - route-based code splitting
 const Pricing = lazy(() => import('./pages/Pricing'));
@@ -149,7 +150,7 @@ const TelegramRedirectGuard: React.FC<{ children: React.ReactNode }> = ({ childr
 };
 
 const App: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated: authIsAuthenticated } = useAuth();
   const { onboardingCompleted, isLoading: cloudStorageLoading } = useCloudStorage();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -160,6 +161,9 @@ const App: React.FC = () => {
   const [language, setLanguage] = useState<Lang>(detectInitialLanguage);
   const [currentView, setCurrentView] = useState<View>('uploader');
   const [userData, setUserData] = useState<UserData | null>(null);
+
+  // Auth modal state (triggered from Pricing page for unauthenticated users)
+  const [showPricingAuth, setShowPricingAuth] = useState(false);
 
   // Payment state
   const [showTariffSelector, setShowTariffSelector] = useState(false);
@@ -583,7 +587,7 @@ const App: React.FC = () => {
           {/* Info pages - with BottomNav for Telegram Mini App navigation consistency */}
           <Route
             path="/pricing"
-            element={withAppLayout(<Pricing language={language} t={t} onBuyTariff={(productType) => handleSelectTariff(productType as ProductType)} isAuthenticated={!!user} />)}
+            element={withAppLayout(<Pricing language={language} t={t} onBuyTariff={(productType) => handleSelectTariff(productType as ProductType)} isAuthenticated={authIsAuthenticated} onLogin={() => setShowPricingAuth(true)} />)}
           />
           <Route
             path="/offer"
@@ -640,6 +644,13 @@ const App: React.FC = () => {
           <Route path="/admin/*" element={<AdminApp />} />
           </Routes>
         </Suspense>
+
+        {/* Auth modal triggered from Pricing page */}
+        {showPricingAuth && (
+          <Suspense fallback={null}>
+            <AuthModal onClose={() => setShowPricingAuth(false)} t={t} />
+          </Suspense>
+        )}
       </TelegramRedirectGuard>
     </ErrorBoundary>
   );
