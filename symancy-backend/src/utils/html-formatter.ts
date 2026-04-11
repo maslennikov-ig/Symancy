@@ -115,6 +115,22 @@ export function sanitizeTelegramHtml(html: string): string {
   );
   result = result.replace(unsupportedTagRegex, "");
 
+  // Escape raw < and > that are NOT part of supported Telegram HTML tags.
+  // LLM output may contain "A > B", "<3", "value < 100" etc. which Telegram
+  // interprets as malformed HTML, causing "Unclosed start tag" errors.
+  const supportedTagPattern = new RegExp(
+    `<\\/?(${supportedTags})(?:\\s[^>]*)?>`,
+    "gi"
+  );
+  // Protect supported tags with placeholders, escape everything else, restore
+  const placeholders: string[] = [];
+  result = result.replace(supportedTagPattern, (match) => {
+    placeholders.push(match);
+    return `\x00TG_TAG_${placeholders.length - 1}\x00`;
+  });
+  result = result.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  result = result.replace(/\x00TG_TAG_(\d+)\x00/g, (_, idx) => placeholders[Number(idx)]!);
+
   // Clean up excessive newlines (3+ → 2)
   result = result.replace(/\n{3,}/g, "\n\n");
 
