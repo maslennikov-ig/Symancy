@@ -2,6 +2,19 @@
 
 User-facing release notes for all versions.
 
+## v0.6.19
+
+_Released on 2026-04-11_
+
+### 🐛 Bug Fixes
+
+- **bot**: Escape raw < and > in sanitizeTelegramHtml to prevent parse errors
+- **pricing**: Code review fixes — auth loading, dark theme, badge design, auto-purchase
+
+---
+
+_This release was automatically generated from 3 commits._
+
 ## v0.6.18
 
 _Released on 2026-04-11_

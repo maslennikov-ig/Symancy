@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.6.19] - 2026-04-11
+
+### Fixed
+- **bot**: escape raw < and > in sanitizeTelegramHtml to prevent parse errors (a02568b)
+- **pricing**: code review fixes — auth loading, dark theme, badge design, auto-purchase (b357e0d)
+
+### Other
+- update docs (3704f34)
+
 ## [0.6.18] - 2026-04-11
 
 ### Added
