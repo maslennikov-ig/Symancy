@@ -25,6 +25,7 @@ export function PaymentWidget({
   const [error, setError] = useState<string | null>(null);
   const [widgetKey, setWidgetKey] = useState(0);
   const [language, setLanguage] = useState<Lang>(detectInitialLanguage);
+  const [widgetReady, setWidgetReady] = useState(false);
 
   useEffect(() => {
      // Sync language with local storage
@@ -43,15 +44,22 @@ export function PaymentWidget({
     returnUrl ||
     `${window.location.origin}/payment/result?status=success&purchase_id=${purchaseId}`;
 
-  // Handle widget initialization complete
-  // The YooWidget library handles its own loading state via script loading
-  // We set loading to false after a brief delay to allow widget to render
+  // Delay widget mount to let React re-renders settle and prevent premature unmount
   useEffect(() => {
+    const mountTimer = setTimeout(() => {
+      setWidgetReady(true);
+    }, 100);
+    return () => clearTimeout(mountTimer);
+  }, []);
+
+  // Handle widget initialization complete
+  useEffect(() => {
+    if (!widgetReady) return;
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 500);
     return () => clearTimeout(timer);
-  }, [widgetKey]);
+  }, [widgetKey, widgetReady]);
 
   // Handle payment errors
   const handleError = useCallback(
@@ -112,8 +120,8 @@ export function PaymentWidget({
         </div>
       )}
 
-      {/* Payment widget container */}
-      {!error && (
+      {/* Payment widget container — delayed mount to prevent checkout.destroy crash */}
+      {!error && widgetReady && (
         <div
           className={cn(
             'transition-opacity duration-150',

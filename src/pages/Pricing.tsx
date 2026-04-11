@@ -145,37 +145,21 @@ const Pricing: React.FC<PricingProps> = ({
   const t = propT || ((key: any) => i18n_t(key, language));
 
   const handleBuy = (type: string) => {
-    console.log('[Pricing] handleBuy called:', { type, isAuthenticated, hasOnBuyTariff: !!onBuyTariff, hasOnLogin: !!onLogin, isAuthLoading });
     if (isAuthenticated && onBuyTariff) {
-      console.log('[Pricing] → calling onBuyTariff');
       onBuyTariff(type);
     } else if (onLogin) {
-      console.log('[Pricing] → calling onLogin');
       onLogin(type);
     } else {
-      console.log('[Pricing] → fallback navigate(/)');
       navigate('/');
     }
   };
-
-  // Debug: log theme state on render
-  if (typeof window !== 'undefined') {
-    const root = document.documentElement;
-    console.log('[Pricing] render debug:', {
-      hasDarkClass: root.classList.contains('dark'),
-      hasTgWebapp: root.classList.contains('tg-webapp'),
-      cardVar: getComputedStyle(root).getPropertyValue('--card'),
-      primaryVar: getComputedStyle(root).getPropertyValue('--primary'),
-      inputVar: getComputedStyle(root).getPropertyValue('--input'),
-    });
-  }
 
   return (
     <>
       <style>{PRICING_STYLES}</style>
 
       <div
-        className="flex flex-col items-center bg-gradient-to-b from-stone-50 via-stone-100/50 to-stone-50 dark:from-stone-950 dark:via-stone-900/50 dark:to-stone-950"
+        className="flex flex-col items-center bg-background"
         style={{
           minHeight: '100%',
           overflowY: 'auto',
@@ -191,7 +175,7 @@ const Pricing: React.FC<PricingProps> = ({
             style={{ animation: 'pricing-fade 0.6s ease-out both' }}
           >
             <p className="text-xs tracking-[0.3em] uppercase text-primary/70 mb-3 font-medium">
-              Coffee Oracle v2
+              Coffee Oracle
             </p>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-foreground tracking-tight mb-4">
               {t('pricing.title')}
