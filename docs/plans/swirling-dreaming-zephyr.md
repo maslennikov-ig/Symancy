@@ -1,78 +1,71 @@
-# Fix: Pricing page auth redirect & display issues in Telegram Mini App
+# Fix: Pricing page — broken buttons, dark theme, OKLCH conflict
 
 ## Context
 
-Клиент сообщил, что при нажатии "Войти для покупки" на странице тарифов в Telegram Mini App его перекидывает на главное меню вместо авторизации. Также символ рубля (₽) отображается как пустой прямоугольник (□), а бейдж "Popular" не переведён.
+Клиент сообщает 2 проблемы на странице `/pricing` в Telegram Mini App:
+1. **Кнопки "Купить" не работают** — нажатие ничего не делает
+2. **Тёмная тема**: при первом переходе из другой страницы контраст сломан (карточки тёмные с невидимыми элементами), после рефреша работает
 
-**Приоритет**: CRITICAL — клиенты не могут совершить покупку.
+**Корневые причины найдены:**
 
-## Найденные проблемы
+### Причина 1: PaymentWidget внутри mainAppContent (CRITICAL)
+`PaymentWidget` и `TariffSelector` рендерятся ВНУТРИ `mainAppContent` (App.tsx:488-548). Этот блок показывается ТОЛЬКО web-пользователям на маршруте `/`. Telegram-пользователи на `/pricing` не видят модалку оплаты после нажатия "Купить".
 
-### 1. CRITICAL: Telegram-пользователи выглядят как неавторизованные
-- **Файл**: `src/App.tsx:152` — `const { user } = useAuth()` деструктурирует только Supabase `user`
-- **Файл**: `src/App.tsx:586` — передаёт `isAuthenticated={!!user}` (только Supabase)
-- **Контекст**: `AuthContext.tsx:215` правильно считает `isAuthenticated = !!(user || unifiedUser)`, но Pricing этим не пользуется
-- **Результат**: Telegram-пользователь видит "Войти для покупки" даже когда авторизован
+### Причина 2: OKLCH переменные перезаписывают HSL (HIGH)
+В `index.css` два набора CSS-переменных:
+- Строки 11-54 (`@layer base`): наши HSL-цвета (stone/amber) 
+- Строки 326-393 (без layer): OKLCH-цвета от shadcn
 
-### 2. CRITICAL: Кнопка "Войти для покупки" уводит на главную
-- **Файл**: `src/pages/Pricing.tsx:148-154` — `handleBuy()` делает `navigate('/')` вместо показа AuthModal
-- **Результат**: Пользователь теряется на главной странице, не понимая что произошло
+OKLCH идут последними → перезаписывают HSL. Tailwind конфиг оборачивает в `hsl(var(--border))` → `hsl(oklch(0.922 0 0))` = **невалидный CSS**. Результат: `bg-card`, `border-input`, `bg-background` не работают → карточки прозрачные, границы невидимые.
 
-### 3. HIGH: Символ рубля (₽) не отображается
-- **Файл**: `src/pages/Pricing.tsx:33,52,73,93` — цены захардкожены как `'100 ₽'`
-- **Причина**: Шрифт Inter (Google Fonts, загружается как `Inter:wght@400;500;600`) не содержит глиф ₽ (U+20BD). В других компонентах используется `&#8381;` — HTML entity, которая корректно фолбечится на системные шрифты
-- **Font stack**: `Inter, sans-serif` (tailwind.config.js:18) — нет промежуточного фолбека с ₽
-
-### 4. MEDIUM: Бейдж "Popular" не переведён
-- **Файл**: `src/pages/Pricing.tsx:211` — захардкожено `Popular`
-- Ключ перевода есть: `subscription.selector.popular` (ru: "Популярный", zh: "热门")
+### Причина 3: Кнопки variant="outline" невидимы в dark mode (MEDIUM)  
+Непопулярные тарифы используют `variant="outline"` → border-input border → в тёмной теме border=dark на dark фоне → невидимая граница.
 
 ## План исправлений
 
-### Задача 1: Fix isAuthenticated для Telegram-пользователей (App.tsx)
+### Задача 1: Вынести PaymentWidget из mainAppContent (CRITICAL)
 **Файл**: `src/App.tsx`
-1. Строка 152: изменить `const { user } = useAuth()` → `const { user, isAuthenticated: authIsAuthenticated } = useAuth()`
-2. Строка 586: изменить `isAuthenticated={!!user}` → `isAuthenticated={authIsAuthenticated}`
 
-### Задача 2: Показывать AuthModal вместо redirect на `/` (Pricing.tsx + App.tsx)
-**Файлы**: `src/pages/Pricing.tsx`, `src/App.tsx`
+Переместить PaymentWidget overlay (строки 503-534) и payment error toast (536-547) из `mainAppContent` в общий рендер — рядом с AuthModal (строки 658-663), чтобы они отображались для ВСЕХ пользователей независимо от маршрута.
 
-1. Добавить prop `onLogin?: () => void` в `PricingProps`
-2. В `handleBuy()` заменить `navigate('/')` → `onLogin?.()`
-3. В `App.tsx`:
-   - Добавить state `const [showPricingAuth, setShowPricingAuth] = useState(false)`
-   - Передать `onLogin={() => setShowPricingAuth(true)}` в Pricing
-   - Рендерить `AuthModal` когда `showPricingAuth === true`
+```tsx
+{/* Перед </TelegramRedirectGuard> */}
 
-### Задача 3: Исправить отображение символа рубля (Pricing.tsx)
+{/* Auth modal */}
+{showPricingAuth && (...)}
+
+{/* Payment widget — должен быть доступен на всех маршрутах */}
+{paymentData && (
+  <div className="fixed inset-0 ...">
+    <PaymentWidget ... />
+  </div>
+)}
+
+{/* Payment error toast */}
+{paymentError && (...)}
+```
+
+Также вынести TariffSelector (488-501) если он используется с `/pricing`.
+
+### Задача 2: Удалить OKLCH-переменные, конфликтующие с HSL (HIGH)
+**Файл**: `src/index.css`
+
+Удалить OKLCH-определения (строки 326-393), которые дублируют наши HSL-переменные. Они были автоматически добавлены shadcn при установке компонентов и перезаписывают наш дизайн.
+
+**НО**: нужно сохранить переменные `--chart-*` и `--sidebar-*`, которых НЕТ в HSL-блоке. Перенести их в HSL-блок (в формате HSL, не OKLCH).
+
+### Задача 3: Сменить outline кнопки на default (MEDIUM)
 **Файл**: `src/pages/Pricing.tsx`
 
-Вместо хардкода `'100 ₽'` в строках — рендерить цену в JSX:
-```tsx
-<span>{tariff.priceNum.toLocaleString('ru-RU')}</span>
-<span>&nbsp;&#8381;</span>
-```
-Это позволит браузеру фолбечиться на системный шрифт для символа рубля.
-
-Альтернативы (рассмотренные, отклонённые):
-- `Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' })` — выдаёт "100 ₽" строкой, не решает проблему шрифта
-- Менять шрифт — рискованно, может сломать другие элементы
-
-### Задача 4: Перевести бейдж "Popular" (Pricing.tsx)
-**Файл**: `src/pages/Pricing.tsx:211`
-- Заменить `Popular` → `{t('subscription.selector.popular' as any)}`
+Строка 297: заменить `variant={isPopular ? 'default' : 'outline'}` → `variant="default"` для всех кнопок CTA. Покупательские кнопки должны быть яркими и заметными.
 
 ## Критические файлы
-- `src/App.tsx` — роутинг, передача пропсов в Pricing
-- `src/pages/Pricing.tsx` — страница тарифов (основной файл для исправлений)
-- `src/contexts/AuthContext.tsx` — контекст авторизации (НЕ трогаем, работает корректно)
-- `src/components/features/auth/AuthModal.tsx` — модалка авторизации (НЕ трогаем, работает корректно)
+- `src/App.tsx` — PaymentWidget/TariffSelector вынести из mainAppContent
+- `src/index.css` — OKLCH vs HSL конфликт
+- `src/pages/Pricing.tsx` — variant кнопок
 
 ## Верификация
-1. `pnpm type-check` — TypeScript должен пройти без ошибок
-2. `pnpm build` — билд должен быть успешным
-3. Проверить в Playwright/браузере:
-   - Открыть `/pricing` как неавторизованный → кнопки показывают "Войти для покупки"
-   - Нажать → появляется AuthModal, а не редирект на `/`
-   - Символ ₽ отображается корректно рядом с ценами
-   - Бейдж показывает "Популярный" (ru), "Popular" (en), "热门" (zh)
+1. `pnpm type-check` + `pnpm build`
+2. Playwright: открыть `/pricing`, нажать "Купить" → должна появиться модалка PaymentWidget
+3. Playwright: проверить тёмную тему — карточки видимы, текст читаемый, кнопки яркие
+4. Убедиться, что web-версия (не Telegram) по-прежнему работает корректно
