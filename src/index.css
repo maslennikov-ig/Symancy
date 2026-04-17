@@ -159,39 +159,17 @@ html.tg-webapp #root {
 /*
  * Telegram Mini App Theme Integration
  *
- * Telegram sends HEX colors (#ffffff), but Tailwind tokens expect HSL/OKLCH components.
- * Colors are converted in JS (see utils/telegramTheme) so tokens like bg-background / text-foreground
- * automatically reflect the Telegram theme.
+ * We rely exclusively on our own HSL palette + .dark / .light class on <html>.
+ * The class is set in main.tsx and re-synced via themeChanged listener in App.tsx
+ * (see sym-79d). Earlier we had .tg-webapp color overrides with !important that
+ * created a race-condition trap: when Telegram emitted colorScheme='light' first
+ * but themeParams.bg_color was dark, fallback 'hsl(var(--foreground))' evaluated
+ * in light-mode palette (stone-950) produced dark-text-on-dark-bg.
+ *
+ * The --tg-* CSS variables are still bound by utils/telegramTheme.ts for any
+ * component that explicitly opts in (e.g., match Telegram chrome). By default,
+ * the app uses its own palette.
  */
-.tg-webapp {
-  background-color: var(--tg-bg-color, hsl(var(--background))) !important;
-  color: var(--tg-text-color, hsl(var(--foreground))) !important;
-}
-
-/* Fix Card text visibility in Telegram dark theme */
-.tg-webapp .bg-card {
-  background-color: var(--tg-secondary-bg-color, hsl(var(--card))) !important;
-}
-
-.tg-webapp .text-card-foreground {
-  color: var(--tg-text-color, hsl(var(--card-foreground))) !important;
-}
-
-.tg-webapp .text-foreground {
-  color: var(--tg-text-color, hsl(var(--foreground))) !important;
-}
-
-.tg-webapp .text-muted-foreground {
-  color: var(--tg-hint-color, hsl(var(--muted-foreground))) !important;
-}
-
-.tg-webapp .bg-background {
-  background-color: var(--tg-bg-color, hsl(var(--background))) !important;
-}
-
-.tg-webapp .text-primary {
-  color: var(--tg-button-color, hsl(var(--primary))) !important;
-}
 
 /* Telegram safe area support via CSS variables */
 .tg-webapp .tg-safe-area-top {
