@@ -212,6 +212,26 @@ const App: React.FC = () => {
     }
   }, [theme]);
 
+  // Subscribe to Telegram themeChanged to avoid dark-text-on-dark-bg race condition
+  // (sym-79d). Telegram may emit colorScheme='light' on first open while themeParams
+  // already contain dark bg_color; we must re-sync theme state when colorScheme updates.
+  useEffect(() => {
+    const tg = window.Telegram?.WebApp;
+    if (!tg) return;
+    const handler = () => {
+      const scheme = tg.colorScheme;
+      if (scheme === 'light' || scheme === 'dark') {
+        setTheme(scheme);
+      }
+    };
+    try { tg.onEvent('themeChanged', handler); } catch {}
+    // Immediate re-sync in case colorScheme changed between mount and this effect.
+    handler();
+    return () => {
+      try { tg.offEvent('themeChanged', handler); } catch {}
+    };
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('language', language);
     document.documentElement.lang = language;
@@ -617,34 +637,21 @@ const App: React.FC = () => {
         )}
 
         {paymentData && (
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={handleClosePaymentWidget}
+          <Suspense
+            fallback={
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                <LoaderIcon className="w-8 h-8 animate-spin" />
+              </div>
+            }
           >
-            <div
-              className="bg-popover rounded-lg shadow-2xl p-6 w-full max-w-lg relative"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={handleClosePaymentWidget}
-                className="absolute top-2 right-2 text-muted-foreground hover:text-foreground p-2 rounded-full text-2xl leading-none"
-                aria-label={t('payment.modal.close')}
-              >
-                &times;
-              </button>
-              <h2 className="text-xl font-display font-bold mb-4 text-center">
-                {t('payment.modal.title')}
-              </h2>
-              <Suspense fallback={<div className="flex items-center justify-center p-8"><LoaderIcon className="w-8 h-8 animate-spin" /></div>}>
-                <PaymentWidget
-                  confirmationToken={paymentData.confirmationToken}
-                  purchaseId={paymentData.purchaseId}
-                  onComplete={handlePaymentComplete}
-                  onError={handlePaymentError}
-                />
-              </Suspense>
-            </div>
-          </div>
+            <PaymentWidget
+              confirmationToken={paymentData.confirmationToken}
+              purchaseId={paymentData.purchaseId}
+              onComplete={handlePaymentComplete}
+              onError={handlePaymentError}
+              onModalClose={handleClosePaymentWidget}
+            />
+          </Suspense>
         )}
 
         {paymentError && (

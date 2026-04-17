@@ -284,15 +284,14 @@ const Pricing: React.FC<PricingProps> = ({
                         ))}
                       </ul>
 
-                      {/* CTA */}
+                      {/* CTA — shadow + active:scale for touch-device feedback (sym-t10) */}
                       <Button
                         onClick={() => handleBuy(tariff.type)}
                         disabled={isAuthLoading}
                         className={[
-                          'w-full transition-all duration-200',
-                          isPopular
-                            ? 'shadow-sm hover:shadow-md'
-                            : '',
+                          'w-full font-semibold tracking-wide transition-all duration-150',
+                          'shadow-md hover:shadow-xl active:scale-[0.98] active:shadow-sm',
+                          isPopular ? 'ring-1 ring-primary/30' : '',
                         ].join(' ')}
                         variant="default"
                         size="lg"
