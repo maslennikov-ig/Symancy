@@ -11,6 +11,7 @@ import ImageUploader from './components/features/analysis/ImageUploader';
 import ResultDisplay from './components/features/analysis/ResultDisplay';
 import { LoaderIcon } from './components/icons/LoaderIcon';
 import { isTelegramWebApp } from './hooks/useTelegramWebApp';
+import { resolveColorScheme } from './utils/telegramTheme';
 
 // Heavy components - load on demand
 const HistoryDisplay = lazy(() => import('./components/features/history/HistoryDisplay'));
@@ -182,19 +183,18 @@ const App: React.FC = () => {
 
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
-      // Priority 1: Use Telegram colorScheme if running in Telegram WebApp
-      const telegramColorScheme = window.Telegram?.WebApp?.colorScheme;
-      if (telegramColorScheme === 'light' || telegramColorScheme === 'dark') {
-        return telegramColorScheme;
-      }
-      // Priority 2: Use stored theme from localStorage (for web users)
+      const tg = window.Telegram?.WebApp;
+      // Priority 1: inside Telegram WebApp — use bg_color lightness as truth
+      // (colorScheme alone is unreliable on some clients, sym-mod).
+      if (tg) return resolveColorScheme(tg);
+      // Priority 2: stored theme from localStorage (web users)
       if (window.localStorage) {
         const storedTheme = window.localStorage.getItem('theme');
         if (storedTheme === 'light' || storedTheme === 'dark') {
           return storedTheme;
         }
       }
-      // Priority 3: Use system preference
+      // Priority 3: system preference
       if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
         return 'dark';
       }
@@ -219,10 +219,8 @@ const App: React.FC = () => {
     const tg = window.Telegram?.WebApp;
     if (!tg) return;
     const handler = () => {
-      const scheme = tg.colorScheme;
-      if (scheme === 'light' || scheme === 'dark') {
-        setTheme(scheme);
-      }
+      // sym-mod: use bg_color lightness first (more reliable than colorScheme).
+      setTheme(resolveColorScheme(tg));
     };
     try { tg.onEvent('themeChanged', handler); } catch {}
     // Immediate re-sync in case colorScheme changed between mount and this effect.

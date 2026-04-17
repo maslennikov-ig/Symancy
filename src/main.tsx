@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router';
 import './index.css';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
-import { initTelegramCssVariables } from './utils/telegramTheme';
+import { initTelegramCssVariables, resolveColorScheme } from './utils/telegramTheme';
 import { initSentry } from './lib/sentry';
 
 // Initialize error tracking FIRST (before any other code)
@@ -23,14 +23,11 @@ function initTelegramWebApp() {
   // Add tg-webapp class immediately for CSS targeting
   document.documentElement.classList.add('tg-webapp');
 
-  // Set dark/light class based on Telegram's colorScheme
-  if (tg.colorScheme === 'dark') {
-    document.documentElement.classList.remove('light');
-    document.documentElement.classList.add('dark');
-  } else {
-    document.documentElement.classList.remove('dark');
-    document.documentElement.classList.add('light');
-  }
+  // sym-mod: use bg_color lightness as primary source (Telegram's colorScheme
+  // is unreliable — some clients report 'light' while rendering dark themeParams).
+  const scheme = resolveColorScheme(tg);
+  document.documentElement.classList.remove(scheme === 'dark' ? 'light' : 'dark');
+  document.documentElement.classList.add(scheme);
 
   // Signal to Telegram that the WebApp is ready
   tg.ready();

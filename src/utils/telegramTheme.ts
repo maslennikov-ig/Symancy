@@ -73,26 +73,15 @@ const THEME_CSS_MAPPING: Record<keyof ThemeParams, string> = {
   section_separator_color: '--tg-section-separator-color',
 };
 
-const TAILWIND_COLOR_MAPPING: Array<{ cssVar: string; sources: Array<keyof ThemeParams> }> = [
-  { cssVar: '--background', sources: ['bg_color'] },
-  { cssVar: '--foreground', sources: ['text_color'] },
-  // NOTE: --card, --card-foreground, --popover, --popover-foreground are NOT mapped
-  // to preserve our dark theme card styles (dark cards in dark mode)
-  // Telegram's secondary_bg_color in dark mode is often lighter which breaks our design
-  { cssVar: '--secondary', sources: ['secondary_bg_color', 'bg_color'] },
-  { cssVar: '--secondary-foreground', sources: ['text_color'] },
-  { cssVar: '--muted', sources: ['secondary_bg_color', 'bg_color'] },
-  { cssVar: '--muted-foreground', sources: ['hint_color', 'subtitle_text_color', 'text_color'] },
-  { cssVar: '--accent', sources: ['link_color', 'accent_text_color', 'button_color'] },
-  { cssVar: '--accent-foreground', sources: ['text_color', 'button_text_color'] },
-  { cssVar: '--primary', sources: ['button_color', 'link_color'] },
-  { cssVar: '--primary-foreground', sources: ['button_text_color', 'text_color'] },
-  { cssVar: '--destructive', sources: ['destructive_text_color', 'button_color'] },
-  { cssVar: '--destructive-foreground', sources: ['bg_color', 'secondary_bg_color', 'text_color'] },
-  { cssVar: '--border', sources: ['hint_color', 'section_separator_color'] },
-  { cssVar: '--input', sources: ['secondary_bg_color', 'bg_color'] },
-  { cssVar: '--ring', sources: ['link_color', 'button_color'] },
-];
+// NOTE: previously this file contained a TAILWIND_COLOR_MAPPING that overwrote
+// our --foreground / --background / --primary / --border / etc. with Telegram's
+// themeParams converted to HSL, written inline on <html>. Inline style always
+// beats :root{} and .dark{}, so if Telegram sent a text_color that was close in
+// lightness to bg_color (Telegram does NOT guarantee contrast, see
+// https://core.telegram.org/bots/webapps — ThemeParams spec), headings became
+// unreadable (sym-mod). We now rely exclusively on our own HSL palette driven
+// by the .dark / .light class on <html>. Only raw --tg-* vars are exposed for
+// components that want to explicitly match Telegram chrome.
 
 const hslCache = new Map<string, string>();
 
@@ -241,6 +230,50 @@ function pickThemeColor(theme: ThemeParams, sources: Array<keyof ThemeParams>): 
 }
 
 /**
+ * Detect whether a hex color represents a "dark" surface (lightness < 0.5).
+ * Used as a fallback for Telegram Mini App theme detection when `colorScheme`
+ * is unreliable: some clients report `light` while actually sending a dark
+ * `bg_color` via themeParams (sym-mod).
+ *
+ * Returns `null` if the input is not a valid hex color.
+ */
+export function isDarkColor(hexColor: string | undefined): boolean | null {
+  const normalized = normalizeHexColor(hexColor);
+  if (!normalized) return null;
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  const { l } = rgbToHsl(r, g, b);
+  return l < 0.5;
+}
+
+/**
+ * Resolve the effective color scheme ('light' | 'dark') for a Telegram WebApp.
+ *
+ * Priority:
+ *   1. If `themeParams.bg_color` is set, use its lightness (most reliable —
+ *      it's the actual painted background).
+ *   2. Otherwise fall back to `colorScheme` if explicit 'dark' or 'light'.
+ *   3. Otherwise system preference via `matchMedia`.
+ *   4. Last resort: 'light'.
+ */
+export function resolveColorScheme(tg: {
+  colorScheme?: string;
+  themeParams?: ThemeParams;
+} | null | undefined): 'light' | 'dark' {
+  const bgDark = isDarkColor(tg?.themeParams?.bg_color);
+  if (bgDark !== null) return bgDark ? 'dark' : 'light';
+
+  const scheme = tg?.colorScheme;
+  if (scheme === 'dark' || scheme === 'light') return scheme;
+
+  if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
+    return 'dark';
+  }
+  return 'light';
+}
+
+/**
  * Bind Telegram ThemeParams to CSS variables
  *
  * HIGH-PERF-1 FIX: Uses batched CSS updates via cssText to minimize DOM reflows.
@@ -280,20 +313,9 @@ export function bindTelegramTheme(
     }
   });
 
-  // Map Telegram colors to Tailwind CSS custom properties (convert HEX -> HSL components)
-  TAILWIND_COLOR_MAPPING.forEach(({ cssVar, sources }) => {
-    const value = pickThemeColor(themeParams, sources);
-    if (!value) return;
-
-    const hslValue = hexToHslComponents(value);
-    if (!hslValue) return;
-
-    const prevValue = pickThemeColor(prev, sources);
-    const prevHslValue = prevValue ? hexToHslComponents(prevValue) : null;
-    if (prevHslValue === hslValue) return;
-
-    updates.push(`${cssVar}: ${hslValue}`);
-  });
+  // sym-mod: removed TAILWIND_COLOR_MAPPING loop that overwrote our palette
+  // inline. Our --background / --foreground / etc. stay strictly controlled by
+  // .dark / .light class + :root rules in index.css.
 
   // HIGH-PERF-1 FIX: Single batch update using cssText
   if (updates.length > 0) {
