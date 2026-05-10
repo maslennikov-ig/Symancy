@@ -11,7 +11,7 @@ import { getEnv, isApiMode, isWorkerMode } from "./config/env.js";
 import { getLogger, setupProcessErrorHandlers } from "./core/logger.js";
 import { initSentry, flushSentry } from "./core/sentry.js";
 import { closeDatabase, getPool } from "./core/database.js";
-import { getQueue, stopQueue } from "./core/queue.js";
+import { getQueue, registerWorker, stopQueue } from "./core/queue.js";
 import { createWebhookHandler, setWebhook, getWebhookInfo } from "./core/telegram.js";
 import { closeCheckpointer } from "./core/langchain/index.js";
 import { setupRouter } from "./modules/router/index.js";
@@ -19,6 +19,7 @@ import { registerPhotoWorker } from "./modules/photo-analysis/worker.js";
 import { registerRetopicWorker } from "./modules/photo-analysis/retopic-worker.js";
 import { registerChatWorker } from "./modules/chat/worker.js";
 import { setupScheduler, registerEngagementWorkers } from "./modules/engagement/index.js";
+import { runWebhookHealthCheck } from "./services/webhook-health.service.js";
 import { validatePromptsExist } from "./chains/validation.js";
 import { registerAuthRoutes } from "./api/auth/index.js";
 import { registerMessagesRoutes } from "./api/messages/index.js";
@@ -255,11 +256,55 @@ async function startWorkers() {
   const engagementWorkerIds = await registerEngagementWorkers();
   logger.info({ count: engagementWorkerIds.length }, "Engagement workers registered");
 
+  // sym-mqd: Periodic webhook health check.
+  // Runs hourly via pg-boss schedule and alerts admin if the Telegram webhook
+  // gets hijacked or goes missing.
+  await registerWebhookHealthSchedule();
+  logger.info("Webhook health schedule registered");
+
   // Setup engagement scheduler AFTER workers (schedules depend on queue existence)
   await setupScheduler();
   logger.info("Engagement scheduler configured");
 
   logger.info("All workers started");
+}
+
+/**
+ * sym-mqd: Register the hourly webhook-health-check schedule and its worker.
+ *
+ * - Queue:    "webhook-health-check"
+ * - Cron:     every hour at minute 5 (avoid the busy :00 slot)
+ * - Worker:   delegates to runWebhookHealthCheck() with auto-recovery enabled.
+ */
+async function registerWebhookHealthSchedule(): Promise<void> {
+  const QUEUE_WEBHOOK_HEALTH = "webhook-health-check";
+  const boss = await getQueue();
+
+  try {
+    await boss.createQueue(QUEUE_WEBHOOK_HEALTH);
+  } catch (error) {
+    if (error instanceof Error && !error.message.includes("already exists")) {
+      logger.warn({ error }, "Failed to create webhook-health-check queue");
+    }
+  }
+
+  await registerWorker(
+    QUEUE_WEBHOOK_HEALTH,
+    async () => {
+      await runWebhookHealthCheck({ attemptRecovery: true });
+    },
+    {
+      batchSize: 1,
+      pollingIntervalSeconds: 60,
+    }
+  );
+
+  await boss.schedule(
+    QUEUE_WEBHOOK_HEALTH,
+    "5 * * * *", // hourly at minute 5
+    {},
+    { tz: "UTC" }
+  );
 }
 
 /**
@@ -313,6 +358,16 @@ async function main() {
       logger.info({ webhookUrl }, "Telegram webhook configured");
     } catch (error) {
       logger.error({ error, webhookUrl }, "Failed to set Telegram webhook");
+    }
+
+    // sym-mqd: verify webhook actually points where we expect and alert
+    // admin if not. Auto-recovery is disabled here because we *just* called
+    // setWebhook() above — if it still does not match, it means something is
+    // racing us (another process, another env) and we want a human, not a loop.
+    try {
+      await runWebhookHealthCheck({ attemptRecovery: false });
+    } catch (error) {
+      logger.error({ error }, "Startup webhook health check threw");
     }
   }
 
