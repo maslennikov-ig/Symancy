@@ -5,6 +5,7 @@
 import { getSupabase } from "../../../core/database.js";
 import { getLogger } from "../../../core/logger.js";
 import { createModel } from "../../../core/langchain/models.js";
+import { MODEL_ARINA_BASIC } from "../../../config/constants.js";
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 
 const logger = getLogger().child({ module: "engagement-inactive" });
@@ -106,7 +107,7 @@ export async function createInactiveReminderMessage(userName: string | null): Pr
   const defaultMessage = `☕️ Привет, ${name}!\n\nМы скучаем по вам! Не хотите заглянуть в будущее?\n\nОтправьте фото кофейной гущи, и я раскрою её тайны ✨`;
 
   try {
-    const model = createModel("openai/gpt-oss-120b", { temperature: 0.9, maxTokens: 150 });
+    const model = createModel(MODEL_ARINA_BASIC, { temperature: 0.9, maxTokens: 150 });
     const response = await model.invoke([
       new SystemMessage(
         "Ты — дружелюбная и слегка загадочная гадалка на кофейной гуще. Твоя задача — написать короткое, " +
