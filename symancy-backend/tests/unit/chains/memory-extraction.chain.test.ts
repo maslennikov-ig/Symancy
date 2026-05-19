@@ -1,10 +1,13 @@
 /**
  * Unit tests for Memory Extraction Chain
- * Tests extraction of memorable facts from user messages using Qwen 2.5 72B
+ * Tests extraction of memorable facts from user messages.
+ * Model name is sourced from EXTRACTION_MODEL constant — tests do not
+ * hardcode model slug, so swapping models doesn't require test edits.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   extractMemories,
+  EXTRACTION_MODEL,
   type ExtractionResult,
   type ExtractedMemory,
 } from "../../../src/chains/memory-extraction.chain.js";
@@ -661,7 +664,7 @@ describe("memory-extraction.chain", () => {
       await extractMemories("Test");
 
       expect(MockedChatOpenAI).toHaveBeenCalledWith({
-        model: "deepseek/deepseek-v4-flash",
+        model: EXTRACTION_MODEL,
         temperature: 0.1,
         maxTokens: 500,
         configuration: {

@@ -1,5 +1,6 @@
 import { vi } from 'vitest'
 import type { ExtractionResult, ExtractedMemory } from '@/chains/memory-extraction.chain.js'
+import { MODEL_MEMORY_EXTRACTION } from '@/config/constants.js'
 
 /**
  * Mock extraction result with memories
@@ -70,7 +71,7 @@ export function mockMemoryExtractionModule() {
     },
     ExtractionResult: {},
     ExtractedMemory: {},
-    EXTRACTION_MODEL: 'deepseek/deepseek-v4-flash',
+    EXTRACTION_MODEL: MODEL_MEMORY_EXTRACTION,
   }))
 }
 

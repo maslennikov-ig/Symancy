@@ -6,9 +6,10 @@ import { z } from "zod";
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { getEnv } from "../config/env.js";
+import { MODEL_MEMORY_EXTRACTION } from "../config/constants.js";
 
-// Model for extraction
-const EXTRACTION_MODEL = "deepseek/deepseek-v4-flash";
+// Re-export so tests can sync against the same constant.
+export const EXTRACTION_MODEL = MODEL_MEMORY_EXTRACTION;
 
 // Categories for memories
 export const MemoryCategory = z.enum([

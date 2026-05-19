@@ -302,6 +302,12 @@ export const MODEL_CHAT = "deepseek/deepseek-v4-flash";
  */
 export const MODEL_VISION = "google/gemma-4-31b-it";
 
+/**
+ * Model for memory extraction chain (extracts memorable facts from messages)
+ * Used by memory-extraction.chain.ts
+ */
+export const MODEL_MEMORY_EXTRACTION = "deepseek/deepseek-v4-flash";
+
 // =============================================================================
 // Timeouts
 // =============================================================================

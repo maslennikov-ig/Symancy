@@ -1,9 +1,12 @@
 /**
  * Unit tests for BGE-M3 Embeddings Client
- * Tests embedding generation, batch processing, and retry logic
+ * Tests embedding generation, batch processing, and retry logic.
+ * Model name is sourced from EMBEDDING_MODEL constant — tests do not
+ * hardcode model slug, so swapping models doesn't require test edits.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type OpenAI from "openai";
+import { EMBEDDING_MODEL } from "@/core/embeddings/bge-client.js";
 
 // Mock OpenAI client
 const mockCreate = vi.fn();
@@ -92,7 +95,7 @@ describe("BGE-M3 Embeddings Client", () => {
       expect(result).toEqual(mockEmbedding);
       expect(result).toHaveLength(1024);
       expect(mockCreate).toHaveBeenCalledWith({
-        model: "baai/bge-m3",
+        model: EMBEDDING_MODEL,
         input: "Test text",
         encoding_format: "float",
       });
@@ -118,7 +121,7 @@ describe("BGE-M3 Embeddings Client", () => {
 
       expect(result).toEqual(mockEmbedding);
       expect(mockCreate).toHaveBeenCalledWith({
-        model: "baai/bge-m3",
+        model: EMBEDDING_MODEL,
         input: "",
         encoding_format: "float",
       });
@@ -145,7 +148,7 @@ describe("BGE-M3 Embeddings Client", () => {
 
       expect(result).toEqual(mockEmbedding);
       expect(mockCreate).toHaveBeenCalledWith({
-        model: "baai/bge-m3",
+        model: EMBEDDING_MODEL,
         input: longText,
         encoding_format: "float",
       });
@@ -172,7 +175,7 @@ describe("BGE-M3 Embeddings Client", () => {
 
       expect(result).toEqual(mockEmbedding);
       expect(mockCreate).toHaveBeenCalledWith({
-        model: "baai/bge-m3",
+        model: EMBEDDING_MODEL,
         input: specialText,
         encoding_format: "float",
       });
@@ -261,7 +264,7 @@ describe("BGE-M3 Embeddings Client", () => {
       expect(result[1]).toEqual(mockEmbeddings[1]);
       expect(result[2]).toEqual(mockEmbeddings[2]);
       expect(mockCreate).toHaveBeenCalledWith({
-        model: "baai/bge-m3",
+        model: EMBEDDING_MODEL,
         input: texts,
         encoding_format: "float",
       });
