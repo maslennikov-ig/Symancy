@@ -4,10 +4,17 @@
  */
 import OpenAI from "openai";
 import { getEnv } from "../../config/env.js";
-import { RETRY_ATTEMPTS, RETRY_BASE_DELAY_MS, RETRY_MAX_DELAY_MS } from "../../config/constants.js";
+import {
+  EMBEDDING_DIMS_BGE,
+  MODEL_EMBEDDING_BGE,
+  RETRY_ATTEMPTS,
+  RETRY_BASE_DELAY_MS,
+  RETRY_MAX_DELAY_MS,
+} from "../../config/constants.js";
 
-export const EMBEDDING_MODEL = "baai/bge-m3";
-export const EMBEDDING_DIMS = 1024;
+// Re-exported for backwards compatibility / self-check tests.
+export const EMBEDDING_MODEL = MODEL_EMBEDDING_BGE;
+export const EMBEDDING_DIMS = EMBEDDING_DIMS_BGE;
 
 // OpenRouter client singleton
 let client: OpenAI | null = null;
