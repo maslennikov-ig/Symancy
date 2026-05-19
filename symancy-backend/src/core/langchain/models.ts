@@ -180,14 +180,14 @@ export async function createChatModel(options?: ModelOptions): Promise<ChatOpenA
  *
  * Loads model from dynamic config (vision_model) with fallback to constant.
  *
- * Optimized parameters for accurate pattern detection:
- * - Low temperature (0.3) for consistency
- * - Max tokens (800) for concise structured output
+ * Default parameters (overridable from system_config):
+ * - Temperature 0.7 for richer descriptions
+ * - Max tokens 4096 for detailed multi-symbol output
  */
 export async function createVisionModel(options?: ModelOptions): Promise<ChatOpenAI> {
   const modelName = await getConfig("vision_model", MODEL_VISION);
-  const temperature = await getConfig("vision_temperature", 0.3);
-  const maxTokens = await getConfig("vision_max_tokens", 800);
+  const temperature = await getConfig("vision_temperature", 0.7);
+  const maxTokens = await getConfig("vision_max_tokens", 4096);
 
   return createChatOpenAIInstance(modelName, {
     temperature,

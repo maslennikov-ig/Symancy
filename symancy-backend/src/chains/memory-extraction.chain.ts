@@ -1,6 +1,6 @@
 /**
  * Memory Extraction Chain
- * Extracts memorable facts from user messages using Qwen 2.5 72B
+ * Extracts memorable facts from user messages
  */
 import { z } from "zod";
 import { ChatOpenAI } from "@langchain/openai";
@@ -8,7 +8,7 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { getEnv } from "../config/env.js";
 
 // Model for extraction
-const EXTRACTION_MODEL = "qwen/qwen-2.5-72b-instruct";
+const EXTRACTION_MODEL = "deepseek/deepseek-v4-flash";
 
 // Categories for memories
 export const MemoryCategory = z.enum([

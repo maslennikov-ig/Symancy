@@ -279,12 +279,12 @@ export const CREDIT_COST_CASSANDRA = 3;
 /**
  * Model for Arina persona (interpretation)
  */
-export const MODEL_ARINA = "qwen/qwen3.5-plus-02-15";
+export const MODEL_ARINA = "qwen/qwen3.6-plus";
 
 /**
  * Model for Arina basic single-topic readings (cheapest tier)
  */
-export const MODEL_ARINA_BASIC = "openai/gpt-oss-120b";
+export const MODEL_ARINA_BASIC = "deepseek/deepseek-v4-flash";
 
 /**
  * Model for Cassandra persona (premium, thinking model)
@@ -294,13 +294,13 @@ export const MODEL_CASSANDRA = "moonshotai/kimi-k2-thinking";
 /**
  * Model for general chat
  */
-export const MODEL_CHAT = "xiaomi/mimo-v2-flash";
+export const MODEL_CHAT = "deepseek/deepseek-v4-flash";
 
 /**
  * Model for vision analysis (multimodal)
  * Always operates in English - receives English prompts and returns English descriptions
  */
-export const MODEL_VISION = "x-ai/grok-4.1-fast";
+export const MODEL_VISION = "google/gemma-4-31b-it";
 
 // =============================================================================
 // Timeouts
