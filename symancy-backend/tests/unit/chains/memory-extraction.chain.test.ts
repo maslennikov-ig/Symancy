@@ -661,7 +661,7 @@ describe("memory-extraction.chain", () => {
       await extractMemories("Test");
 
       expect(MockedChatOpenAI).toHaveBeenCalledWith({
-        model: "qwen/qwen-2.5-72b-instruct",
+        model: "deepseek/deepseek-v4-flash",
         temperature: 0.1,
         maxTokens: 500,
         configuration: {

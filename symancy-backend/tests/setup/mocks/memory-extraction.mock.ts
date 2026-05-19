@@ -70,7 +70,7 @@ export function mockMemoryExtractionModule() {
     },
     ExtractionResult: {},
     ExtractedMemory: {},
-    EXTRACTION_MODEL: 'qwen/qwen-2.5-72b-instruct',
+    EXTRACTION_MODEL: 'deepseek/deepseek-v4-flash',
   }))
 }
 
