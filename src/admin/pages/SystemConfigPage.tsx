@@ -16,7 +16,6 @@ import { X, UserPlus, Shield } from 'lucide-react';
 
 // Import new config components
 import { VisionStageSettings } from '../components/config/VisionStageSettings';
-import { InterpretationStageSettings } from '../components/config/InterpretationStageSettings';
 import { PersonasSettings } from '../components/config/PersonasSettings';
 import { SystemSettings } from '../components/config/SystemSettings';
 
@@ -336,9 +335,8 @@ export function SystemConfigPage() {
       >
         {/* Tabs for configuration sections */}
         <Tabs defaultValue="vision" className="mt-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="vision">Vision</TabsTrigger>
-            <TabsTrigger value="interpretation">Interpretation</TabsTrigger>
             <TabsTrigger value="personas">{t('admin.systemConfig.tabs.personas')}</TabsTrigger>
             <TabsTrigger value="system">System</TabsTrigger>
           </TabsList>
@@ -348,23 +346,9 @@ export function SystemConfigPage() {
               <ConfigTabSkeleton />
             ) : (
               <VisionStageSettings
-                visionModel={getStringConfig(configs, 'vision_model', 'google/gemini-1.5-flash')}
+                visionModel={getStringConfig(configs, 'vision_model', 'google/gemma-4-31b-it')}
                 visionTemperature={getNumberConfig(configs, 'vision_temperature', 0.7)}
                 visionMaxTokens={getNumberConfig(configs, 'vision_max_tokens', 4096)}
-                onUpdate={handleConfigUpdate}
-                loading={loading}
-              />
-            )}
-          </TabsContent>
-
-          <TabsContent value="interpretation" className="mt-4">
-            {loading ? (
-              <ConfigTabSkeleton />
-            ) : (
-              <InterpretationStageSettings
-                interpretationModel={getStringConfig(configs, 'interpretation_model', 'google/gemini-1.5-flash')}
-                interpretationTemperature={getNumberConfig(configs, 'interpretation_temperature', 0.7)}
-                interpretationMaxTokens={getNumberConfig(configs, 'interpretation_max_tokens', 2048)}
                 onUpdate={handleConfigUpdate}
                 loading={loading}
               />
@@ -376,17 +360,17 @@ export function SystemConfigPage() {
               <ConfigTabSkeleton />
             ) : (
               <PersonasSettings
-                arinaModel={getStringConfig(configs, 'arina_model', 'xiaomi/mimo-v2-flash')}
+                arinaModel={getStringConfig(configs, 'arina_model', 'qwen/qwen3.6-plus')}
                 arinaTemperature={getNumberConfig(configs, 'arina_temperature', 0.9)}
-                arinaMaxTokens={getNumberConfig(configs, 'arina_max_tokens', 1200)}
-                arinaFrequencyPenalty={getNumberConfig(configs, 'arina_frequency_penalty', 0)}
-                arinaPresencePenalty={getNumberConfig(configs, 'arina_presence_penalty', 0)}
+                arinaMaxTokens={getNumberConfig(configs, 'arina_max_tokens', 5000)}
+                arinaFrequencyPenalty={getNumberConfig(configs, 'arina_frequency_penalty', 0.6)}
+                arinaPresencePenalty={getNumberConfig(configs, 'arina_presence_penalty', 0.5)}
                 arinaPrompt={getStringConfig(configs, 'arina_prompt', '')}
-                cassandraModel={getStringConfig(configs, 'cassandra_model', 'moonshotai/kimi-k2')}
-                cassandraTemperature={getNumberConfig(configs, 'cassandra_temperature', 1.0)}
-                cassandraMaxTokens={getNumberConfig(configs, 'cassandra_max_tokens', 1500)}
-                cassandraFrequencyPenalty={getNumberConfig(configs, 'cassandra_frequency_penalty', 0)}
-                cassandraPresencePenalty={getNumberConfig(configs, 'cassandra_presence_penalty', 0)}
+                cassandraModel={getStringConfig(configs, 'cassandra_model', 'moonshotai/kimi-k2-thinking')}
+                cassandraTemperature={getNumberConfig(configs, 'cassandra_temperature', 1.1)}
+                cassandraMaxTokens={getNumberConfig(configs, 'cassandra_max_tokens', 5000)}
+                cassandraFrequencyPenalty={getNumberConfig(configs, 'cassandra_frequency_penalty', 0.4)}
+                cassandraPresencePenalty={getNumberConfig(configs, 'cassandra_presence_penalty', 0.3)}
                 cassandraPrompt={getStringConfig(configs, 'cassandra_prompt', '')}
                 onUpdate={handleConfigUpdate}
                 loading={loading}

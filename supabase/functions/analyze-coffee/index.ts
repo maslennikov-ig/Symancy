@@ -3,6 +3,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "npm:@supabase/supabase-js@2"
 import { ARINA_SYSTEM_PROMPT, CASSANDRA_SYSTEM_PROMPT, VISION_SYSTEM_PROMPT } from "./prompts.ts"
 import { getPrompt } from "./getPrompt.ts"
+import { getConfigValue } from "./getConfig.ts"
 import { getCreditType } from "./creditMapping.ts"
 
 /**
@@ -31,8 +32,25 @@ const corsHeaders = {
 const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY")
 const SITE_URL = Deno.env.get("SITE_URL") || "https://symancy.ru"
 const APP_NAME = "Symancy/1.0"
-const VISION_MODEL = "google/gemini-1.5-flash"
-const INTERPRETATION_MODEL = "google/gemini-1.5-flash"
+// Fallback models/params (used only if system_config is unreachable).
+// Live values come from system_config via getConfig() — admin panel controls
+// both Telegram bot and Web Edge Function from one place.
+// Keep these in sync with symancy-backend/src/config/constants.ts.
+const FALLBACK_VISION_MODEL = "google/gemma-4-31b-it"
+const FALLBACK_VISION_TEMPERATURE = 0.7
+const FALLBACK_VISION_MAX_TOKENS = 4096
+
+const FALLBACK_ARINA_MODEL = "qwen/qwen3.6-plus"
+const FALLBACK_ARINA_TEMPERATURE = 0.9
+const FALLBACK_ARINA_MAX_TOKENS = 5000
+const FALLBACK_ARINA_FREQUENCY_PENALTY = 0.6
+const FALLBACK_ARINA_PRESENCE_PENALTY = 0.5
+
+const FALLBACK_CASSANDRA_MODEL = "moonshotai/kimi-k2-thinking"
+const FALLBACK_CASSANDRA_TEMPERATURE = 1.1
+const FALLBACK_CASSANDRA_MAX_TOKENS = 5000
+const FALLBACK_CASSANDRA_FREQUENCY_PENALTY = 0.4
+const FALLBACK_CASSANDRA_PRESENCE_PENALTY = 0.3
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -75,12 +93,18 @@ Deno.serve(async (req) => {
     }
 
     // 4. AI ANALYSIS - STEP 1: VISION
-    // Using Gemini 1.5 Flash via OpenRouter for cost/speed
+    // Model + params come from system_config (admin panel), with code fallback.
     const visionPromptResult = await getPrompt(supabaseClient, 'vision', VISION_SYSTEM_PROMPT);
     const visionSystemPrompt = visionPromptResult.content;
     if (visionPromptResult.error) {
       console.warn(`Vision prompt loaded from ${visionPromptResult.source}: ${visionPromptResult.error}`);
     }
+
+    const [visionModel, visionTemperature, visionMaxTokens] = await Promise.all([
+      getConfigValue(supabaseClient, 'vision_model', FALLBACK_VISION_MODEL),
+      getConfigValue(supabaseClient, 'vision_temperature', FALLBACK_VISION_TEMPERATURE),
+      getConfigValue(supabaseClient, 'vision_max_tokens', FALLBACK_VISION_MAX_TOKENS),
+    ]);
 
     const visionResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -91,7 +115,9 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "google/gemini-1.5-flash",
+        model: visionModel,
+        temperature: visionTemperature,
+        max_tokens: visionMaxTokens,
         messages: [
           {
             role: "system",
@@ -119,9 +145,42 @@ Deno.serve(async (req) => {
     const visionDescription = visionResult.choices[0].message.content
 
     // 5. AI ANALYSIS - STEP 2: INTERPRETATION
-    // Select Prompt from DB with fallback to hardcoded
-    const selectedPromptKey = mode === 'esoteric' ? 'cassandra' : 'arina';
-    const selectedFallback = mode === 'esoteric' ? CASSANDRA_SYSTEM_PROMPT : ARINA_SYSTEM_PROMPT;
+    // Persona-specific model + params from system_config (admin panel), with code fallback.
+    const isEsoteric = mode === 'esoteric';
+    const selectedPromptKey = isEsoteric ? 'cassandra' : 'arina';
+    const selectedFallback = isEsoteric ? CASSANDRA_SYSTEM_PROMPT : ARINA_SYSTEM_PROMPT;
+
+    const personaKey = isEsoteric ? 'cassandra' : 'arina';
+    const personaFallbacks = isEsoteric
+      ? {
+          model: FALLBACK_CASSANDRA_MODEL,
+          temperature: FALLBACK_CASSANDRA_TEMPERATURE,
+          maxTokens: FALLBACK_CASSANDRA_MAX_TOKENS,
+          frequencyPenalty: FALLBACK_CASSANDRA_FREQUENCY_PENALTY,
+          presencePenalty: FALLBACK_CASSANDRA_PRESENCE_PENALTY,
+        }
+      : {
+          model: FALLBACK_ARINA_MODEL,
+          temperature: FALLBACK_ARINA_TEMPERATURE,
+          maxTokens: FALLBACK_ARINA_MAX_TOKENS,
+          frequencyPenalty: FALLBACK_ARINA_FREQUENCY_PENALTY,
+          presencePenalty: FALLBACK_ARINA_PRESENCE_PENALTY,
+        };
+
+    const [
+      interpretationModel,
+      interpretationTemperature,
+      interpretationMaxTokens,
+      interpretationFrequencyPenalty,
+      interpretationPresencePenalty,
+    ] = await Promise.all([
+      getConfigValue(supabaseClient, `${personaKey}_model`, personaFallbacks.model),
+      getConfigValue(supabaseClient, `${personaKey}_temperature`, personaFallbacks.temperature),
+      getConfigValue(supabaseClient, `${personaKey}_max_tokens`, personaFallbacks.maxTokens),
+      getConfigValue(supabaseClient, `${personaKey}_frequency_penalty`, personaFallbacks.frequencyPenalty),
+      getConfigValue(supabaseClient, `${personaKey}_presence_penalty`, personaFallbacks.presencePenalty),
+    ]);
+
     const interpretPromptResult = await getPrompt(supabaseClient, selectedPromptKey, selectedFallback);
     let systemPromptTemplate = interpretPromptResult.content;
     if (interpretPromptResult.error) {
@@ -149,7 +208,11 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "google/gemini-1.5-flash",
+        model: interpretationModel,
+        temperature: interpretationTemperature,
+        max_tokens: interpretationMaxTokens,
+        frequency_penalty: interpretationFrequencyPenalty,
+        presence_penalty: interpretationPresencePenalty,
         response_format: { type: "json_object" }, // Enforce JSON
         messages: [
           {
@@ -194,8 +257,8 @@ Deno.serve(async (req) => {
         focus_area: userData?.intent || mode, // Use intent as focus area description
         metadata: {
             mode: mode,
-            model: INTERPRETATION_MODEL,
-            vision_model: VISION_MODEL,
+            model: interpretationModel,
+            vision_model: visionModel,
             user_data: userData,
             vision_summary: visionDescription.substring(0, 200) + "..."
         }
