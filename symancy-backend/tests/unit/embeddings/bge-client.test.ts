@@ -6,7 +6,10 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type OpenAI from "openai";
-import { EMBEDDING_MODEL } from "@/core/embeddings/bge-client.js";
+// Import from constants.ts (not bge-client.ts) to avoid loading the real
+// module during vitest's vi.mock hoisting — bge-client imports `openai`
+// which is itself mocked in this file, causing initialization race.
+import { MODEL_EMBEDDING_BGE as EMBEDDING_MODEL } from "@/config/constants.js";
 
 // Mock OpenAI client
 const mockCreate = vi.fn();

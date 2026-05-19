@@ -308,6 +308,17 @@ export const MODEL_VISION = "google/gemma-4-31b-it";
  */
 export const MODEL_MEMORY_EXTRACTION = "deepseek/deepseek-v4-flash";
 
+/**
+ * Model for BGE-M3 embeddings (Russian-optimized vector similarity)
+ * Used by bge-client.ts
+ */
+export const MODEL_EMBEDDING_BGE = "baai/bge-m3";
+
+/**
+ * BGE-M3 embedding vector dimensionality
+ */
+export const EMBEDDING_DIMS_BGE = 1024;
+
 // =============================================================================
 // Timeouts
 // =============================================================================
