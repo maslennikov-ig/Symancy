@@ -3,6 +3,7 @@ import { Tariff } from '../../../types/payment';
 import { cn } from '../../../lib/utils';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../ui/card';
 import { translations, Lang } from '../../../lib/i18n';
+import { SummerSaleBadge } from './SummerSaleBadge';
 
 interface TariffCardProps {
   tariff: Tariff;
@@ -76,10 +77,32 @@ export function TariffCard({ tariff, onSelect, onClick, isSelected = false, disa
             {t(creditTypeLabels[tariff.creditType])}
           </span>
         </div>
+        {tariff.promoTag === 'summer-time' && tariff.originalPrice ? (
+          <div className="mt-1">
+            <SummerSaleBadge t={t} size="sm" />
+          </div>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-2">
-        <div className="flex items-baseline gap-1">
-          <span className="text-3xl font-bold text-foreground">{tariff.price}</span>
+        <div className="flex items-baseline gap-2">
+          {tariff.originalPrice && tariff.originalPrice !== tariff.price ? (
+            <span
+              className="text-base font-medium text-muted-foreground line-through"
+              aria-label={t('summerSale.priceAriaOriginal').replace('{price}', String(tariff.originalPrice))}
+            >
+              {tariff.originalPrice}&nbsp;&#8381;
+            </span>
+          ) : null}
+          <span
+            className="text-3xl font-bold text-foreground"
+            aria-label={
+              tariff.originalPrice
+                ? t('summerSale.priceAriaCurrent').replace('{price}', String(tariff.price))
+                : undefined
+            }
+          >
+            {tariff.price}
+          </span>
           <span className="text-lg text-muted-foreground">&#8381;</span>
         </div>
         <CardDescription className="text-sm">

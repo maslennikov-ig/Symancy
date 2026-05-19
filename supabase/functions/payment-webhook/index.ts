@@ -4,10 +4,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2"
 import { webhookCorsHeaders } from "../_shared/cors.ts"
-
-// Types
-type ProductType = 'basic' | 'pack5' | 'pro' | 'cassandra'
-type CreditType = 'basic' | 'pro' | 'cassandra'
+import {
+  TARIFFS,
+  type ProductType,
+  type TariffConfig,
+} from "../_shared/tariffs-config.ts"
 
 interface YooKassaPaymentMethod {
   type: string
@@ -46,21 +47,6 @@ interface YooKassaWebhookPayload {
   object: YooKassaPayment
 }
 
-interface Tariff {
-  price: number
-  credits: number
-  creditType: CreditType
-  name: string
-}
-
-// Tariff definitions matching create-payment/index.ts
-const TARIFFS: Record<ProductType, Tariff> = {
-  basic: { price: 100, credits: 1, creditType: 'basic', name: 'Новичок' },
-  pack5: { price: 300, credits: 5, creditType: 'basic', name: 'Любитель' },
-  pro: { price: 500, credits: 1, creditType: 'pro', name: 'Внутренний мудрец' },
-  cassandra: { price: 1000, credits: 1, creditType: 'cassandra', name: 'Кассандра' },
-}
-
 // Verify payment by calling YooKassa API
 // This is the recommended approach per YooKassa docs (no HMAC signature)
 async function verifyPaymentWithApi(
@@ -92,7 +78,7 @@ async function verifyPaymentWithApi(
 }
 
 // Get tariff details for a product type
-function getTariffDetails(productType: ProductType): Tariff {
+function getTariffDetails(productType: ProductType): TariffConfig {
   return TARIFFS[productType] || TARIFFS.basic
 }
 

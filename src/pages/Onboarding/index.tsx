@@ -21,6 +21,7 @@ import { Welcome } from './Welcome';
 import { LanguageStep } from './Language';
 import { HowItWorks } from './HowItWorks';
 import { FreeCredit } from './FreeCredit';
+import { claimWelcomeCredits } from '../../services/creditService';
 
 /**
  * Step indicator component showing progress dots
@@ -121,10 +122,13 @@ const Onboarding: React.FC<OnboardingProps> = ({ language: propLanguage, t: prop
     setGrantError(null);
 
     try {
-      // TODO: Call backend to grant free credit
-      // For now, we'll just mark onboarding as completed
-      // The actual credit granting would be:
-      // await grantFreeCredit();
+      // Grant Summer-2026 welcome gift (3 basic + 1 pro), idempotent at RPC level.
+      const claim = await claimWelcomeCredits();
+      if (!claim.success) {
+        // Non-fatal: log and continue onboarding completion so the user
+        // doesn't get stuck. Credits can be manually granted later.
+        console.warn('[Onboarding] Welcome credits not granted:', claim.error);
+      }
 
       await setOnboardingCompleted(true);
 

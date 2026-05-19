@@ -5,7 +5,10 @@
 import type { OnboardingState } from "../state.js";
 import { getBotApi } from "../../../core/telegram.js";
 import { getSupabase } from "../../../core/database.js";
-import { grantInitialCredits } from "../../../modules/credits/service.js";
+import {
+  grantUnifiedInitialCredits,
+  WELCOME_GIFT,
+} from "../../../modules/credits/service.js";
 import { getLogger } from "../../../core/logger.js";
 import { findOrCreateByTelegramId } from "../../../services/user/UnifiedUserService.js";
 
@@ -32,46 +35,46 @@ export async function complete(
   }
 
   try {
-    // Grant initial credits (actual credits, not just a flag)
-    const grantResult = await grantInitialCredits(telegramUserId);
-
-    if (!grantResult.success) {
-      logger.warn({ telegramUserId, error: grantResult.error }, "Failed to grant initial credits, but continuing");
-    } else if (grantResult.alreadyGranted) {
-      logger.info({ telegramUserId, balance: grantResult.balance }, "Credits already granted (idempotent)");
-    } else {
-      logger.info({ telegramUserId, balance: grantResult.balance }, "Initial credits granted successfully");
-    }
-
-    // Create unified_users record — trigger auto-copies credits from backend_user_credits
+    // 1) Ensure unified_users row exists BEFORE granting credits.
+    //    The new type-aware grant flow operates on unified_user_credits and needs
+    //    a valid unified_user_id.
+    let unifiedUserId: string | null = null;
     try {
-      await findOrCreateByTelegramId({
+      const unifiedUser = await findOrCreateByTelegramId({
         telegramId: telegramUserId,
         displayName: name || "User",
         languageCode: "ru",
       });
-      logger.info({ telegramUserId }, "Unified user record created/updated");
+      unifiedUserId = unifiedUser?.id ?? null;
+      logger.info({ telegramUserId, unifiedUserId }, "Unified user record ready");
     } catch (unifiedError) {
-      logger.warn({ telegramUserId, error: unifiedError }, "Failed to create unified user record, credits may not sync to Mini App");
+      logger.warn(
+        { telegramUserId, error: unifiedError },
+        "Failed to create unified user record; welcome credits will be skipped"
+      );
     }
 
-    // Mark free credit as granted in unified_user_credits
-    try {
-      const supabaseForUpdate = getSupabase();
-      const { data: unifiedUser } = await supabaseForUpdate
-        .from("unified_users")
-        .select("id")
-        .eq("telegram_id", telegramUserId)
-        .single();
-
-      if (unifiedUser) {
-        await supabaseForUpdate
-          .from("unified_user_credits")
-          .update({ free_credit_granted: true })
-          .eq("unified_user_id", unifiedUser.id);
+    // 2) Grant welcome credits (Summer 2026: 3 basic + 1 pro) atomically and
+    //    idempotently. Falls back gracefully if unified_users could not be created.
+    let grantResult: Awaited<ReturnType<typeof grantUnifiedInitialCredits>> | null = null;
+    if (unifiedUserId) {
+      grantResult = await grantUnifiedInitialCredits(unifiedUserId, WELCOME_GIFT);
+      if (!grantResult.success) {
+        logger.warn(
+          { telegramUserId, unifiedUserId, error: grantResult.error },
+          "Failed to grant welcome credits, but continuing"
+        );
+      } else if (grantResult.alreadyGranted) {
+        logger.info(
+          { telegramUserId, unifiedUserId, balance: grantResult.balance },
+          "Welcome credits already granted (idempotent)"
+        );
+      } else {
+        logger.info(
+          { telegramUserId, unifiedUserId, granted: grantResult.granted, balance: grantResult.balance },
+          "Welcome credits granted successfully"
+        );
       }
-    } catch (flagError) {
-      logger.warn({ telegramUserId, error: flagError }, "Failed to set free_credit_granted flag");
     }
 
     // Mark onboarding as complete
@@ -90,11 +93,30 @@ export async function complete(
 
     logger.info({ telegramUserId }, "Onboarding marked as complete");
 
-    // Send completion message
+    // Send completion message. Use the actually-granted amounts so the user
+    // sees what landed on their balance even if a partial failure occurred.
     const userName = name || "друг";
+    const grantedBasic = grantResult?.granted.basic ?? 0;
+    const grantedPro = grantResult?.granted.pro ?? 0;
+    const totalGranted = grantedBasic + grantedPro + (grantResult?.granted.cassandra ?? 0);
+
+    let giftLine: string;
+    if (totalGranted > 0) {
+      const parts: string[] = [];
+      if (grantedBasic > 0) parts.push(`<b>${grantedBasic} базовых</b>`);
+      if (grantedPro > 0) parts.push(`<b>${grantedPro} PRO</b>`);
+      if ((grantResult?.granted.cassandra ?? 0) > 0) {
+        parts.push(`<b>${grantResult!.granted.cassandra} Кассандра</b>`);
+      }
+      giftLine = `💝 В подарок вам ${parts.join(" + ")} ${totalGranted === 1 ? "кредит" : "кредитов"} для гадания на кофейной гуще!`;
+    } else {
+      // Either already granted before or grant failed — show neutral wording
+      giftLine = `☕️ Готовы к первому гаданию? Просто пришлите фото кофейной чашки.`;
+    }
+
     const completionMessage = `🎉 Отлично, ${userName}! Мы познакомились.
 
-💝 В подарок вам <b>1 бесплатный кредит</b> для гадания на кофейной гуще!
+${giftLine}
 
 Просто отправьте мне фото своей кофейной чашки, и я раскрою её тайны ☕️✨`;
 
@@ -106,7 +128,7 @@ export async function complete(
 
     return {
       completed: true,
-      bonusCreditGranted: grantResult.success,
+      bonusCreditGranted: grantResult?.success === true && !grantResult.alreadyGranted,
     };
   } catch (error) {
     logger.error({ telegramUserId, error }, "Failed in complete node");

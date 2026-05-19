@@ -44,10 +44,20 @@ type AccountLinkStatus = LinkedAccount | UnlinkedAccount;
 
 /**
  * Free tier configuration
+ *
+ * Welcome gift is now type-aware (Summer 2026): 3 basic + 1 pro for every new user.
+ * ONBOARDING_BONUS is preserved for the legacy single-credit RPC path; new flow
+ * uses WELCOME_GIFT via grantUnifiedInitialCredits().
  */
 export const FREE_TIER = {
   ONBOARDING_BONUS: 1,
   MAX_FREE_GRANT: 10,
+} as const;
+
+export const WELCOME_GIFT = {
+  basic: 3,
+  pro: 1,
+  cassandra: 0,
 } as const;
 
 // =============================================================================
@@ -468,6 +478,122 @@ export async function grantInitialCredits(
     success: true,
     balance: newBalance,
     alreadyGranted: !actuallyGranted,
+  };
+}
+
+/**
+ * Welcome-credit grant against unified_user_credits.
+ *
+ * Replaces the legacy single-credit `grantInitialCredits` for new users —
+ * grants per-type credits (e.g. 3 basic + 1 pro) atomically and idempotently.
+ * Safe to call multiple times: subsequent calls are no-ops thanks to the
+ * `free_credit_granted` flag on unified_user_credits.
+ */
+export interface UnifiedGrantResult {
+  success: boolean;
+  alreadyGranted: boolean;
+  granted: { basic: number; pro: number; cassandra: number };
+  balance: { basic: number; pro: number; cassandra: number };
+  error?: string;
+}
+
+export async function grantUnifiedInitialCredits(
+  unifiedUserId: string,
+  amounts: { basic?: number; pro?: number; cassandra?: number } = WELCOME_GIFT
+): Promise<UnifiedGrantResult> {
+  const basic = amounts.basic ?? 0;
+  const pro = amounts.pro ?? 0;
+  const cassandra = amounts.cassandra ?? 0;
+
+  if (!unifiedUserId || typeof unifiedUserId !== "string") {
+    return {
+      success: false,
+      alreadyGranted: false,
+      granted: { basic: 0, pro: 0, cassandra: 0 },
+      balance: { basic: 0, pro: 0, cassandra: 0 },
+      error: "Invalid unifiedUserId",
+    };
+  }
+
+  if (basic < 0 || pro < 0 || cassandra < 0) {
+    return {
+      success: false,
+      alreadyGranted: false,
+      granted: { basic: 0, pro: 0, cassandra: 0 },
+      balance: { basic: 0, pro: 0, cassandra: 0 },
+      error: "Credit amounts must be non-negative",
+    };
+  }
+
+  if (basic > FREE_TIER.MAX_FREE_GRANT || pro > FREE_TIER.MAX_FREE_GRANT || cassandra > FREE_TIER.MAX_FREE_GRANT) {
+    return {
+      success: false,
+      alreadyGranted: false,
+      granted: { basic: 0, pro: 0, cassandra: 0 },
+      balance: { basic: 0, pro: 0, cassandra: 0 },
+      error: `Amount per type exceeds max free tier (${FREE_TIER.MAX_FREE_GRANT})`,
+    };
+  }
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc("grant_unified_initial_credits", {
+    p_unified_user_id: unifiedUserId,
+    p_basic: basic,
+    p_pro: pro,
+    p_cassandra: cassandra,
+  });
+
+  if (error) {
+    logger.error(
+      { unifiedUserId, basic, pro, cassandra, error, operation: "grant_unified_initial" },
+      "Failed to grant unified initial credits"
+    );
+    return {
+      success: false,
+      alreadyGranted: false,
+      granted: { basic: 0, pro: 0, cassandra: 0 },
+      balance: { basic: 0, pro: 0, cassandra: 0 },
+      error: error.message || "Database error",
+    };
+  }
+
+  // RPC returns a single-row table; supabase-js exposes it as an array.
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    return {
+      success: false,
+      alreadyGranted: false,
+      granted: { basic: 0, pro: 0, cassandra: 0 },
+      balance: { basic: 0, pro: 0, cassandra: 0 },
+      error: "Empty RPC response",
+    };
+  }
+
+  logger.info(
+    {
+      unifiedUserId,
+      requested: { basic, pro, cassandra },
+      granted: { basic: row.basic_granted, pro: row.pro_granted, cassandra: row.cassandra_granted },
+      alreadyGranted: row.already_granted,
+      balance: { basic: row.new_basic, pro: row.new_pro, cassandra: row.new_cassandra },
+      operation: "grant_unified_initial",
+    },
+    row.already_granted ? "Welcome credits already granted (idempotent)" : "Welcome credits granted"
+  );
+
+  return {
+    success: true,
+    alreadyGranted: row.already_granted,
+    granted: {
+      basic: row.basic_granted,
+      pro: row.pro_granted,
+      cassandra: row.cassandra_granted,
+    },
+    balance: {
+      basic: row.new_basic,
+      pro: row.new_pro,
+      cassandra: row.new_cassandra,
+    },
   };
 }
 

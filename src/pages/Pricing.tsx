@@ -2,37 +2,35 @@ import React from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '../components/ui/button';
 import { translations, Lang, t as i18n_t } from '../lib/i18n';
+import { TARIFFS_PRICING, PROMO, type PurchaseProductType } from '../constants/tariffs';
+import { SummerSaleBadge } from '../components/features/payment/SummerSaleBadge';
 
 /* ── Types ─────────────────────────────────────────── */
 
+interface TariffAccent {
+  strip: string;
+  glow: string;
+  icon: string;
+  badge: string;
+}
+
 interface Tariff {
-  type: string;
+  type: PurchaseProductType;
   nameKey: string;
   priceNum: number;
+  originalPriceNum?: number;
   credits: number;
   descriptionKey: string;
   featureKeys: string[];
   highlighted?: boolean;
-  accent: { strip: string; glow: string; icon: string; badge: string };
+  accent: TariffAccent;
 }
 
-interface PricingProps {
-  language?: Lang;
-  t?: (key: keyof typeof translations.en) => string;
-  onBuyTariff?: (productType: string) => void;
-  isAuthenticated?: boolean;
-  isAuthLoading?: boolean;
-  onLogin?: (tariffType: string) => void;
-}
-
-/* ── Tariff data ───────────────────────────────────── */
-
-const TARIFFS: Tariff[] = [
-  {
-    type: 'basic',
+// UI-only metadata (icons, feature list, accent colors).
+// Pricing/credits is sourced from src/constants/tariffs.ts.
+const TARIFF_UI_META: Record<PurchaseProductType, Omit<Tariff, 'type' | 'priceNum' | 'originalPriceNum' | 'credits'>> = {
+  basic: {
     nameKey: 'pricing.tariff.basic.name',
-    priceNum: 100,
-    credits: 1,
     descriptionKey: 'pricing.tariff.basic.description',
     featureKeys: [
       'pricing.tariff.basic.feature.1',
@@ -46,11 +44,8 @@ const TARIFFS: Tariff[] = [
       badge: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20',
     },
   },
-  {
-    type: 'pack5',
+  pack5: {
     nameKey: 'pricing.tariff.pack5.name',
-    priceNum: 300,
-    credits: 5,
     descriptionKey: 'pricing.tariff.pack5.description',
     featureKeys: [
       'pricing.tariff.pack5.feature.1',
@@ -66,11 +61,8 @@ const TARIFFS: Tariff[] = [
       badge: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20',
     },
   },
-  {
-    type: 'pro',
+  pro: {
     nameKey: 'pricing.tariff.pro.name',
-    priceNum: 500,
-    credits: 1,
     descriptionKey: 'pricing.tariff.pro.description',
     featureKeys: [
       'pricing.tariff.pro.feature.1',
@@ -85,11 +77,8 @@ const TARIFFS: Tariff[] = [
       badge: 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/20',
     },
   },
-  {
-    type: 'cassandra',
+  cassandra: {
     nameKey: 'pricing.tariff.cassandra.name',
-    priceNum: 1000,
-    credits: 1,
     descriptionKey: 'pricing.tariff.cassandra.description',
     featureKeys: [
       'pricing.tariff.cassandra.feature.1',
@@ -104,7 +93,32 @@ const TARIFFS: Tariff[] = [
       badge: 'bg-amber-500/10 text-amber-800 dark:text-amber-200 border-amber-600/20',
     },
   },
-];
+};
+
+interface PricingProps {
+  language?: Lang;
+  t?: (key: keyof typeof translations.en) => string;
+  onBuyTariff?: (productType: string) => void;
+  isAuthenticated?: boolean;
+  isAuthLoading?: boolean;
+  onLogin?: (tariffType: string) => void;
+}
+
+/* ── Tariff data ───────────────────────────────────── */
+
+const PURCHASE_TYPES: PurchaseProductType[] = ['basic', 'pack5', 'pro', 'cassandra'];
+
+const TARIFFS: Tariff[] = PURCHASE_TYPES.map((type) => {
+  const pricing = TARIFFS_PRICING[type];
+  const meta = TARIFF_UI_META[type];
+  return {
+    type,
+    priceNum: pricing.price,
+    originalPriceNum: pricing.originalPrice,
+    credits: pricing.credits,
+    ...meta,
+  };
+});
 
 const STEPS = [
   { num: '1', key: 'pricing.howItWorks.step1.text' },
@@ -190,6 +204,18 @@ const Pricing: React.FC<PricingProps> = ({
               <span className="text-primary/50 text-xs">✦</span>
               <span className="block w-12 h-px bg-border" />
             </div>
+
+            {/* Summer Sale banner */}
+            {PROMO.active ? (
+              <div className="mt-6 inline-flex items-center gap-2 sm:gap-3 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/15 to-orange-500/15 border border-amber-500/40 dark:border-amber-400/30">
+                <span className="text-sm font-bold text-amber-700 dark:text-amber-300">
+                  {t('summerSale.bannerTitle' as any)}
+                </span>
+                <span className="text-xs sm:text-sm text-amber-700/80 dark:text-amber-300/80">
+                  {t('summerSale.bannerSubtitle' as any)}
+                </span>
+              </div>
+            ) : null}
           </div>
 
           {/* ── Tariff cards ── */}
@@ -244,7 +270,25 @@ const Pricing: React.FC<PricingProps> = ({
 
                       {/* Price */}
                       <div className="mb-4">
-                        <span className="font-display text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
+                        {PROMO.active && tariff.originalPriceNum && tariff.originalPriceNum !== tariff.priceNum ? (
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span
+                              className="text-base font-medium text-muted-foreground line-through"
+                              aria-label={t('summerSale.priceAriaOriginal' as any).replace('{price}', String(tariff.originalPriceNum))}
+                            >
+                              {tariff.originalPriceNum.toLocaleString('ru-RU')}&nbsp;&#8381;
+                            </span>
+                            <SummerSaleBadge t={t as any} size="sm" />
+                          </div>
+                        ) : null}
+                        <span
+                          className="font-display text-3xl sm:text-4xl font-bold text-foreground tracking-tight"
+                          aria-label={
+                            tariff.originalPriceNum
+                              ? t('summerSale.priceAriaCurrent' as any).replace('{price}', String(tariff.priceNum))
+                              : undefined
+                          }
+                        >
                           {tariff.priceNum.toLocaleString('ru-RU')}
                         </span>
                         <span className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">

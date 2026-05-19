@@ -3,56 +3,17 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "npm:@supabase/supabase-js@2"
 import { getCorsHeaders } from "../_shared/cors.ts"
-
-// Types
-type ProductType = 'basic' | 'pack5' | 'pro' | 'cassandra'
+import {
+  TARIFFS,
+  VALID_PRODUCT_TYPES,
+  isValidProductType,
+  type ProductType,
+} from "../_shared/tariffs-config.ts"
 
 interface CreatePaymentRequest {
   product_type: ProductType
   return_url?: string
 }
-
-interface Tariff {
-  price: number
-  credits: number
-  creditType: 'basic' | 'pro' | 'cassandra'
-  name: string
-  description: string
-}
-
-// Tariff definitions matching types/payment.ts
-const TARIFFS: Record<ProductType, Tariff> = {
-  basic: {
-    price: 100,
-    credits: 1,
-    creditType: 'basic',
-    name: 'Новичок',
-    description: '1 базовая расшифровка (3-4 блока)',
-  },
-  pack5: {
-    price: 300,
-    credits: 5,
-    creditType: 'basic',
-    name: 'Любитель',
-    description: '5 расшифровок (скидка 40%)',
-  },
-  pro: {
-    price: 500,
-    credits: 1,
-    creditType: 'pro',
-    name: 'Внутренний мудрец',
-    description: '1 PRO расшифровка (6+ блоков)',
-  },
-  cassandra: {
-    price: 1000,
-    credits: 1,
-    creditType: 'cassandra',
-    name: 'Кассандра',
-    description: 'Эзотерическое предсказание',
-  },
-}
-
-const VALID_PRODUCT_TYPES: ProductType[] = ['basic', 'pack5', 'pro', 'cassandra']
 
 // Fiscal receipt configuration (54-FZ)
 // tax_system_code: 1=ОСН, 2=УСН(доходы), 3=УСН(доходы-расходы), 4=ЕНВД, 5=ЕСХН, 6=ПСН
@@ -60,10 +21,6 @@ const RECEIPT_TAX_SYSTEM_CODE = 2  // УСН (доходы) — change if differ
 
 // vat_code: 1=Без НДС, 2=НДС 0%, 3=НДС 10%, 4=НДС 20%, 5=НДС 10/110, 6=НДС 20/120
 const RECEIPT_VAT_CODE = 1  // Без НДС — standard for УСН
-
-function isValidProductType(type: string): type is ProductType {
-  return VALID_PRODUCT_TYPES.includes(type as ProductType)
-}
 
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
