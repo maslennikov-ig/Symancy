@@ -168,5 +168,3 @@ export async function getEmbeddings(texts: string[]): Promise<number[][]> {
   // This should never be reached, but TypeScript requires it
   throw new Error(`Failed to generate embeddings: ${lastError?.message || "Unknown error"}`);
 }
-
-export { EMBEDDING_MODEL, EMBEDDING_DIMS };
