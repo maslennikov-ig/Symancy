@@ -1,5 +1,39 @@
 # План: Релиз 22 мая 2026 — цены, welcome credits, сравнение чашек, COGS
 
+## Статус (2026-05-19, после первой сессии)
+
+**В мейне (commit `91dd4cd` на `origin/main`) и применено к prod Supabase:**
+- ✅ T1.1 Централизация TARIFFS (`src/constants/tariffs.ts` + `supabase/functions/_shared/tariffs-config.ts`)
+- ✅ T1.2 Новые цены 50/150/250/500 ₽ + миграция `20260519000001_extend_purchases_amount_check.sql` (применена)
+- ✅ T1.3 Summer Sale UI (`SummerSaleBadge.tsx`, strikethrough, баннер, ru/en/zh)
+- ✅ T1.4 Welcome credits 3 basic + 1 pro: RPC `grant_unified_initial_credits` (применена), `grantUnifiedInitialCredits()` в backend, `claimWelcomeCredits()` на вебе, intergation в обоих onboarding-флоу
+
+**Осталось:**
+- T2.1 Схема БД для сравнения чашек (`paired_analysis_id` UUID + extend `analysis_type` CHECK)
+- T2.2 Промпты `ARINA_DYNAMICS_PROMPT` + `CASSANDRA_COMPATIBILITY_PROMPT`
+- T2.3 Telegram-флоу `/compare_dynamics` (Advanced) и `/compare_compatibility` (Premium) с state machine через `user_states`
+- T2.4 Cost report generator (`scripts/generate-cost-report.ts` → `docs/reports/costs/2026-05.md`)
+- T3.1 `MultiImageUploader` для веба
+- T3.2 Edge Function `compare-coffee`
+- T3.3 Страница `/compare` (Tab Динамика / Совместимость с tier-gating)
+- T4 Smoke-tests + advisors check + релиз 22.05
+
+## Технические нюансы окружения (важно для следующей сессии)
+
+- **Worktree**: `\\wsl.localhost\ubuntu\home\me\code\coffee\.claude\worktrees\kind-lumiere-b10b1b` (ветка `ADT/kind-lumiere-b10b1b`).
+- **Worktree git-paths починены** на native WSL (`/home/me/...`). Не используй UNC-пути в `.git` файлах.
+- **`pnpm` падает с panic через UNC**. Запускай только через WSL: `wsl.exe --cd "/home/me/code/coffee/.claude/worktrees/kind-lumiere-b10b1b" -- pnpm <cmd>`. Аналогично для backend: `.../symancy-backend`.
+- **Git операции** в worktree — тоже через WSL (SSH работает только там, PowerShell без ключей).
+- **Pushing**: пользователь подтвердил — прямой push в `origin/main`, dev-ветки нет. Не делать PR. CLAUDE.md в этом проекте говорит про dev, но это устарело.
+- **Миграции на prod**: применять через `mcp__supabase__apply_migration` ДО `git push origin HEAD:main` (потому что есть GitHub Actions автодеплой на main).
+
+## Решения, принятые в первой сессии
+
+- Платёжная модель: гибрид (кредиты + подписки) сохраняем.
+- Сравнение чашек: делаем Telegram + Web, приоритет Telegram.
+- Welcome credits: только новым (идемпотентность через `free_credit_granted`).
+- Cost report: markdown в `docs/reports/costs/`.
+
 ## Context
 
 Заказчик (Jean, 18.05.2026) поставил дедлайн 22.05 и сформулировал пожелания одним сообщением. Сегодня 19.05.2026 — у нас ~3-4 дня. Решения после уточнений:
