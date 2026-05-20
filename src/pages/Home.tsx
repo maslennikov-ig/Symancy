@@ -20,6 +20,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCloudStorage } from '../hooks/useCloudStorage';
 import { useTelegramWebApp } from '../hooks/useTelegramWebApp';
 import { BalanceCard } from '../components/features/home/BalanceCard';
+import { CompareBanner } from '../components/features/home/CompareBanner';
 import { DailyInsightCard } from '../components/features/home/DailyInsightCard';
 import { QuickActions } from '../components/features/home/QuickActions';
 import { RecentActivity } from '../components/features/home/RecentActivity';
@@ -108,6 +109,11 @@ const Home: React.FC<HomeProps> = ({ language: propLanguage, t: propT }) => {
 
         {/* Quick Actions */}
         <QuickActions
+          t={t as (key: string) => string}
+        />
+
+        {/* Compare Banner - promo for the cup-comparison feature */}
+        <CompareBanner
           t={t as (key: string) => string}
         />
 

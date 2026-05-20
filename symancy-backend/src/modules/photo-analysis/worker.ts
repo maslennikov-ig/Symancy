@@ -455,13 +455,30 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
       throw new Error("Message splitting resulted in empty array");
     }
 
-    // Build retopic keyboard for single-topic readings (inline with last message)
+    // Build post-analysis keyboard.
+    //
+    // The keyboard always carries the "Compare with a new cup" CTA so users
+    // can chain a comparison even on "all topics" PRO readings where the
+    // retopic grid is empty. For single-topic readings we also keep the
+    // remaining-topic shortcuts; for `topic === "all"` we pass every topic
+    // as already covered so only the compare CTA is shown.
     let retopicKeyboard: ReturnType<typeof createRetopicKeyboard> = null;
-    if (topic !== "all" && analysisId) {
+    if (analysisId) {
       try {
-        retopicKeyboard = createRetopicKeyboard(analysisId, [topic], language || "ru");
+        const coveredTopics =
+          topic === "all"
+            ? Array.from(VALID_TOPICS).filter((t) => t !== "all")
+            : [topic];
+        retopicKeyboard = createRetopicKeyboard(
+          analysisId,
+          coveredTopics,
+          language || "ru",
+        );
       } catch (retopicError) {
-        jobLogger.warn({ error: retopicError }, "Failed to create retopic keyboard");
+        jobLogger.warn(
+          { error: retopicError },
+          "Failed to create post-analysis keyboard",
+        );
       }
     }
 

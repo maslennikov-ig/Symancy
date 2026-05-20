@@ -46,7 +46,13 @@ export type BotMessageKey =
   | 'compare.insufficientCreditsPro'
   | 'compare.insufficientCreditsCassandra'
   | 'compare.error'
-  | 'compare.cancelButton';
+  | 'compare.cancelButton'
+  | 'compare.chooseMode'
+  | 'compare.button.dynamics'
+  | 'compare.button.compatibility'
+  | 'compare.fromAnalysis.cta'
+  | 'compare.fromAnalysis.confirmed'
+  | 'onboarding.completion.compareHint';
 
 /**
  * Bot messages translations
@@ -70,6 +76,7 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
     'help.commands':
       '/start — Начать работу с ботом\n' +
       '/cassandra — Премиум гадалка Кассандра\n' +
+      '/compare — Сравнить две чашки (динамика или совместимость)\n' +
       '/credits — Проверить баланс кредитов\n' +
       '/history — История ваших гаданий\n' +
       '/link — Связать с веб-версией\n' +
@@ -131,6 +138,14 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
     'compare.error':
       'Произошла ошибка при сравнении. Кредит возвращён. Попробуйте ещё раз.',
     'compare.cancelButton': '❌ Отменить сравнение',
+    'compare.chooseMode': '☕️ Что хочешь сравнить? Выбери режим:',
+    'compare.button.dynamics': '📊 Динамика (pro)',
+    'compare.button.compatibility': '🔮 Совместимость (cassandra)',
+    'compare.fromAnalysis.cta': '📊 Сравнить с новой чашкой',
+    'compare.fromAnalysis.confirmed':
+      '✅ Жду второе фото для сравнения.',
+    'onboarding.completion.compareHint':
+      '\n\n✨ Новинка: используй /compare чтобы сравнить две чашки!',
   },
   en: {
     'error.generic': 'An error occurred. Please try again later.',
@@ -150,6 +165,7 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
     'help.commands':
       '/start — Start the bot\n' +
       '/cassandra — Premium fortune teller Cassandra\n' +
+      '/compare — Compare two cups (dynamics or compatibility)\n' +
       '/credits — Check credit balance\n' +
       '/history — Your reading history\n' +
       '/link — Link to web version\n' +
@@ -210,6 +226,14 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
     'compare.error':
       'An error occurred during comparison. Your credit has been refunded. Please try again.',
     'compare.cancelButton': '❌ Cancel comparison',
+    'compare.chooseMode': '☕️ What do you want to compare? Choose a mode:',
+    'compare.button.dynamics': '📊 Dynamics (pro)',
+    'compare.button.compatibility': '🔮 Compatibility (cassandra)',
+    'compare.fromAnalysis.cta': '📊 Compare with a new cup',
+    'compare.fromAnalysis.confirmed':
+      '✅ Send the second cup photo to compare.',
+    'onboarding.completion.compareHint':
+      '\n\n✨ New: use /compare to compare two cups!',
   },
   zh: {
     'error.generic': '发生错误。请稍后再试。',
@@ -228,6 +252,7 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
     'help.commands':
       '/start — 启动机器人\n' +
       '/cassandra — 高级占卜师卡桑德拉\n' +
+      '/compare — 比较两个杯子（动态或兼容性）\n' +
       '/credits — 查看积分余额\n' +
       '/history — 占卜历史\n' +
       '/link — 链接到网页版\n' +
@@ -288,6 +313,14 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
     'compare.error':
       '对比时出错。您的积分已退还。请重试。',
     'compare.cancelButton': '❌ 取消对比',
+    'compare.chooseMode': '☕️ 您要比较什么？选择模式：',
+    'compare.button.dynamics': '📊 动态 (pro)',
+    'compare.button.compatibility': '🔮 兼容性 (cassandra)',
+    'compare.fromAnalysis.cta': '📊 与新杯子比较',
+    'compare.fromAnalysis.confirmed':
+      '✅ 等待第二张照片进行比较。',
+    'onboarding.completion.compareHint':
+      '\n\n✨ 新功能：使用 /compare 来比较两个杯子！',
   },
 };
 

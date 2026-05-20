@@ -45,7 +45,12 @@ import { withRetry } from "../../utils/retry.js";
 import { getEnv } from "../../config/env.js";
 import {
   createCancelCompareKeyboard,
+  createCompareModeKeyboard,
+  createCompareFromAnalysisModeKeyboard,
   COMPARE_CANCEL_CALLBACK,
+  parseCompareModeCallback,
+  parseCompareStartFromCallback,
+  parseCompareStartFromModeCallback,
 } from "./keyboards.js";
 
 const logger = getLogger().child({ module: "compare-handler" });
@@ -71,6 +76,216 @@ export async function handleCompareDynamicsCommand(ctx: BotContext): Promise<voi
  */
 export async function handleCompareCompatibilityCommand(ctx: BotContext): Promise<void> {
   await startCompareSession(ctx, "compatibility");
+}
+
+/**
+ * Handle the unified `/compare` command.
+ *
+ * Shows a mode picker ("Dynamics" / "Compatibility") so the user can pick the
+ * variant they want before we collect any photos. The actual session is started
+ * by handleCompareModeCallback once a mode is chosen.
+ *
+ * We intentionally do NOT check credits here — the credit gate runs inside
+ * startCompareSession after the mode is known.
+ */
+export async function handleCompareCommand(ctx: BotContext): Promise<void> {
+  if (!ctx.from) return;
+  const language = getEffectiveLanguage(ctx);
+
+  // Maintenance guard — keep behaviour consistent with the legacy entry points.
+  if (await isMaintenanceMode()) {
+    await ctx.reply(getBotMessage("error.maintenance", language));
+    return;
+  }
+
+  await ctx.reply(getBotMessage("compare.chooseMode", language), {
+    reply_markup: createCompareModeKeyboard(language),
+  });
+}
+
+/**
+ * Handle the `cmp:mode:{dynamics|compatibility}` callback emitted by
+ * the unified `/compare` mode picker.
+ *
+ * Delegates to startCompareSession after answering the callback query so the
+ * UX is consistent with /compare_dynamics / /compare_compatibility.
+ */
+export async function handleCompareModeCallback(ctx: BotContext): Promise<void> {
+  if (!ctx.callbackQuery?.data || !ctx.from) return;
+
+  const mode = parseCompareModeCallback(ctx.callbackQuery.data);
+  if (!mode) {
+    await ctx.answerCallbackQuery();
+    return;
+  }
+
+  // Acknowledge callback first so the spinner clears on the client.
+  await ctx.answerCallbackQuery();
+
+  // Strip the inline keyboard from the original picker message so the user
+  // can't double-click into two sessions.
+  try {
+    const messageId = ctx.callbackQuery.message?.message_id;
+    if (messageId && ctx.chat) {
+      await ctx.api.editMessageReplyMarkup(ctx.chat.id, messageId, {
+        reply_markup: { inline_keyboard: [] },
+      });
+    }
+  } catch {
+    // Non-fatal — Telegram may reject editing if the message is too old.
+  }
+
+  await startCompareSession(ctx, mode);
+}
+
+/**
+ * Handle the `cmp:start_from:{analysisId}` callback shown under a regular
+ * analysis result ("Compare with a new cup" CTA).
+ *
+ * We don't start the session yet — we present a mini mode picker
+ * (Dynamics / Compatibility) so the user explicitly chooses the credit type
+ * before paying with their next photo.
+ */
+export async function handleCompareStartFromCallback(ctx: BotContext): Promise<void> {
+  if (!ctx.callbackQuery?.data || !ctx.from) return;
+
+  const analysisId = parseCompareStartFromCallback(ctx.callbackQuery.data);
+  if (!analysisId) {
+    await ctx.answerCallbackQuery();
+    return;
+  }
+
+  const language = getEffectiveLanguage(ctx);
+  await ctx.answerCallbackQuery();
+
+  // Maintenance guard — avoid trapping users in a flow that will fail.
+  if (await isMaintenanceMode()) {
+    await ctx.reply(getBotMessage("error.maintenance", language));
+    return;
+  }
+
+  await ctx.reply(getBotMessage("compare.chooseMode", language), {
+    reply_markup: createCompareFromAnalysisModeKeyboard(analysisId, language),
+  });
+}
+
+/**
+ * Handle the `cmp:sfm:{analysisId}:{token}` callback — final step of the
+ * "compare from an existing analysis" flow.
+ *
+ * Validates ownership + readiness of the source analysis, checks credits,
+ * then primes the compare session with pending_first_analysis_id set to the
+ * provided analysisId so the user's next photo becomes the SECOND cup.
+ */
+export async function handleCompareStartFromModeCallback(
+  ctx: BotContext,
+): Promise<void> {
+  if (!ctx.callbackQuery?.data || !ctx.from) return;
+
+  const parsed = parseCompareStartFromModeCallback(ctx.callbackQuery.data);
+  if (!parsed) {
+    await ctx.answerCallbackQuery();
+    return;
+  }
+
+  const { analysisId, mode } = parsed;
+  const telegramUserId = ctx.from.id;
+  const language = getEffectiveLanguage(ctx);
+
+  await ctx.answerCallbackQuery();
+
+  // Maintenance guard
+  if (await isMaintenanceMode()) {
+    await ctx.reply(getBotMessage("error.maintenance", language));
+    return;
+  }
+
+  const supabase = getSupabase();
+
+  // Verify the source analysis exists, belongs to the user, is completed and
+  // has a usable vision_result (worker.ts reuses it as the first cup).
+  const { data: analysis, error: fetchError } = await supabase
+    .from("analysis_history")
+    .select("id, telegram_user_id, status, vision_result")
+    .eq("id", analysisId)
+    .single();
+
+  if (
+    fetchError ||
+    !analysis ||
+    analysis.telegram_user_id !== telegramUserId ||
+    analysis.status !== "completed" ||
+    !analysis.vision_result
+  ) {
+    logger.warn(
+      { telegramUserId, analysisId, fetchError },
+      "compare-from-analysis: source analysis invalid",
+    );
+    await ctx.reply(getBotMessage("compare.sessionExpired", language));
+    return;
+  }
+
+  // Credit pre-check (no consumption — that happens in the worker for the
+  // second photo, mirroring the regular compare flow).
+  const requiredCreditType = mode === "dynamics" ? "pro" : "cassandra";
+  const hasCredit = await hasCreditsOfType(telegramUserId, requiredCreditType);
+  if (!hasCredit) {
+    const msgKey =
+      mode === "dynamics"
+        ? "compare.insufficientCreditsPro"
+        : "compare.insufficientCreditsCassandra";
+    await ctx.reply(getBotMessage(msgKey, language));
+    logger.info(
+      { telegramUserId, mode, analysisId },
+      "compare-from-analysis: insufficient credits",
+    );
+    return;
+  }
+
+  // Strip the mode-picker keyboard from the original message so it can't be
+  // re-clicked into a parallel session.
+  try {
+    const messageId = ctx.callbackQuery.message?.message_id;
+    if (messageId && ctx.chat) {
+      await ctx.api.editMessageReplyMarkup(ctx.chat.id, messageId, {
+        reply_markup: { inline_keyboard: [] },
+      });
+    }
+  } catch {
+    // Non-fatal
+  }
+
+  // Persist the compare session with the existing analysisId already wired up
+  // as the first cup. Use UPSERT so brand-new users still get a row.
+  const { error: upsertError } = await supabase
+    .from("user_states")
+    .upsert(
+      {
+        telegram_user_id: telegramUserId,
+        pending_compare_type: mode,
+        pending_first_analysis_id: analysisId,
+        pending_compare_started_at: new Date().toISOString(),
+      },
+      { onConflict: "telegram_user_id" },
+    );
+
+  if (upsertError) {
+    logger.error(
+      { telegramUserId, mode, analysisId, error: upsertError },
+      "compare-from-analysis: failed to upsert pending state",
+    );
+    await ctx.reply(getBotMessage("error.generic", language));
+    return;
+  }
+
+  await ctx.reply(getBotMessage("compare.fromAnalysis.confirmed", language), {
+    reply_markup: createCancelCompareKeyboard(language),
+  });
+
+  logger.info(
+    { telegramUserId, mode, firstAnalysisId: analysisId },
+    "compare-from-analysis: session armed with existing first analysis",
+  );
 }
 
 /**

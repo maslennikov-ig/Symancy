@@ -109,6 +109,26 @@ export function ProfileIcon({ className, size = 24 }: IconProps): React.ReactEle
   );
 }
 
+export function CompareIcon({ className, size = 24 }: IconProps): React.ReactElement {
+  return (
+    <svg
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="4" width="7" height="16" rx="1" />
+      <rect x="14" y="4" width="7" height="16" rx="1" />
+      <path d="M10 12 L14 12" />
+    </svg>
+  );
+}
+
 // ============================================================================
 // Chevron Icons
 // ============================================================================

@@ -638,6 +638,7 @@ export const translations = {
     'admin.systemConfig.updateFailed': 'Failed to update configuration',
     // Navigation (Telegram Mini App)
     'nav.home': 'Home',
+    'nav.compare': 'Compare',
     'nav.chat': 'Chat',
     'nav.history': 'History',
     'nav.profile': 'Profile',
@@ -658,6 +659,10 @@ export const translations = {
     'home.recentActivity.analysisCompleted': 'Analysis completed',
     'home.recentActivity.defaultTitle': 'Coffee Analysis',
     'home.topUp': 'Top Up Balance',
+    'home.compareBanner.title': 'Cup Comparison',
+    'home.compareBanner.description': 'Compare two of your readings or compatibility with a friend',
+    'home.compareBanner.cta': 'Try it',
+    'home.compareBanner.badge': 'New',
     // Profile Screen (Telegram Mini App)
     'profile.title': 'Profile',
     'profile.balance': 'Balance',
@@ -1581,6 +1586,7 @@ export const translations = {
     'admin.systemConfig.updateFailed': 'Не удалось обновить конфигурацию',
     // Navigation (Telegram Mini App)
     'nav.home': 'Главная',
+    'nav.compare': 'Сравнение',
     'nav.chat': 'Чат',
     'nav.history': 'История',
     'nav.profile': 'Профиль',
@@ -1601,6 +1607,10 @@ export const translations = {
     'home.recentActivity.analysisCompleted': 'Анализ завершён',
     'home.recentActivity.defaultTitle': 'Анализ кофе',
     'home.topUp': 'Пополнить баланс',
+    'home.compareBanner.title': 'Сравнение чашек',
+    'home.compareBanner.description': 'Сравните две свои чашки или совместимость с другом',
+    'home.compareBanner.cta': 'Попробовать',
+    'home.compareBanner.badge': 'Новинка',
     // Profile Screen (Telegram Mini App)
     'profile.title': 'Профиль',
     'profile.balance': 'Баланс',
@@ -2524,6 +2534,7 @@ export const translations = {
     'admin.systemConfig.updateFailed': '更新配置失败',
     // Navigation (Telegram Mini App)
     'nav.home': '首页',
+    'nav.compare': '比较',
     'nav.chat': '聊天',
     'nav.history': '历史',
     'nav.profile': '个人资料',
@@ -2544,6 +2555,10 @@ export const translations = {
     'home.recentActivity.analysisCompleted': '分析已完成',
     'home.recentActivity.defaultTitle': '咖啡分析',
     'home.topUp': '充值',
+    'home.compareBanner.title': '杯子比较',
+    'home.compareBanner.description': '比较您的两次解读或与朋友的兼容性',
+    'home.compareBanner.cta': '立即尝试',
+    'home.compareBanner.badge': '新功能',
     // Profile Screen (Telegram Mini App)
     'profile.title': '个人资料',
     'profile.balance': '余额',

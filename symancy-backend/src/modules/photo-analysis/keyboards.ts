@@ -10,6 +10,10 @@ import type { InlineKeyboardMarkup } from "grammy/types";
 import { READING_TOPICS } from "../../config/constants.js";
 import { SingleTopicEnum } from "../../types/job-schemas.js";
 import { storeFileId, resolveFileId } from "./file-id-cache.js";
+import {
+  COMPARE_START_FROM_PREFIX,
+} from "../compare/keyboards.js";
+import { getBotMessage } from "../../services/i18n/index.js";
 
 /**
  * Labels for the "All topics" button in different languages
@@ -186,13 +190,22 @@ const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Create retopic keyboard for selecting another topic from the same cup
- * Filters out topics already covered in the analysis session
+ * Create the post-analysis inline keyboard.
+ *
+ * Layout:
+ *  - Remaining retopic options (2-column grid) — skipped when nothing is left
+ *  - One row: "📊 Compare with a new cup" CTA — ALWAYS appended when
+ *    `analysisId` is provided, so users can chain a comparison even after the
+ *    "all topics" PRO reading where retopic is not applicable.
+ *
+ * The callback shape for the compare CTA is `cmp:start_from:{analysisId}`,
+ * routed by the compare module's keyboards/handlers.
  *
  * @param analysisId - UUID of the original analysis record
  * @param coveredTopics - Array of topic keys already read in this session
  * @param language - User's language code (ru, en, zh)
- * @returns InlineKeyboardMarkup or null if no remaining topics
+ * @returns InlineKeyboardMarkup with at least the compare CTA, or null when
+ *          analysisId is missing (defensive — caller must provide a UUID).
  *
  * @example
  * ```typescript
@@ -207,20 +220,19 @@ export function createRetopicKeyboard(
   coveredTopics: string[],
   language: string = "ru"
 ): InlineKeyboardMarkup | null {
+  if (!analysisId) {
+    return null;
+  }
+
   // Filter READING_TOPICS excluding already covered topics
   const coveredSet = new Set(coveredTopics);
   const remainingTopics = READING_TOPICS.filter(
     (topic) => !coveredSet.has(topic.key)
   );
 
-  // No remaining topics to show
-  if (remainingTopics.length === 0) {
-    return null;
-  }
-
   const keyboard = new InlineKeyboard();
 
-  // 2-column grid layout (same as createTopicKeyboard)
+  // 2-column grid for remaining retopic options (may be empty after "all").
   for (let i = 0; i < remainingTopics.length; i += 2) {
     const topic1 = remainingTopics[i];
     const topic2 = remainingTopics[i + 1];
@@ -241,6 +253,10 @@ export function createRetopicKeyboard(
 
     keyboard.row();
   }
+
+  // Always append the "Compare with a new cup" CTA as its own row.
+  const compareLabel = getBotMessage("compare.fromAnalysis.cta", language);
+  keyboard.text(compareLabel, `${COMPARE_START_FROM_PREFIX}${analysisId}`);
 
   return keyboard;
 }

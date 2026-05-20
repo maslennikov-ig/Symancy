@@ -11,6 +11,7 @@ import {
 } from "../../../modules/credits/service.js";
 import { getLogger } from "../../../core/logger.js";
 import { findOrCreateByTelegramId } from "../../../services/user/UnifiedUserService.js";
+import { getBotMessage } from "../../../services/i18n/index.js";
 
 const logger = getLogger().child({ module: "onboarding:complete" });
 
@@ -114,11 +115,36 @@ export async function complete(
       giftLine = `☕️ Готовы к первому гаданию? Просто пришлите фото кофейной чашки.`;
     }
 
+    // Look up the user's preferred language for the localized "compare" hint.
+    // The base completion message stays in Russian (legacy behaviour) but we
+    // append a localized teaser pointing to the new /compare command.
+    let compareHintLanguage = "ru";
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("language_code")
+        .eq("telegram_user_id", telegramUserId)
+        .single();
+      if (profile?.language_code) {
+        compareHintLanguage = profile.language_code;
+      }
+    } catch (langError) {
+      logger.warn(
+        { telegramUserId, error: langError },
+        "Failed to resolve user language for completion hint; defaulting to ru",
+      );
+    }
+
+    const compareHint = getBotMessage(
+      "onboarding.completion.compareHint",
+      compareHintLanguage,
+    );
+
     const completionMessage = `🎉 Отлично, ${userName}! Мы познакомились.
 
 ${giftLine}
 
-Просто отправьте мне фото своей кофейной чашки, и я раскрою её тайны ☕️✨`;
+Просто отправьте мне фото своей кофейной чашки, и я раскрою её тайны ☕️✨${compareHint}`;
 
     await bot.sendMessage(chatId, completionMessage, {
       parse_mode: "HTML",

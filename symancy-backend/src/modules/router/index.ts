@@ -20,6 +20,7 @@ import {
   handleCompareDynamicsCommand,
   handleCompareCompatibilityCommand,
   handleCancelCompareCommand,
+  handleCompareCommand,
 } from "./commands.js";
 import {
   startOnboarding,
@@ -33,9 +34,18 @@ import {
   handleComparePhoto,
   handleCompareText,
   handleCompareCancelCallback,
+  handleCompareModeCallback,
+  handleCompareStartFromCallback,
+  handleCompareStartFromModeCallback,
   isCompareSessionActive,
 } from "../compare/handler.js";
-import { isCompareCallback } from "../compare/keyboards.js";
+import {
+  isCompareCallback,
+  COMPARE_CANCEL_CALLBACK,
+  COMPARE_MODE_PREFIX,
+  COMPARE_START_FROM_PREFIX,
+  COMPARE_START_FROM_MODE_PREFIX,
+} from "../compare/keyboards.js";
 
 const logger = getLogger().child({ module: "router" });
 
@@ -304,6 +314,24 @@ export function setupRouter(): void {
     }
   });
 
+  // Handle unified /compare command (mode picker → dynamics or compatibility)
+  bot.command("compare", async (ctx) => {
+    const botCtx = ctx as BotContext;
+    logger.info({ telegramUserId: ctx.from?.id }, "Received /compare command");
+
+    if (requiresOnboarding(botCtx)) {
+      await sendOnboardingRequired(botCtx);
+      return;
+    }
+
+    try {
+      await handleCompareCommand(botCtx);
+    } catch (error) {
+      logger.error({ error, telegramUserId: ctx.from?.id }, "Error in /compare command");
+      await ctx.reply("Ошибка в команде /compare");
+    }
+  });
+
   // Handle /compare_dynamics command (Arina, pro credit)
   bot.command("compare_dynamics", async (ctx) => {
     const botCtx = ctx as BotContext;
@@ -473,9 +501,29 @@ export function setupRouter(): void {
         return;
       }
 
-      // Route compare callbacks (cancel button)
+      // Route compare callbacks. The `cmp:` family fans out into:
+      //   cmp:cancel              → cancel an active session
+      //   cmp:mode:*              → /compare mode picker
+      //   cmp:start_from:*        → "Compare with a new cup" CTA
+      //   cmp:sfm:*               → mode picker for "compare from analysis"
       if (isCompareCallback(ctx.callbackQuery.data)) {
-        await handleCompareCancelCallback(botCtx);
+        const data = ctx.callbackQuery.data;
+        if (data === COMPARE_CANCEL_CALLBACK) {
+          await handleCompareCancelCallback(botCtx);
+        } else if (data.startsWith(COMPARE_START_FROM_MODE_PREFIX)) {
+          // NOTE: must be checked BEFORE COMPARE_START_FROM_PREFIX because
+          // "cmp:sfm:" does NOT share a prefix with "cmp:start_from:" — they
+          // are distinct, but the order is kept defensive in case the
+          // constants ever change.
+          await handleCompareStartFromModeCallback(botCtx);
+        } else if (data.startsWith(COMPARE_START_FROM_PREFIX)) {
+          await handleCompareStartFromCallback(botCtx);
+        } else if (data.startsWith(COMPARE_MODE_PREFIX)) {
+          await handleCompareModeCallback(botCtx);
+        } else {
+          // Unknown cmp:* callback — acknowledge to clear the spinner.
+          await ctx.answerCallbackQuery();
+        }
         return;
       }
 
@@ -493,13 +541,16 @@ export function setupRouter(): void {
     logger.error({ error: err.error, updateId }, "Bot error caught by global handler");
   });
 
-  // Set bot commands menu (fire-and-forget)
+  // Set bot commands menu (fire-and-forget).
+  //
+  // Note: /compare_dynamics and /compare_compatibility are intentionally NOT
+  // shown in the visible Telegram command menu — they remain functional for
+  // backwards compatibility but are superseded by the unified /compare.
   bot.api
     .setMyCommands([
       { command: "start", description: "Начать работу с ботом" },
       { command: "cassandra", description: "Премиум гадалка Кассандра" },
-      { command: "compare_dynamics", description: "Сравнить две свои чашки (динамика)" },
-      { command: "compare_compatibility", description: "Сравнить две чашки (совместимость)" },
+      { command: "compare", description: "Сравнить две чашки" },
       { command: "cancel_compare", description: "Отменить сравнение чашек" },
       { command: "credits", description: "Проверить баланс кредитов" },
       { command: "history", description: "История гаданий" },

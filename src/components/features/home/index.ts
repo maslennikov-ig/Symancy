@@ -6,6 +6,7 @@
  * @module components/features/home
  */
 export { BalanceCard } from './BalanceCard';
+export { CompareBanner } from './CompareBanner';
 export { DailyInsightCard } from './DailyInsightCard';
 export { QuickActions } from './QuickActions';
 export { RecentActivity } from './RecentActivity';

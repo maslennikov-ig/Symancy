@@ -14,6 +14,7 @@ import {
   handleCompareDynamicsCommand as compareDynamicsImpl,
   handleCompareCompatibilityCommand as compareCompatibilityImpl,
   handleCancelCompareCommand as cancelCompareImpl,
+  handleCompareCommand as compareImpl,
 } from '../compare/handler.js';
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -23,6 +24,7 @@ import {
 export const handleCompareDynamicsCommand = compareDynamicsImpl;
 export const handleCompareCompatibilityCommand = compareCompatibilityImpl;
 export const handleCancelCompareCommand = cancelCompareImpl;
+export const handleCompareCommand = compareImpl;
 
 const logger = getLogger().child({ module: 'router:commands' });
 
