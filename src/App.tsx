@@ -29,6 +29,7 @@ const Chat = lazy(() => import('./pages/Chat'));
 const History = lazy(() => import('./pages/History'));
 const Link = lazy(() => import('./pages/Link'));
 const Profile = lazy(() => import('./pages/Profile'));
+const Compare = lazy(() => import('./pages/Compare'));
 const ProfileCredits = lazy(() => import('./pages/Profile/Credits'));
 const ProfileSubscription = lazy(() => import('./pages/Profile/Subscription'));
 const AdminApp = lazy(() => import('./admin/AdminApp'));
@@ -567,6 +568,10 @@ const App: React.FC = () => {
           <Route
             path="/contacts"
             element={withAppLayout(<Contacts language={language} t={t} />)}
+          />
+          <Route
+            path="/compare"
+            element={withAppLayout(<Compare language={language} t={t} />)}
           />
 
           {/* Onboarding route for Telegram Mini App */}

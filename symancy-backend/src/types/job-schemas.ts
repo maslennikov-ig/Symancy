@@ -21,10 +21,21 @@ export type ReadingTopic = z.infer<typeof ReadingTopicEnum>;
 
 /**
  * Credit type for consumption
+ * Note: photo-analysis topic flow only uses basic | pro.
+ * Compare flow uses pro (dynamics) or cassandra (compatibility).
  */
-export const CreditTypeEnum = z.enum(["basic", "pro"]);
+export const CreditTypeEnum = z.enum(["basic", "pro", "cassandra"]);
 
 export type CreditType = z.infer<typeof CreditTypeEnum>;
+
+/**
+ * Compare mode for two-cup analysis flow
+ * - dynamics: same person, two moments — Arina, pro credit
+ * - compatibility: two different people — Cassandra, cassandra credit
+ */
+export const CompareModeEnum = z.enum(["dynamics", "compatibility"]);
+
+export type CompareMode = z.infer<typeof CompareModeEnum>;
 
 /**
  * Photo analysis job schema
@@ -69,6 +80,28 @@ export const RetopicJobSchema = z.object({
 });
 
 export type RetopicJobData = z.infer<typeof RetopicJobSchema>;
+
+/**
+ * Compare photos job schema
+ * Validates job data for compare-photos queue.
+ *
+ * This job is enqueued only when the user sends the SECOND photo in an
+ * active compare session. It runs vision analysis on the second cup,
+ * fetches vision_result of the first cup (by firstAnalysisId), consumes
+ * the appropriate credit, and produces a comparison interpretation.
+ */
+export const ComparePhotosJobSchema = z.object({
+  telegramUserId: z.number().int().positive(),
+  chatId: z.number().int(),
+  messageId: z.number().int().positive(),
+  fileId: z.string().min(1),
+  compareMode: CompareModeEnum,
+  firstAnalysisId: z.string().uuid(),
+  language: z.string().min(2).max(10),
+  userName: z.string().optional(),
+});
+
+export type ComparePhotosJobData = z.infer<typeof ComparePhotosJobSchema>;
 
 /**
  * Chat reply job schema

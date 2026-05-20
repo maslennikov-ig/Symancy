@@ -17,6 +17,9 @@ import {
   handleCreditsCommand,
   handleHistoryCommand,
   handleLinkCommand,
+  handleCompareDynamicsCommand,
+  handleCompareCompatibilityCommand,
+  handleCancelCompareCommand,
 } from "./commands.js";
 import {
   startOnboarding,
@@ -26,6 +29,13 @@ import {
   isInOnboarding,
 } from "../onboarding/handler.js";
 import { handleMoodCommand, handleMoodCallback } from "../mood/handler.js";
+import {
+  handleComparePhoto,
+  handleCompareText,
+  handleCompareCancelCallback,
+  isCompareSessionActive,
+} from "../compare/handler.js";
+import { isCompareCallback } from "../compare/keyboards.js";
 
 const logger = getLogger().child({ module: "router" });
 
@@ -294,7 +304,61 @@ export function setupRouter(): void {
     }
   });
 
-  // Handle photos - delegate to photo-analysis module
+  // Handle /compare_dynamics command (Arina, pro credit)
+  bot.command("compare_dynamics", async (ctx) => {
+    const botCtx = ctx as BotContext;
+    logger.info({ telegramUserId: ctx.from?.id }, "Received /compare_dynamics command");
+
+    if (requiresOnboarding(botCtx)) {
+      await sendOnboardingRequired(botCtx);
+      return;
+    }
+
+    try {
+      await handleCompareDynamicsCommand(botCtx);
+    } catch (error) {
+      logger.error({ error, telegramUserId: ctx.from?.id }, "Error in /compare_dynamics command");
+      await ctx.reply("Ошибка в команде /compare_dynamics");
+    }
+  });
+
+  // Handle /compare_compatibility command (Cassandra, cassandra credit)
+  bot.command("compare_compatibility", async (ctx) => {
+    const botCtx = ctx as BotContext;
+    logger.info({ telegramUserId: ctx.from?.id }, "Received /compare_compatibility command");
+
+    if (requiresOnboarding(botCtx)) {
+      await sendOnboardingRequired(botCtx);
+      return;
+    }
+
+    try {
+      await handleCompareCompatibilityCommand(botCtx);
+    } catch (error) {
+      logger.error({ error, telegramUserId: ctx.from?.id }, "Error in /compare_compatibility command");
+      await ctx.reply("Ошибка в команде /compare_compatibility");
+    }
+  });
+
+  // Handle /cancel_compare command (clear pending compare session)
+  bot.command("cancel_compare", async (ctx) => {
+    const botCtx = ctx as BotContext;
+    logger.info({ telegramUserId: ctx.from?.id }, "Received /cancel_compare command");
+
+    if (requiresOnboarding(botCtx)) {
+      await sendOnboardingRequired(botCtx);
+      return;
+    }
+
+    try {
+      await handleCancelCompareCommand(botCtx);
+    } catch (error) {
+      logger.error({ error, telegramUserId: ctx.from?.id }, "Error in /cancel_compare command");
+      await ctx.reply("Ошибка в команде /cancel_compare");
+    }
+  });
+
+  // Handle photos - delegate to compare module first (if active), else photo-analysis
   bot.on("message:photo", async (ctx) => {
     const botCtx = ctx as BotContext;
     logger.info({ telegramUserId: ctx.from?.id }, "Received photo message");
@@ -304,6 +368,16 @@ export function setupRouter(): void {
       if (requiresOnboarding(botCtx)) {
         await handlePhotoBeforeOnboarding(botCtx);
         return;
+      }
+
+      // Active compare session? Route through compare handler.
+      // It returns false if the session has just expired or is missing,
+      // in which case we fall through to the normal photo flow.
+      if (ctx.from && (await isCompareSessionActive(ctx.from.id))) {
+        const consumed = await handleComparePhoto(botCtx);
+        if (consumed) {
+          return;
+        }
       }
 
       await handlePhotoMessage(botCtx);
@@ -342,6 +416,15 @@ export function setupRouter(): void {
         // Profile exists but onboarding not completed - prompt to start
         await sendOnboardingRequired(botCtx);
       } else {
+        // Compare session active? Nudge the user to send a photo (or cancel).
+        // Skip nudge for commands so /cancel_compare etc. still work.
+        if (!text.startsWith("/") && ctx.from) {
+          const consumed = await handleCompareText(botCtx);
+          if (consumed) {
+            return;
+          }
+        }
+
         // Normal message handling for users who completed onboarding
         await handleTextMessage(botCtx);
       }
@@ -390,6 +473,12 @@ export function setupRouter(): void {
         return;
       }
 
+      // Route compare callbacks (cancel button)
+      if (isCompareCallback(ctx.callbackQuery.data)) {
+        await handleCompareCancelCallback(botCtx);
+        return;
+      }
+
       // Unknown callback - acknowledge to remove loading state
       await ctx.answerCallbackQuery({ text: "Обрабатывается..." });
     } catch (error) {
@@ -409,6 +498,9 @@ export function setupRouter(): void {
     .setMyCommands([
       { command: "start", description: "Начать работу с ботом" },
       { command: "cassandra", description: "Премиум гадалка Кассандра" },
+      { command: "compare_dynamics", description: "Сравнить две свои чашки (динамика)" },
+      { command: "compare_compatibility", description: "Сравнить две чашки (совместимость)" },
+      { command: "cancel_compare", description: "Отменить сравнение чашек" },
       { command: "credits", description: "Проверить баланс кредитов" },
       { command: "history", description: "История гаданий" },
       { command: "link", description: "Связать с веб-версией" },

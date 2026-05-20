@@ -10,6 +10,19 @@ import { getSupabase } from '../../core/database.js';
 import { getCreditBalance } from '../credits/service.js';
 import { generateLinkToken } from '../../services/auth/LinkTokenService.js';
 import { getBotMessage } from '../../services/i18n/index.js';
+import {
+  handleCompareDynamicsCommand as compareDynamicsImpl,
+  handleCompareCompatibilityCommand as compareCompatibilityImpl,
+  handleCancelCompareCommand as cancelCompareImpl,
+} from '../compare/handler.js';
+
+// ──────────────────────────────────────────────────────────────────────────
+// Re-export compare command handlers so the router has a single import site.
+// The actual implementation lives in modules/compare/handler.ts.
+// ──────────────────────────────────────────────────────────────────────────
+export const handleCompareDynamicsCommand = compareDynamicsImpl;
+export const handleCompareCompatibilityCommand = compareCompatibilityImpl;
+export const handleCancelCompareCommand = cancelCompareImpl;
 
 const logger = getLogger().child({ module: 'router:commands' });
 

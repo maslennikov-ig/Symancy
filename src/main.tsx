@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
+import { Toaster } from 'sonner';
 import './index.css';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
@@ -55,6 +56,7 @@ root.render(
     <AuthProvider>
       <BrowserRouter>
         <App />
+        <Toaster position="top-center" richColors closeButton />
       </BrowserRouter>
     </AuthProvider>
   </React.StrictMode>

@@ -134,6 +134,18 @@ export const QUEUE_EVENING_INSIGHT_SINGLE = "evening-insight-single";
  */
 export const QUEUE_RETOPIC_PHOTO = "retopic-photo";
 
+/**
+ * Queue name for compare-photos (two-cup comparison: dynamics or compatibility)
+ */
+export const QUEUE_COMPARE_PHOTOS = "compare-photos";
+
+/**
+ * TTL for an active compare session in milliseconds.
+ * If user does not send the second photo within this window,
+ * the session is reset and they are asked to start over.
+ */
+export const COMPARE_SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
 // =============================================================================
 // Rate Limits
 // =============================================================================
@@ -290,6 +302,17 @@ export const MODEL_ARINA_BASIC = "deepseek/deepseek-v4-flash";
  * Model for Cassandra persona (premium, thinking model)
  */
 export const MODEL_CASSANDRA = "moonshotai/kimi-k2-thinking";
+
+/**
+ * Model for Arina compare-dynamics (Advanced tariff, two-cup comparison)
+ * Same model family as MODEL_ARINA but used by the comparison chain.
+ */
+export const MODEL_ARINA_DYNAMICS = "openai/gpt-oss-120b";
+
+/**
+ * Model for Cassandra compare-compatibility (Premium tariff, two-cup comparison)
+ */
+export const MODEL_CASSANDRA_COMPATIBILITY = "moonshotai/kimi-k2-thinking";
 
 /**
  * Model for general chat

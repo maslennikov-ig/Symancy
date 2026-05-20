@@ -32,6 +32,13 @@ export interface ChatMessage {
 }
 
 /**
+ * Compare mode for two-cup analysis flow
+ * - dynamics: same person, two moments (Arina, pro credit)
+ * - compatibility: two different people (Cassandra, cassandra credit)
+ */
+export type CompareMode = "dynamics" | "compatibility";
+
+/**
  * User state for onboarding and context
  * Tracks current user position in conversational flows
  */
@@ -46,6 +53,21 @@ export interface UserState {
   daily_invalid_count: number;
   /** Reset timestamp for daily invalid counter */
   daily_invalid_reset_at: string | null;
+  /**
+   * Active compare session mode (NULL = no compare session).
+   * Set via /compare_dynamics or /compare_compatibility.
+   */
+  pending_compare_type: CompareMode | null;
+  /**
+   * ID of the first analysis_history row in current compare session.
+   * NULL until first photo has been processed.
+   */
+  pending_first_analysis_id: string | null;
+  /**
+   * Timestamp when the compare session was started (used for TTL).
+   * NULL when no compare session is active.
+   */
+  pending_compare_started_at: string | null;
   updated_at: Date;
 }
 

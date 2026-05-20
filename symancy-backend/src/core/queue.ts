@@ -20,6 +20,7 @@ import {
   QUEUE_MORNING_INSIGHT_SINGLE,
   QUEUE_EVENING_INSIGHT_SINGLE,
   QUEUE_RETOPIC_PHOTO,
+  QUEUE_COMPARE_PHOTOS,
   JOB_TIMEOUT_MS,
 } from "../config/constants.js";
 import {
@@ -27,10 +28,12 @@ import {
   ChatReplyJobSchema,
   SendMessageJobSchema,
   RetopicJobSchema,
+  ComparePhotosJobSchema,
   type PhotoAnalysisJobData,
   type ChatReplyJobData,
   type SendMessageJobData,
   type RetopicJobData,
+  type ComparePhotosJobData,
 } from "../types/job-schemas.js";
 
 let _boss: PgBoss | null = null;
@@ -74,6 +77,7 @@ export async function getQueue(): Promise<PgBoss> {
       QUEUE_MORNING_INSIGHT_SINGLE,
       QUEUE_EVENING_INSIGHT_SINGLE,
       QUEUE_RETOPIC_PHOTO,
+      QUEUE_COMPARE_PHOTOS,
     ];
     for (const queueName of queuesToCreate) {
       try {
@@ -151,6 +155,24 @@ export async function sendRetopicJob(data: RetopicJobData): Promise<string | nul
 
   const boss = await getQueue();
   return boss.send(QUEUE_RETOPIC_PHOTO, validated, {
+    retryLimit: 3,
+    retryDelay: 5,
+    expireInSeconds: JOB_TIMEOUT_MS / 1000,
+  });
+}
+
+/**
+ * Send job to compare-photos queue (two-cup comparison)
+ * Triggered when user sends the SECOND photo in an active compare session.
+ *
+ * @param data - Job data (validated against ComparePhotosJobSchema)
+ * @returns Job ID or null if failed
+ */
+export async function sendComparePhotosJob(data: ComparePhotosJobData): Promise<string | null> {
+  const validated = ComparePhotosJobSchema.parse(data);
+
+  const boss = await getQueue();
+  return boss.send(QUEUE_COMPARE_PHOTOS, validated, {
     retryLimit: 3,
     retryDelay: 5,
     expireInSeconds: JOB_TIMEOUT_MS / 1000,
@@ -399,4 +421,5 @@ export const QUEUES = {
   CHAT_REPLY: QUEUE_CHAT_REPLY,
   SEND_MESSAGE: QUEUE_SEND_MESSAGE,
   RETOPIC_PHOTO: QUEUE_RETOPIC_PHOTO,
+  COMPARE_PHOTOS: QUEUE_COMPARE_PHOTOS,
 } as const;

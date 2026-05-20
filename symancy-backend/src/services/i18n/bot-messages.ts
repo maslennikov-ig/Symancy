@@ -32,7 +32,20 @@ export type BotMessageKey =
   | 'link.alreadyLinked'
   | 'link.generateUrl'
   | 'link.benefits'
-  | 'link.notFound';
+  | 'link.notFound'
+  | 'compare.dynamics.start'
+  | 'compare.compatibility.start'
+  | 'compare.firstReceived'
+  | 'compare.sendPhotoPrompt'
+  | 'compare.expectingPhoto'
+  | 'compare.sessionExpired'
+  | 'compare.cancelled'
+  | 'compare.nothingToCancel'
+  | 'compare.processing'
+  | 'compare.insufficientCreditsPro'
+  | 'compare.insufficientCreditsCassandra'
+  | 'compare.error'
+  | 'compare.cancelButton';
 
 /**
  * Bot messages translations
@@ -85,6 +98,32 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
       '• Объединить кредиты и историю',
     'link.notFound':
       'Аккаунт не найден. Сначала отправьте /start для регистрации.',
+    'compare.dynamics.start':
+      '☕️ Сравнение динамики (Арина)\n\n' +
+      'Я сравню две ваши чашки и покажу, что изменилось во внутреннем пейзаже между двумя моментами.\n\n' +
+      'Отправьте первое фото кофейной гущи.',
+    'compare.compatibility.start':
+      '🔮 Сравнение совместимости (Кассандра)\n\n' +
+      'Я прочитаю встречу двух энергий — как они резонируют, где сталкиваются, что шепчут о вашем союзе.\n\n' +
+      'Пришлите первое фото кофейной гущи (одного человека).',
+    'compare.firstReceived':
+      '✨ Первая чашка проанализирована.\n\nТеперь отправьте вторую фотографию.',
+    'compare.sendPhotoPrompt':
+      'Жду фото кофейной гущи, чтобы продолжить сравнение. Отправьте /cancel_compare, чтобы отменить.',
+    'compare.expectingPhoto':
+      'Сейчас я жду фото, а не текст. Пришлите фотографию или отмените сравнение командой /cancel_compare.',
+    'compare.sessionExpired':
+      '⏳ Сессия сравнения истекла. Начните заново командой /compare_dynamics или /compare_compatibility.',
+    'compare.cancelled': '✅ Сравнение отменено.',
+    'compare.nothingToCancel': 'Активного сравнения нет.',
+    'compare.processing': '☕️ Сравниваю чашки...',
+    'compare.insufficientCreditsPro':
+      '💳 Недостаточно Pro-кредитов для сравнения динамики.\nИспользуйте /credits для проверки баланса.',
+    'compare.insufficientCreditsCassandra':
+      '💳 Недостаточно Cassandra-кредитов для сравнения совместимости.\nИспользуйте /credits для проверки баланса.',
+    'compare.error':
+      'Произошла ошибка при сравнении. Кредит возвращён. Попробуйте ещё раз.',
+    'compare.cancelButton': '❌ Отменить сравнение',
   },
   en: {
     'error.generic': 'An error occurred. Please try again later.',
@@ -132,6 +171,32 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
       '• Use one account on website and Telegram\n' +
       '• Merge credits and history',
     'link.notFound': 'Account not found. Send /start first to register.',
+    'compare.dynamics.start':
+      '☕️ Dynamics comparison (Arina)\n\n' +
+      'I will compare two of your cups and show what has shifted in your inner landscape between the two moments.\n\n' +
+      'Please send the first coffee-grounds photo.',
+    'compare.compatibility.start':
+      '🔮 Compatibility reading (Cassandra)\n\n' +
+      'I will read the meeting of two energies — how they resonate, where they collide, what they whisper about your union.\n\n' +
+      'Send the first coffee-grounds photo (one person\'s cup).',
+    'compare.firstReceived':
+      '✨ The first cup has been analyzed.\n\nNow send the second photo.',
+    'compare.sendPhotoPrompt':
+      'Waiting for the coffee-grounds photo to continue the comparison. Send /cancel_compare to abort.',
+    'compare.expectingPhoto':
+      'I am waiting for a photo, not text. Send a picture or cancel with /cancel_compare.',
+    'compare.sessionExpired':
+      '⏳ The comparison session has expired. Start again with /compare_dynamics or /compare_compatibility.',
+    'compare.cancelled': '✅ Comparison cancelled.',
+    'compare.nothingToCancel': 'No active comparison session.',
+    'compare.processing': '☕️ Comparing the two cups...',
+    'compare.insufficientCreditsPro':
+      '💳 Not enough Pro credits for dynamics comparison.\nUse /credits to check your balance.',
+    'compare.insufficientCreditsCassandra':
+      '💳 Not enough Cassandra credits for compatibility comparison.\nUse /credits to check your balance.',
+    'compare.error':
+      'An error occurred during comparison. Your credit has been refunded. Please try again.',
+    'compare.cancelButton': '❌ Cancel comparison',
   },
   zh: {
     'error.generic': '发生错误。请稍后再试。',
@@ -179,6 +244,32 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
       '• 在网站和Telegram使用同一账户\n' +
       '• 合并积分和历史记录',
     'link.notFound': '未找到账户。请先发送 /start 进行注册。',
+    'compare.dynamics.start':
+      '☕️ 动态对比（阿丽娜）\n\n' +
+      '我将比较您的两杯咖啡渣，展示两个时刻之间内心世界的变化。\n\n' +
+      '请发送第一张咖啡渣照片。',
+    'compare.compatibility.start':
+      '🔮 兼容性解读（卡桑德拉）\n\n' +
+      '我将解读两种能量的相遇——它们如何共鸣、在哪里碰撞、对你们的关系低语何种讯息。\n\n' +
+      '请发送第一张咖啡渣照片（一个人的杯子）。',
+    'compare.firstReceived':
+      '✨ 第一杯已分析完成。\n\n现在请发送第二张照片。',
+    'compare.sendPhotoPrompt':
+      '正在等待咖啡渣照片以继续对比。发送 /cancel_compare 取消。',
+    'compare.expectingPhoto':
+      '我正在等待照片，不是文字。请发送图片或使用 /cancel_compare 取消。',
+    'compare.sessionExpired':
+      '⏳ 对比会话已过期。请使用 /compare_dynamics 或 /compare_compatibility 重新开始。',
+    'compare.cancelled': '✅ 对比已取消。',
+    'compare.nothingToCancel': '没有正在进行的对比会话。',
+    'compare.processing': '☕️ 正在对比两杯咖啡渣...',
+    'compare.insufficientCreditsPro':
+      '💳 Pro 积分不足，无法进行动态对比。\n使用 /credits 查看余额。',
+    'compare.insufficientCreditsCassandra':
+      '💳 Cassandra 积分不足，无法进行兼容性对比。\n使用 /credits 查看余额。',
+    'compare.error':
+      '对比时出错。您的积分已退还。请重试。',
+    'compare.cancelButton': '❌ 取消对比',
   },
 };
 

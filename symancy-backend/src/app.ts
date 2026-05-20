@@ -17,6 +17,7 @@ import { closeCheckpointer } from "./core/langchain/index.js";
 import { setupRouter } from "./modules/router/index.js";
 import { registerPhotoWorker } from "./modules/photo-analysis/worker.js";
 import { registerRetopicWorker } from "./modules/photo-analysis/retopic-worker.js";
+import { registerCompareWorker } from "./modules/compare/worker.js";
 import { registerChatWorker } from "./modules/chat/worker.js";
 import { setupScheduler, registerEngagementWorkers } from "./modules/engagement/index.js";
 import { runWebhookHealthCheck } from "./services/webhook-health.service.js";
@@ -247,6 +248,10 @@ async function startWorkers() {
   // Register retopic worker (re-reading another topic from same cup)
   const retopicWorkerId = await registerRetopicWorker();
   logger.info({ workerId: retopicWorkerId }, "Retopic worker registered");
+
+  // Register compare-photos worker (dynamics + compatibility two-cup flow)
+  const compareWorkerId = await registerCompareWorker();
+  logger.info({ workerId: compareWorkerId }, "Compare-photos worker registered");
 
   // Register chat reply worker
   const chatWorkerId = await registerChatWorker();

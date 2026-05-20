@@ -906,6 +906,40 @@ export const translations = {
 
     // CreditBalance badge
     'subscription.badge.active': 'Active',
+
+    // MultiImageUploader (compare two cups)
+    'multiImageUploader.firstCup': 'First cup',
+    'multiImageUploader.secondCup': 'Second cup',
+    'multiImageUploader.changePhoto': 'Change photo',
+    'multiImageUploader.dropHere': 'Drag a photo here or click to choose',
+    'multiImageUploader.uploadButton': 'Choose file',
+    'multiImageUploader.compareNow': 'Compare',
+    'multiImageUploader.invalidType': 'Unsupported file type. Use JPG, PNG, WebP or HEIC.',
+    'multiImageUploader.tooLarge': 'File is too large. Max size is 10 MB.',
+
+    // Compare page (two-cup analysis)
+    'compare.title': 'Compare cups',
+    'compare.subtitle': 'Upload two photos to see how your cup is changing or how two people match.',
+    'compare.tab.dynamics': 'Dynamics',
+    'compare.tab.compatibility': 'Compatibility',
+    'compare.dynamics.title': 'Cup dynamics',
+    'compare.dynamics.description': 'Same person, two moments — see what is changing inside.',
+    'compare.compatibility.title': 'Cup compatibility',
+    'compare.compatibility.description': 'Two people, one reading — see how you mirror each other.',
+    'compare.processing': 'Analyzing your cups…',
+    'compare.error': 'We could not finish the analysis. Please try again.',
+    'compare.error.tryAgain': 'Try again',
+    'compare.upgrade.dynamics': 'Dynamics comparison is part of the Inner Sage plan.',
+    'compare.upgrade.compatibility': 'Compatibility comparison is part of the Cassandra plan.',
+    'compare.upgrade.cta': 'Go to pricing',
+    'compare.result.title': 'Comparison result',
+    'compare.result.reset': 'Compare another pair',
+    'compare.firstLabel': 'First cup',
+    'compare.secondLabel': 'Second cup',
+    'compare.firstLabel.compatibility': 'First person',
+    'compare.secondLabel.compatibility': 'Second person',
+    'compare.locked.title': 'Plan upgrade required',
+    'compare.auth.required': 'Please sign in to compare your cups.',
   },
   ru: {
     'header.title': 'Кофейный Психолог',
@@ -1814,6 +1848,40 @@ export const translations = {
 
     // CreditBalance badge
     'subscription.badge.active': 'Активна',
+
+    // MultiImageUploader (compare two cups)
+    'multiImageUploader.firstCup': 'Первая чашка',
+    'multiImageUploader.secondCup': 'Вторая чашка',
+    'multiImageUploader.changePhoto': 'Сменить',
+    'multiImageUploader.dropHere': 'Перетащите фото сюда или нажмите, чтобы выбрать',
+    'multiImageUploader.uploadButton': 'Выбрать файл',
+    'multiImageUploader.compareNow': 'Анализировать',
+    'multiImageUploader.invalidType': 'Неподдерживаемый формат. Используйте JPG, PNG, WebP или HEIC.',
+    'multiImageUploader.tooLarge': 'Файл слишком большой. Максимум 10 МБ.',
+
+    // Compare page (two-cup analysis)
+    'compare.title': 'Сравнение чашек',
+    'compare.subtitle': 'Загрузите два фото, чтобы увидеть, как меняется ваша чашка или как сочетаются двое.',
+    'compare.tab.dynamics': 'Динамика',
+    'compare.tab.compatibility': 'Совместимость',
+    'compare.dynamics.title': 'Динамика чашки',
+    'compare.dynamics.description': 'Один человек, два момента — посмотрим, что меняется внутри.',
+    'compare.compatibility.title': 'Совместимость',
+    'compare.compatibility.description': 'Двое людей, одно прочтение — посмотрим, как вы отражаете друг друга.',
+    'compare.processing': 'Анализируем ваши чашки…',
+    'compare.error': 'Не удалось завершить анализ. Попробуйте ещё раз.',
+    'compare.error.tryAgain': 'Попробовать снова',
+    'compare.upgrade.dynamics': 'Сравнение динамики доступно на тарифе «Внутренний Мудрец».',
+    'compare.upgrade.compatibility': 'Сравнение совместимости доступно на тарифе «Кассандра».',
+    'compare.upgrade.cta': 'К тарифам',
+    'compare.result.title': 'Результат сравнения',
+    'compare.result.reset': 'Сравнить другую пару',
+    'compare.firstLabel': 'Первая чашка',
+    'compare.secondLabel': 'Вторая чашка',
+    'compare.firstLabel.compatibility': 'Первый человек',
+    'compare.secondLabel.compatibility': 'Второй человек',
+    'compare.locked.title': 'Нужен апгрейд тарифа',
+    'compare.auth.required': 'Войдите, чтобы сравнить чашки.',
   },
   zh: {
     'header.title': '咖啡心理学家',
@@ -2722,6 +2790,40 @@ export const translations = {
 
     // CreditBalance badge
     'subscription.badge.active': '活跃',
+
+    // MultiImageUploader (compare two cups)
+    'multiImageUploader.firstCup': '第一杯',
+    'multiImageUploader.secondCup': '第二杯',
+    'multiImageUploader.changePhoto': '更换照片',
+    'multiImageUploader.dropHere': '将照片拖到此处或点击选择',
+    'multiImageUploader.uploadButton': '选择文件',
+    'multiImageUploader.compareNow': '开始分析',
+    'multiImageUploader.invalidType': '不支持的文件类型。请使用 JPG、PNG、WebP 或 HEIC。',
+    'multiImageUploader.tooLarge': '文件过大。最大 10 MB。',
+
+    // Compare page (two-cup analysis)
+    'compare.title': '杯子对比',
+    'compare.subtitle': '上传两张照片，看看你的杯子如何变化，或两个人如何匹配。',
+    'compare.tab.dynamics': '动态',
+    'compare.tab.compatibility': '兼容性',
+    'compare.dynamics.title': '杯子动态',
+    'compare.dynamics.description': '同一个人，两个时刻——看看内心正在发生什么变化。',
+    'compare.compatibility.title': '杯子兼容性',
+    'compare.compatibility.description': '两个人，一次解读——看看你们如何相互映照。',
+    'compare.processing': '正在分析您的杯子…',
+    'compare.error': '我们无法完成分析。请重试。',
+    'compare.error.tryAgain': '重试',
+    'compare.upgrade.dynamics': '动态对比需要「内在贤者」套餐。',
+    'compare.upgrade.compatibility': '兼容性对比需要「卡桑德拉」套餐。',
+    'compare.upgrade.cta': '前往套餐',
+    'compare.result.title': '对比结果',
+    'compare.result.reset': '对比另一对',
+    'compare.firstLabel': '第一杯',
+    'compare.secondLabel': '第二杯',
+    'compare.firstLabel.compatibility': '第一个人',
+    'compare.secondLabel.compatibility': '第二个人',
+    'compare.locked.title': '需要升级套餐',
+    'compare.auth.required': '请登录以对比您的杯子。',
   },
 };
 
