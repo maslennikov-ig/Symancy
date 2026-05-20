@@ -29,8 +29,14 @@ const corsHeaders = {
 };
 
 const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+if (!OPENROUTER_API_KEY) {
+  console.error("FATAL: OPENROUTER_API_KEY env var is not set");
+}
 const SITE_URL = Deno.env.get("SITE_URL") || "https://symancy.ru";
 const APP_NAME = "Symancy/1.0";
+
+// ~14 MB base64 ≈ 10 MB binary
+const MAX_BASE64_LEN = Math.ceil(10 * 1024 * 1024 * 1.4);
 
 const VISION_MODEL = "x-ai/grok-4.1-fast";
 const DYNAMICS_MODEL = "openai/gpt-oss-120b";
@@ -106,7 +112,8 @@ async function callVision(image: string, mimeType: string): Promise<VisionCallRe
   }
 
   const data = await response.json();
-  const description = data?.choices?.[0]?.message?.content ?? "";
+  const rawDescription: string = data?.choices?.[0]?.message?.content ?? "";
+  const description = rawDescription.length > 3000 ? rawDescription.slice(0, 3000) : rawDescription;
   const tokensUsed = data?.usage?.total_tokens ?? 0;
 
   if (!description) {
@@ -227,14 +234,15 @@ interface CreditOpResult {
 
 /**
  * Consume one credit of the given type. Prefers RPC consume_unified_credit
- * (keyed by telegram_id). Falls back to a direct SQL update on
- * unified_user_credits for web-only users that have no telegram_id yet.
+ * (keyed by telegram_id). For web-only users without telegram_id linkage,
+ * uses the race-safe consume_unified_credit_by_unified_user_id RPC.
  */
 async function consumeCreditForAuthUser(
   serviceClient: SupabaseClient,
   user: UnifiedUserLookup,
   creditType: CreditType,
 ): Promise<CreditOpResult> {
+  // Prefer telegram-id path (existing RPC, race-safe)
   if (user.telegramId != null) {
     const { data, error } = await serviceClient.rpc("consume_unified_credit", {
       p_telegram_id: user.telegramId,
@@ -244,7 +252,6 @@ async function consumeCreditForAuthUser(
       console.error("consume_unified_credit RPC error", error);
       return { success: false, remaining: null, reason: error.message };
     }
-    // rpc returns TABLE(success boolean, remaining integer) → comes back as an array
     const row = Array.isArray(data) ? data[0] : data;
     return {
       success: !!row?.success,
@@ -252,41 +259,29 @@ async function consumeCreditForAuthUser(
     };
   }
 
-  // Fallback for web-only users without telegram_id linkage.
-  const column = `credits_${creditType}`; // credits_pro | credits_cassandra
-  const { data: current, error: fetchErr } = await serviceClient
-    .from("unified_user_credits")
-    .select(`id, ${column}`)
-    .eq("unified_user_id", user.unifiedUserId)
-    .maybeSingle();
-
-  if (fetchErr) {
-    console.error("unified_user_credits fetch error", fetchErr);
-    return { success: false, remaining: null, reason: fetchErr.message };
+  // Web-only fallback — атомарный RPC по unified_user_id
+  const { data, error } = await serviceClient.rpc(
+    "consume_unified_credit_by_unified_user_id",
+    {
+      p_unified_user_id: user.unifiedUserId,
+      p_credit_type: creditType,
+    },
+  );
+  if (error) {
+    console.error("consume_unified_credit_by_unified_user_id RPC error", error);
+    return { success: false, remaining: null, reason: error.message };
   }
-  if (!current) {
-    return { success: false, remaining: 0, reason: "No credit row" };
-  }
-
-  const balance = Number((current as Record<string, unknown>)[column] ?? 0);
-  if (balance <= 0) {
-    return { success: false, remaining: 0, reason: "Insufficient credits" };
-  }
-
-  const { error: updErr } = await serviceClient
-    .from("unified_user_credits")
-    .update({ [column]: balance - 1, updated_at: new Date().toISOString() })
-    .eq("unified_user_id", user.unifiedUserId);
-
-  if (updErr) {
-    console.error("unified_user_credits decrement error", updErr);
-    return { success: false, remaining: balance, reason: updErr.message };
-  }
-  return { success: true, remaining: balance - 1 };
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    success: !!row?.success,
+    remaining: typeof row?.remaining === "number" ? row.remaining : null,
+  };
 }
 
 /**
  * Refund one credit. Best-effort: logs on failure but never throws.
+ * Uses the race-safe refund_unified_credit_by_unified_user_id RPC for
+ * web-only users without telegram_id linkage.
  */
 async function refundCreditForAuthUser(
   serviceClient: SupabaseClient,
@@ -305,24 +300,15 @@ async function refundCreditForAuthUser(
       return;
     }
 
-    const column = `credits_${creditType}`;
-    const { data: current, error: fetchErr } = await serviceClient
-      .from("unified_user_credits")
-      .select(`id, ${column}`)
-      .eq("unified_user_id", user.unifiedUserId)
-      .maybeSingle();
-
-    if (fetchErr || !current) {
-      console.error("Refund fallback fetch failed", fetchErr);
-      return;
-    }
-    const balance = Number((current as Record<string, unknown>)[column] ?? 0);
-    const { error: updErr } = await serviceClient
-      .from("unified_user_credits")
-      .update({ [column]: balance + 1, updated_at: new Date().toISOString() })
-      .eq("unified_user_id", user.unifiedUserId);
-    if (updErr) {
-      console.error("Refund fallback update failed", updErr);
+    const { error } = await serviceClient.rpc(
+      "refund_unified_credit_by_unified_user_id",
+      {
+        p_unified_user_id: user.unifiedUserId,
+        p_credit_type: creditType,
+      },
+    );
+    if (error) {
+      console.error("refund_unified_credit_by_unified_user_id RPC error", error);
     }
   } catch (e) {
     console.error("Refund threw", e);
@@ -339,6 +325,10 @@ Deno.serve(async (req) => {
   }
   if (req.method !== "POST") {
     return errorResponse("Method not allowed", "METHOD_NOT_ALLOWED", 405);
+  }
+
+  if (!OPENROUTER_API_KEY) {
+    return errorResponse("Service misconfigured", "SERVICE_MISCONFIGURED", 503);
   }
 
   // Track credit consumption so we can refund on downstream failure.
@@ -386,6 +376,9 @@ Deno.serve(async (req) => {
 
     if (!firstImage || !secondImage) {
       return errorResponse("Both images are required", "BAD_REQUEST", 400);
+    }
+    if (firstImage.length > MAX_BASE64_LEN || secondImage.length > MAX_BASE64_LEN) {
+      return errorResponse("Image too large (max 10 MB)", "IMAGE_TOO_LARGE", 413);
     }
     if (!firstMimeType || !ALLOWED_MIME.has(firstMimeType)) {
       return errorResponse("Invalid firstMimeType", "BAD_REQUEST", 400);
@@ -500,6 +493,18 @@ Deno.serve(async (req) => {
 
     if (mainErr || !mainRow) {
       console.error("analysis_history main insert error", mainErr);
+      // Soft-delete the orphaned first row so it doesn't show up in history.
+      try {
+        await serviceClient
+          .from("analysis_history")
+          .update({
+            status: "failed",
+            error_message: "Main comparison row insert failed; first cup orphaned",
+          })
+          .eq("id", firstRow.id);
+      } catch (cleanupErr) {
+        console.error("Failed to mark orphaned firstRow as failed", cleanupErr);
+      }
       throw new Error("Failed to persist comparison history");
     }
 

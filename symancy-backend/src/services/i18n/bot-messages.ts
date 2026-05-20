@@ -18,6 +18,7 @@ export type BotMessageKey =
   | 'error.loadFailed'
   | 'error.balanceFailed'
   | 'error.linkFailed'
+  | 'error.maintenance'
   | 'cassandra.intro'
   | 'help.title'
   | 'help.commands'
@@ -57,6 +58,8 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
     'error.loadFailed': 'Не удалось загрузить историю. Попробуйте позже.',
     'error.balanceFailed': 'Не удалось получить баланс. Попробуйте позже.',
     'error.linkFailed': 'Не удалось создать ссылку. Попробуйте позже.',
+    'error.maintenance':
+      '⚙️ Бот находится на обслуживании. Попробуйте позже.',
     'cassandra.intro':
       '🔮 Приветствую, смертный. Я — Кассандра, мистик высшего ранга.\n\n' +
       'Моё искусство требует глубокого проникновения в символы судьбы. ' +
@@ -118,9 +121,13 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
     'compare.nothingToCancel': 'Активного сравнения нет.',
     'compare.processing': '☕️ Сравниваю чашки...',
     'compare.insufficientCreditsPro':
-      '💳 Недостаточно Pro-кредитов для сравнения динамики.\nИспользуйте /credits для проверки баланса.',
+      '💳 Недостаточно Pro-кредитов для сравнения динамики.\n' +
+      'Кредиты не были списаны.\n' +
+      'Используйте /credits для проверки баланса.',
     'compare.insufficientCreditsCassandra':
-      '💳 Недостаточно Cassandra-кредитов для сравнения совместимости.\nИспользуйте /credits для проверки баланса.',
+      '💳 Недостаточно Cassandra-кредитов для сравнения совместимости.\n' +
+      'Кредиты не были списаны.\n' +
+      'Используйте /credits для проверки баланса.',
     'compare.error':
       'Произошла ошибка при сравнении. Кредит возвращён. Попробуйте ещё раз.',
     'compare.cancelButton': '❌ Отменить сравнение',
@@ -131,6 +138,8 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
     'error.loadFailed': 'Failed to load history. Please try again later.',
     'error.balanceFailed': 'Failed to get balance. Please try again later.',
     'error.linkFailed': 'Failed to create link. Please try again later.',
+    'error.maintenance':
+      '⚙️ The bot is under maintenance. Please try again later.',
     'cassandra.intro':
       '🔮 Greetings, mortal. I am Cassandra, a mystic of the highest rank.\n\n' +
       'My art requires deep penetration into the symbols of fate. ' +
@@ -191,9 +200,13 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
     'compare.nothingToCancel': 'No active comparison session.',
     'compare.processing': '☕️ Comparing the two cups...',
     'compare.insufficientCreditsPro':
-      '💳 Not enough Pro credits for dynamics comparison.\nUse /credits to check your balance.',
+      '💳 Not enough Pro credits for dynamics comparison.\n' +
+      'No credits were deducted.\n' +
+      'Use /credits to check your balance.',
     'compare.insufficientCreditsCassandra':
-      '💳 Not enough Cassandra credits for compatibility comparison.\nUse /credits to check your balance.',
+      '💳 Not enough Cassandra credits for compatibility comparison.\n' +
+      'No credits were deducted.\n' +
+      'Use /credits to check your balance.',
     'compare.error':
       'An error occurred during comparison. Your credit has been refunded. Please try again.',
     'compare.cancelButton': '❌ Cancel comparison',
@@ -204,6 +217,7 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
     'error.loadFailed': '加载历史失败。请稍后再试。',
     'error.balanceFailed': '获取余额失败。请稍后再试。',
     'error.linkFailed': '创建链接失败。请稍后再试。',
+    'error.maintenance': '⚙️ 机器人正在维护中。请稍后再试。',
     'cassandra.intro':
       '🔮 你好，凡人。我是卡桑德拉，最高级别的神秘主义者。\n\n' +
       '我的艺术需要深入探索命运的符号。' +
@@ -264,9 +278,13 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
     'compare.nothingToCancel': '没有正在进行的对比会话。',
     'compare.processing': '☕️ 正在对比两杯咖啡渣...',
     'compare.insufficientCreditsPro':
-      '💳 Pro 积分不足，无法进行动态对比。\n使用 /credits 查看余额。',
+      '💳 Pro 积分不足，无法进行动态对比。\n' +
+      '未扣除积分。\n' +
+      '使用 /credits 查看余额。',
     'compare.insufficientCreditsCassandra':
-      '💳 Cassandra 积分不足，无法进行兼容性对比。\n使用 /credits 查看余额。',
+      '💳 Cassandra 积分不足，无法进行兼容性对比。\n' +
+      '未扣除积分。\n' +
+      '使用 /credits 查看余额。',
     'compare.error':
       '对比时出错。您的积分已退还。请重试。',
     'compare.cancelButton': '❌ 取消对比',

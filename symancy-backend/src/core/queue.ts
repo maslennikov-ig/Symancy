@@ -173,8 +173,13 @@ export async function sendComparePhotosJob(data: ComparePhotosJobData): Promise<
 
   const boss = await getQueue();
   return boss.send(QUEUE_COMPARE_PHOTOS, validated, {
-    retryLimit: 3,
+    // Lowered from 3 → 1 to prevent cascading retries that double-spend
+    // OpenRouter tokens and risk duplicate credit consumption on a flapping DB.
+    retryLimit: 1,
     retryDelay: 5,
+    // Dedupe by firstAnalysisId so an accidentally re-sent identical job is
+    // swallowed by pg-boss instead of triggering a second consume.
+    singletonKey: validated.firstAnalysisId,
     expireInSeconds: JOB_TIMEOUT_MS / 1000,
   });
 }

@@ -6,13 +6,24 @@ import { cn } from '../../../lib/utils';
 
 /**
  * Allowed mime-types for uploaded coffee cup photos.
+ *
+ * Note: HEIC/HEIF are intentionally NOT supported — the Vision API used by
+ * the Edge Function rejects HEIC payloads. We surface a dedicated error
+ * message when a user tries to upload one (detected via extension, since
+ * some browsers report empty mime for HEIC files).
  */
 const ALLOWED_MIME_TYPES = [
   'image/jpeg',
   'image/png',
   'image/webp',
-  'image/heic',
 ] as const;
+
+/**
+ * File extensions that indicate an HEIC/HEIF image. Detected separately so
+ * we can show a user-friendly "not supported" message instead of a generic
+ * invalid-type error.
+ */
+const HEIC_EXTENSION_RE = /\.(heic|heif)$/i;
 
 /**
  * Maximum file size per image (10 MB).
@@ -135,13 +146,26 @@ export const MultiImageUploader: React.FC<MultiImageUploaderProps> = ({
   /**
    * Validate a candidate file against mime-type and size constraints.
    * Returns a translated error message on failure, or `null` on success.
+   *
+   * HEIC/HEIF is rejected with a dedicated message — the Vision backend
+   * cannot decode raw HEIC bytes, and we deliberately stopped accepting
+   * the type to avoid silent mime mismatches downstream.
    */
   const validateFile = useCallback(
     (file: File): string | null => {
-      const isAllowedMime =
-        (ALLOWED_MIME_TYPES as readonly string[]).includes(file.type) ||
-        // Some browsers report empty type for .heic — fall back to extension.
-        /\.(heic|jpg|jpeg|png|webp)$/i.test(file.name);
+      // Detect HEIC/HEIF first so we can show a targeted message even when
+      // the browser reports an empty or generic mime type.
+      if (
+        file.type === 'image/heic' ||
+        file.type === 'image/heif' ||
+        HEIC_EXTENSION_RE.test(file.name)
+      ) {
+        return t('multiImageUploader.heicNotSupported');
+      }
+
+      const isAllowedMime = (ALLOWED_MIME_TYPES as readonly string[]).includes(
+        file.type,
+      );
 
       if (!isAllowedMime) {
         return t('multiImageUploader.invalidType');

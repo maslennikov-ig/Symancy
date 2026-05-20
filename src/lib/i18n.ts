@@ -914,7 +914,8 @@ export const translations = {
     'multiImageUploader.dropHere': 'Drag a photo here or click to choose',
     'multiImageUploader.uploadButton': 'Choose file',
     'multiImageUploader.compareNow': 'Compare',
-    'multiImageUploader.invalidType': 'Unsupported file type. Use JPG, PNG, WebP or HEIC.',
+    'multiImageUploader.invalidType': 'Unsupported file type. Use JPG, PNG or WebP.',
+    'multiImageUploader.heicNotSupported': 'HEIC format is not supported. Please convert to JPEG or PNG.',
     'multiImageUploader.tooLarge': 'File is too large. Max size is 10 MB.',
 
     // Compare page (two-cup analysis)
@@ -1856,7 +1857,8 @@ export const translations = {
     'multiImageUploader.dropHere': 'Перетащите фото сюда или нажмите, чтобы выбрать',
     'multiImageUploader.uploadButton': 'Выбрать файл',
     'multiImageUploader.compareNow': 'Анализировать',
-    'multiImageUploader.invalidType': 'Неподдерживаемый формат. Используйте JPG, PNG, WebP или HEIC.',
+    'multiImageUploader.invalidType': 'Неподдерживаемый формат. Используйте JPG, PNG или WebP.',
+    'multiImageUploader.heicNotSupported': 'Формат HEIC не поддерживается. Конвертируйте в JPEG или PNG.',
     'multiImageUploader.tooLarge': 'Файл слишком большой. Максимум 10 МБ.',
 
     // Compare page (two-cup analysis)
@@ -2798,7 +2800,8 @@ export const translations = {
     'multiImageUploader.dropHere': '将照片拖到此处或点击选择',
     'multiImageUploader.uploadButton': '选择文件',
     'multiImageUploader.compareNow': '开始分析',
-    'multiImageUploader.invalidType': '不支持的文件类型。请使用 JPG、PNG、WebP 或 HEIC。',
+    'multiImageUploader.invalidType': '不支持的文件类型。请使用 JPG、PNG 或 WebP。',
+    'multiImageUploader.heicNotSupported': '不支持 HEIC 格式。请转换为 JPEG 或 PNG。',
     'multiImageUploader.tooLarge': '文件过大。最大 10 MB。',
 
     // Compare page (two-cup analysis)

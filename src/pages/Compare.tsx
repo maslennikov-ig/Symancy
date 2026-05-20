@@ -71,12 +71,31 @@ function fileToBase64(file: File): Promise<{ data: string; mimeType: string }> {
 }
 
 /**
- * Cheap mime normaliser: the Edge Function only accepts a small subset.
- * Falls back to `image/jpeg` for unsupported types (HEIC, etc.).
+ * Allowed mime-types the `compare-coffee` Edge Function understands.
+ *
+ * HEIC is intentionally absent: the Vision API rejects HEIC payloads, and
+ * the upstream `MultiImageUploader` blocks them before they reach this
+ * page. Keeping the set narrow here guards against a future regression
+ * where a new accepted-but-incompatible type slips through.
  */
-function normaliseMime(mime: string): 'image/webp' | 'image/jpeg' | 'image/png' {
-  if (mime === 'image/webp' || mime === 'image/jpeg' || mime === 'image/png') {
-    return mime;
+type SupportedMime = 'image/webp' | 'image/jpeg' | 'image/png';
+
+const ALLOWED_WEB_MIME = new Set<SupportedMime>([
+  'image/webp',
+  'image/jpeg',
+  'image/png',
+]);
+
+/**
+ * Cheap mime normaliser: trust the upstream validation in
+ * `MultiImageUploader` (mime checked against `ALLOWED_MIME_TYPES`), but
+ * still defend against any drift by falling back to `image/jpeg` only as a
+ * last resort. We deliberately do NOT silently re-label HEIC as JPEG —
+ * that previously caused the API to receive jpeg-mime + heic-bytes.
+ */
+function normaliseMime(mime: string): SupportedMime {
+  if (ALLOWED_WEB_MIME.has(mime as SupportedMime)) {
+    return mime as SupportedMime;
   }
   return 'image/jpeg';
 }
@@ -180,9 +199,21 @@ interface CompareFormProps {
   mode: CompareMode;
   language: Lang;
   t: (key: keyof typeof translations.en) => string;
+  /**
+   * Called after a successful comparison so the parent can refresh credit
+   * counters. Without this, the parent's `credits` state would be stale
+   * until the next auth-change, and the user could see the form with a
+   * silently-spent credit balance.
+   */
+  onCompletedComparison?: () => void;
 }
 
-const CompareForm: React.FC<CompareFormProps> = ({ mode, language, t }) => {
+const CompareForm: React.FC<CompareFormProps> = ({
+  mode,
+  language,
+  t,
+  onCompletedComparison,
+}) => {
   const [status, setStatus] = useState<FormStatus>('idle');
   const [result, setResult] = useState<ComparisonResultData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -243,6 +274,11 @@ const CompareForm: React.FC<CompareFormProps> = ({ mode, language, t }) => {
 
         setResult(data.result);
         setStatus('result');
+        // Refresh the parent's credit balance right after success. We do
+        // it here (not in handleReset) so the parent has the fresh count
+        // ready *before* the user navigates back to the form — preventing
+        // a 402 on the next attempt with a stale "you have 1 credit" UI.
+        onCompletedComparison?.();
       } catch (err) {
         const message = err instanceof Error ? err.message : t('compare.error');
         console.error('[Compare] comparison failed:', err);
@@ -251,7 +287,7 @@ const CompareForm: React.FC<CompareFormProps> = ({ mode, language, t }) => {
         toast.error(message);
       }
     },
-    [language, mode, t],
+    [language, mode, t, onCompletedComparison],
   );
 
   const handleReset = useCallback(() => {
@@ -309,6 +345,13 @@ const CompareForm: React.FC<CompareFormProps> = ({ mode, language, t }) => {
         onImagesReady={handleImagesReady}
         firstLabel={firstLabel}
         secondLabel={secondLabel}
+        // Disabled while a request is in flight. We compute against the raw
+        // `status` (typed as `FormStatus`) instead of the narrowed value so
+        // a future refactor that keeps the uploader mounted during
+        // 'processing' still benefits from this guard. TS narrows the
+        // current code path to `'idle' | 'error'` because both `processing`
+        // and `result` branches return earlier — hence the cast.
+        disabled={(status as FormStatus) === 'processing'}
       />
     </div>
   );
@@ -325,34 +368,35 @@ const Compare: React.FC<CompareProps> = ({ language, t }) => {
   const [creditsLoading, setCreditsLoading] = useState<boolean>(false);
 
   /**
-   * Fetch the current user's credit balance. Re-runs whenever auth state
-   * changes (e.g. after sign-in) so the tabs unlock without a manual reload.
+   * Fetch the current user's credit balance.
+   *
+   * Extracted into a stable callback so it can be reused as
+   * `onCompletedComparison` for {@link CompareForm}: after a successful
+   * compare the credit balance changes server-side, and we refetch so the
+   * unlock-gate (`hasPro` / `hasCassandra`) reflects reality before the
+   * user attempts another comparison.
    */
-  useEffect(() => {
-    let cancelled = false;
-
+  const loadCredits = useCallback(async (): Promise<void> => {
     if (!isAuthenticated) {
       setCredits(null);
       return;
     }
 
     setCreditsLoading(true);
-    getUserCredits()
-      .then((data) => {
-        if (!cancelled) setCredits(data);
-      })
-      .catch((err) => {
-        console.error('[Compare] Failed to fetch credits:', err);
-        if (!cancelled) setCredits(null);
-      })
-      .finally(() => {
-        if (!cancelled) setCreditsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const data = await getUserCredits();
+      setCredits(data);
+    } catch (err) {
+      console.error('[Compare] Failed to fetch credits:', err);
+      setCredits(null);
+    } finally {
+      setCreditsLoading(false);
+    }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    void loadCredits();
+  }, [loadCredits]);
 
   const hasPro = useMemo(() => (credits?.pro_credits ?? 0) > 0, [credits]);
   const hasCassandra = useMemo(
@@ -385,14 +429,24 @@ const Compare: React.FC<CompareProps> = ({ language, t }) => {
 
     if (activeTab === 'dynamics') {
       return hasPro ? (
-        <CompareForm mode="dynamics" language={language} t={t} />
+        <CompareForm
+          mode="dynamics"
+          language={language}
+          t={t}
+          onCompletedComparison={loadCredits}
+        />
       ) : (
         <UpgradeCard mode="dynamics" t={t} />
       );
     }
 
     return hasCassandra ? (
-      <CompareForm mode="compatibility" language={language} t={t} />
+      <CompareForm
+        mode="compatibility"
+        language={language}
+        t={t}
+        onCompletedComparison={loadCredits}
+      />
     ) : (
       <UpgradeCard mode="compatibility" t={t} />
     );

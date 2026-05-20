@@ -184,7 +184,7 @@ export async function handleComparePhoto(ctx: BotContext): Promise<boolean> {
 
   // Maintenance guard
   if (await isMaintenanceMode()) {
-    await ctx.reply("⚙️ Бот находится на обслуживании. Попробуйте позже.");
+    await ctx.reply(getBotMessage("error.maintenance", language));
     return true;
   }
 
@@ -256,6 +256,14 @@ async function startCompareSession(ctx: BotContext, mode: CompareMode): Promise<
   const telegramUserId = ctx.from.id;
   const language = getEffectiveLanguage(ctx);
 
+  // 0. Maintenance guard — block sessions from starting during maintenance
+  // so users don't burn intent on a flow that will fail at the worker step.
+  if (await isMaintenanceMode()) {
+    await ctx.reply(getBotMessage("error.maintenance", language));
+    logger.info({ telegramUserId, mode }, "Compare session blocked: maintenance mode");
+    return;
+  }
+
   // 1. Credit check
   const requiredCreditType = mode === "dynamics" ? "pro" : "cassandra";
   const hasCredit = await hasCreditsOfType(telegramUserId, requiredCreditType);
@@ -269,19 +277,27 @@ async function startCompareSession(ctx: BotContext, mode: CompareMode): Promise<
     return;
   }
 
-  // 2. Persist pending state
+  // 2. Persist pending state.
+  // Use UPSERT (not UPDATE) because new users may not yet have a user_states
+  // row — a plain UPDATE silently affects 0 rows and we lose the session.
+  // All other columns either have DB defaults or allow NULL (see migration
+  // 003_backend_tables.sql + 004/006/008 + 20260520000001_*), so the minimal
+  // payload below is safe for INSERT.
   const supabase = getSupabase();
   const { error } = await supabase
     .from("user_states")
-    .update({
-      pending_compare_type: mode,
-      pending_first_analysis_id: null,
-      pending_compare_started_at: new Date().toISOString(),
-    })
-    .eq("telegram_user_id", telegramUserId);
+    .upsert(
+      {
+        telegram_user_id: telegramUserId,
+        pending_compare_type: mode,
+        pending_first_analysis_id: null,
+        pending_compare_started_at: new Date().toISOString(),
+      },
+      { onConflict: "telegram_user_id" },
+    );
 
   if (error) {
-    logger.error({ telegramUserId, mode, error }, "Failed to set pending compare state");
+    logger.error({ telegramUserId, mode, error }, "Failed to upsert pending compare state");
     await ctx.reply(getBotMessage("error.generic", language));
     return;
   }
@@ -530,8 +546,24 @@ async function loadCompareSession(telegramUserId: number): Promise<CompareSessio
     if (!Number.isNaN(startedAt) && Date.now() - startedAt > COMPARE_SESSION_TTL_MS) {
       logger.info({ telegramUserId }, "compare: session TTL expired, clearing");
       await clearCompareState(telegramUserId);
-      // Notify via best-effort log only — the user will be told on next interaction
-      // when the router falls through to the normal flow.
+      // Best-effort notify the user that their session expired so they know
+      // why their next photo is being treated as a fresh single-cup analysis.
+      // For private chats chat_id === telegram_user_id, which is how this flow
+      // is invoked. Language is not available in this scope (loadCompareSession
+      // is called from both photo and text paths without ctx), so we fall back
+      // to 'ru' — getBotMessage will gracefully fall through if 'ru' is missing.
+      try {
+        const bot = getBot();
+        await bot.api.sendMessage(
+          telegramUserId,
+          getBotMessage("compare.sessionExpired", "ru"),
+        );
+      } catch (notifyError) {
+        logger.warn(
+          { telegramUserId, error: notifyError },
+          "compare: failed to send session expiry notice",
+        );
+      }
       return null;
     }
   }

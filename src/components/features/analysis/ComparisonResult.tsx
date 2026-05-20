@@ -106,7 +106,7 @@ export const ComparisonResult: React.FC<ComparisonResultProps> = ({
 
       <div className="flex flex-col gap-4">
         {result.sections.map((section, index) => (
-          <Card key={`${section.title}-${index}`} className="bg-card/80 backdrop-blur-sm">
+          <Card key={index} className="bg-card/80 backdrop-blur-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg font-display">
                 {section.title}
