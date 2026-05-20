@@ -169,27 +169,29 @@ describe('createRetopicKeyboard', () => {
   });
 
   describe('keyboard generation', () => {
-    it('should create keyboard with 6 buttons when no topics covered', () => {
+    it('should create keyboard with 6 retopic buttons + compare button when no topics covered', () => {
       const result = createRetopicKeyboard(validUuid, [], 'ru');
 
       expect(result).not.toBeNull();
-      // 6 topics = 3 rows (2 buttons per row)
+      // 6 topics = 3 retopic rows (each row terminated by .row() in the loop)
+      // Compare button is appended as a .text() without trailing .row() — same row,
+      // separate from the retopic grid implicitly because previous .row() closed the loop.
       expect(mockRowCalls.length).toBe(3);
-      // 6 text buttons
-      expect(mockTextCalls.length).toBe(6);
+      // 6 retopic buttons + 1 compare button
+      expect(mockTextCalls.length).toBe(7);
     });
 
-    it('should create keyboard with 4 buttons when 2 topics covered', () => {
+    it('should create keyboard with 4 retopic buttons + compare button when 2 topics covered', () => {
       const result = createRetopicKeyboard(validUuid, ['love', 'career'], 'ru');
 
       expect(result).not.toBeNull();
-      // 4 remaining topics = 2 rows
+      // 4 remaining topics = 2 retopic rows
       expect(mockRowCalls.length).toBe(2);
-      // 4 text buttons
-      expect(mockTextCalls.length).toBe(4);
+      // 4 retopic buttons + 1 compare button
+      expect(mockTextCalls.length).toBe(5);
     });
 
-    it('should create keyboard with 1 button when 5 topics covered', () => {
+    it('should create keyboard with 1 retopic button + compare button when 5 topics covered', () => {
       const result = createRetopicKeyboard(
         validUuid,
         ['love', 'career', 'money', 'health', 'family'],
@@ -197,23 +199,28 @@ describe('createRetopicKeyboard', () => {
       );
 
       expect(result).not.toBeNull();
-      // 1 remaining topic = 1 row (single button still creates a row)
+      // 1 remaining topic = 1 retopic row
       expect(mockRowCalls.length).toBe(1);
-      // 1 text button
-      expect(mockTextCalls.length).toBe(1);
+      // 1 retopic button + 1 compare button
+      expect(mockTextCalls.length).toBe(2);
     });
 
-    it('should return null when all 6 topics covered', () => {
+    it('should still return keyboard with only compare button when all 6 topics covered', () => {
       const result = createRetopicKeyboard(
         validUuid,
         ['love', 'career', 'money', 'health', 'family', 'spiritual'],
         'en'
       );
 
-      expect(result).toBeNull();
-      // No buttons should be created
-      expect(mockTextCalls.length).toBe(0);
+      // Compare button is always present even when retopic options are exhausted
+      expect(result).not.toBeNull();
+      // No retopic rows at all (loop never iterates)
       expect(mockRowCalls.length).toBe(0);
+      // Only the compare button
+      expect(mockTextCalls.length).toBe(1);
+      // The button is the compare button
+      const callbackData = mockTextCalls.map(([, data]) => data);
+      expect(callbackData[0]).toMatch(/^cmp:start_from:/);
     });
   });
 
@@ -270,12 +277,21 @@ describe('createRetopicKeyboard', () => {
       const customUuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
       createRetopicKeyboard(customUuid, ['love'], 'en');
 
-      // All remaining topics should have the custom UUID
+      // All buttons (retopic + compare) should contain the analysisId
       const callbackData = mockTextCalls.map(([, data]) => data);
       callbackData.forEach((data) => {
         expect(data).toContain(customUuid);
-        expect(data).toMatch(/^rt:[a-z]+:[a-f0-9-]+$/);
+        // Either retopic format (rt:topic:uuid) or compare format (cmp:start_from:uuid)
+        expect(data).toMatch(/^(rt:[a-z]+:[a-f0-9-]+|cmp:start_from:[a-f0-9-]+)$/);
       });
+    });
+
+    it('should append compare button with cmp:start_from:{analysisId} callback', () => {
+      const customUuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+      createRetopicKeyboard(customUuid, [], 'ru');
+
+      const callbackData = mockTextCalls.map(([, data]) => data);
+      expect(callbackData).toContain(`cmp:start_from:${customUuid}`);
     });
   });
 
