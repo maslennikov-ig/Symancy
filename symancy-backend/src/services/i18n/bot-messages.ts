@@ -52,7 +52,20 @@ export type BotMessageKey =
   | 'compare.button.compatibility'
   | 'compare.fromAnalysis.cta'
   | 'compare.fromAnalysis.confirmed'
-  | 'onboarding.completion.compareHint';
+  | 'onboarding.completion.compareHint'
+  | 'menu.button.predict'
+  | 'menu.button.compare'
+  | 'menu.button.cassandra'
+  | 'menu.button.history'
+  | 'menu.button.credits'
+  | 'menu.button.buy'
+  | 'menu.button.mood'
+  | 'menu.button.help'
+  | 'menu.placeholder'
+  | 'menu.action.predictPrompt'
+  | 'menu.action.buyPrompt'
+  | 'menu.action.buyOpen'
+  | 'menu.compareSessionWarning';
 
 /**
  * Bot messages translations
@@ -146,6 +159,21 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
       '✅ Жду второе фото для сравнения.',
     'onboarding.completion.compareHint':
       '\n\n✨ Новинка: используй /compare чтобы сравнить две чашки!',
+    'menu.button.predict': '📷 Гадание',
+    'menu.button.compare': '📊 Сравнить',
+    'menu.button.cassandra': '🔮 Кассандра',
+    'menu.button.history': '📜 История',
+    'menu.button.credits': '💰 Баланс',
+    'menu.button.buy': '🎁 Купить',
+    'menu.button.mood': '🌙 Настроение',
+    'menu.button.help': 'ℹ️ Помощь',
+    'menu.placeholder': 'Выбери действие или отправь фото чашки',
+    'menu.action.predictPrompt':
+      '📷 Отправь фото кофейной чашки для гадания.',
+    'menu.action.buyPrompt': '🎁 Выбери тариф или подписку:',
+    'menu.action.buyOpen': '🎁 Открыть тарифы',
+    'menu.compareSessionWarning':
+      '☕️ У тебя активная сессия сравнения чашек. Отправь второе фото или используй /cancel_compare для отмены.',
   },
   en: {
     'error.generic': 'An error occurred. Please try again later.',
@@ -234,6 +262,21 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
       '✅ Send the second cup photo to compare.',
     'onboarding.completion.compareHint':
       '\n\n✨ New: use /compare to compare two cups!',
+    'menu.button.predict': '📷 Reading',
+    'menu.button.compare': '📊 Compare',
+    'menu.button.cassandra': '🔮 Cassandra',
+    'menu.button.history': '📜 History',
+    'menu.button.credits': '💰 Balance',
+    'menu.button.buy': '🎁 Buy',
+    'menu.button.mood': '🌙 Mood',
+    'menu.button.help': 'ℹ️ Help',
+    'menu.placeholder': 'Choose action or send a cup photo',
+    'menu.action.predictPrompt':
+      '📷 Send a coffee cup photo for a reading.',
+    'menu.action.buyPrompt': '🎁 Choose a plan or subscription:',
+    'menu.action.buyOpen': '🎁 Open plans',
+    'menu.compareSessionWarning':
+      '☕️ You have an active compare session. Send the second photo or use /cancel_compare to abort.',
   },
   zh: {
     'error.generic': '发生错误。请稍后再试。',
@@ -321,6 +364,20 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
       '✅ 等待第二张照片进行比较。',
     'onboarding.completion.compareHint':
       '\n\n✨ 新功能：使用 /compare 来比较两个杯子！',
+    'menu.button.predict': '📷 占卜',
+    'menu.button.compare': '📊 比较',
+    'menu.button.cassandra': '🔮 卡桑德拉',
+    'menu.button.history': '📜 历史',
+    'menu.button.credits': '💰 余额',
+    'menu.button.buy': '🎁 购买',
+    'menu.button.mood': '🌙 心情',
+    'menu.button.help': 'ℹ️ 帮助',
+    'menu.placeholder': '选择操作或发送杯子照片',
+    'menu.action.predictPrompt': '📷 发送咖啡杯照片进行占卜。',
+    'menu.action.buyPrompt': '🎁 选择套餐或订阅：',
+    'menu.action.buyOpen': '🎁 打开套餐',
+    'menu.compareSessionWarning':
+      '☕️ 您有一个活跃的对比会话。请发送第二张照片或使用 /cancel_compare 取消。',
   },
 };
 

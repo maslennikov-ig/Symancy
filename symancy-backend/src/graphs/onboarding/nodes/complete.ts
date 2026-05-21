@@ -12,6 +12,7 @@ import {
 import { getLogger } from "../../../core/logger.js";
 import { findOrCreateByTelegramId } from "../../../services/user/UnifiedUserService.js";
 import { getBotMessage } from "../../../services/i18n/index.js";
+import { createMainMenuKeyboard } from "../../../modules/menu/keyboards.js";
 
 const logger = getLogger().child({ module: "onboarding:complete" });
 
@@ -148,6 +149,7 @@ ${giftLine}
 
     await bot.sendMessage(chatId, completionMessage, {
       parse_mode: "HTML",
+      reply_markup: createMainMenuKeyboard(compareHintLanguage),
     });
 
     logger.info({ telegramUserId, chatId }, "Completion message sent");

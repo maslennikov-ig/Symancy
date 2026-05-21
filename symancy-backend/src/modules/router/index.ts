@@ -46,6 +46,8 @@ import {
   COMPARE_START_FROM_PREFIX,
   COMPARE_START_FROM_MODE_PREFIX,
 } from "../compare/keyboards.js";
+import { createMainMenuKeyboard } from "../menu/keyboards.js";
+import { handleMainMenuText } from "../menu/handler.js";
 
 const logger = getLogger().child({ module: "router" });
 
@@ -194,7 +196,10 @@ export function setupRouter(): void {
         return;
       }
 
-      await ctx.reply("Привет! Отправьте мне фото кофейной гущи для гадания.");
+      const language = botCtx.profile?.language_code || ctx.from?.language_code;
+      await ctx.reply("Привет! Отправьте мне фото кофейной гущи для гадания.", {
+        reply_markup: createMainMenuKeyboard(language),
+      });
     } catch (error) {
       logger.error({ error, telegramUserId: ctx.from?.id }, "Error in /start command");
       await ctx.reply("Произошла ошибка. Попробуйте /start ещё раз.");
@@ -444,6 +449,16 @@ export function setupRouter(): void {
         // Profile exists but onboarding not completed - prompt to start
         await sendOnboardingRequired(botCtx);
       } else {
+        // Main-menu reply-keyboard button? Dispatch to the matching command.
+        // Menu buttons short-circuit the rest of the text pipeline so they
+        // never reach the compare nudge or the chat handler.
+        if (!text.startsWith("/")) {
+          const consumedByMenu = await handleMainMenuText(botCtx);
+          if (consumedByMenu) {
+            return;
+          }
+        }
+
         // Compare session active? Nudge the user to send a photo (or cancel).
         // Skip nudge for commands so /cancel_compare etc. still work.
         if (!text.startsWith("/") && ctx.from) {
