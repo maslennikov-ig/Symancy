@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.6.20] - 2026-05-21
+
+### Added
+- **symancy-backend/tests/unit/payments/keyboards.test.ts**: add 4 source file(s), update 2 source file(s), +3 more (ac92e97)
+- **menu**: collapsible keyboard + new compare icon (c84df46)
+- **menu**: persistent reply-keyboard as main menu (8 buttons, 3 locales) (5978bc0)
+- **compare**: UX improvements — discoverability + entry points (U1-U5) (a0bca53)
+- **compare**: cup comparison flow (dynamics + compatibility) for Telegram + Web (c2c5b09)
+- **pricing,credits**: summer sale -50% + welcome 3 basic + 1 pro (91dd4cd)
+- **backend**: webhook misconfig auto-recovery + post-incident server hardening (sym-kqb) (1ca5d82)
+
+### Changed
+- **embeddings**: move EMBEDDING_MODEL/DIMS to constants.ts (fix vitest hoist) (#5) (bdbcc6e)
+- **tests**: bind LLM model assertions to source constants (#3) (9cd7678)
+- **config**: unify LLM models via system_config (Telegram + Web) (#1) (2617326)
+
+### Fixed
+- **compare**: close P0/P1/P2/P3 findings from code review (compare release) (d2bcae9)
+- **bge-client**: remove duplicate EMBEDDING_MODEL re-export (#4) (b34063c)
+- **backend**: update engagement triggers + memory tests to new LLM models (#2) (336857a)
+- **tailwind**: wrap color tokens in hsl() inside @theme inline (sym-dn3) (82e2c5b)
+- **theme**: don't let Telegram themeParams overwrite our palette inline (sym-mod) (92d524a)
+- **pricing**: корректная dark-тема, touch-feedback CTA, адаптивный YooKassa (bca11e8)
+- **pricing**: use bg-background instead of hardcoded gradient, fix PaymentWidget crash (96cbad8)
+- **pricing**: move PaymentWidget to global scope, remove OKLCH conflict, solid CTA buttons (1f18a3a)
+
+### Other
+- **retopic-keyboards**: update expectations after createRetopicKeyboard adds compare CTA (4bbffe6)
+- **plan**: handoff status for next session — Tier 1 done, Tier 2/3 remain (05f7de5)
+- pricing dark-theme, CTA feedback, YooKassa responsive fixes (sym-79d, sym-t10, sym-6wb) (abd78ca)
+- save current plan (c5330ad)
+- add diagnostic logging to Pricing and payment flow (dd66399)
+- add version marker to Pricing page to verify deploy (8fa08c0)
+
 ## [0.6.19] - 2026-04-11
 
 ### Fixed

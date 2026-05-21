@@ -2,6 +2,41 @@
 
 User-facing release notes for all versions.
 
+## v0.6.20
+
+_Released on 2026-05-21_
+
+### ✨ New Features
+
+- **symancy-backend/tests/unit/payments/keyboards.test.ts**: Add 4 source file(s), update 2 source file(s), +3 more
+- **menu**: Collapsible keyboard + new compare icon
+- **menu**: Persistent reply-keyboard as main menu (8 buttons, 3 locales)
+- **compare**: UX improvements — discoverability + entry points (U1-U5)
+- **compare**: Cup comparison flow (dynamics + compatibility) for Telegram + Web
+- **pricing,credits**: Summer sale -50% + welcome 3 basic + 1 pro
+- **backend**: Webhook misconfig auto-recovery + post-incident server hardening (sym-kqb)
+
+### 🔧 Improvements
+
+- **embeddings**: Move EMBEDDING_MODEL/DIMS to constants.ts (fix vitest hoist) (#5)
+- **tests**: Bind LLM model assertions to source constants (#3)
+- **config**: Unify LLM models via system_config (Telegram + Web) (#1)
+
+### 🐛 Bug Fixes
+
+- **compare**: Close P0/P1/P2/P3 findings from code review (compare release)
+- **bge-client**: Remove duplicate EMBEDDING_MODEL re-export (#4)
+- **backend**: Update engagement triggers + memory tests to new LLM models (#2)
+- **tailwind**: Wrap color tokens in hsl() inside @theme inline (sym-dn3)
+- **theme**: Don't let Telegram themeParams overwrite our palette inline (sym-mod)
+- **pricing**: корректная dark-тема, touch-feedback CTA, адаптивный YooKassa
+- **pricing**: Use bg-background instead of hardcoded gradient, fix PaymentWidget crash
+- **pricing**: Move PaymentWidget to global scope, remove OKLCH conflict, solid CTA buttons
+
+---
+
+_This release was automatically generated from 24 commits._
+
 ## v0.6.19
 
 _Released on 2026-04-11_
