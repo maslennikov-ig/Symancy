@@ -1,13 +1,13 @@
 /**
- * Main menu (persistent reply keyboard) for the Symancy Telegram bot.
+ * Main menu (reply keyboard) for the Symancy Telegram bot.
  *
  * Goal: replace the hidden command set (/compare, /credits, /history, /mood …)
- * with an always-visible 4×2 grid of buttons under the user's input field.
+ * with a visible 4×2 grid of buttons under the user's input field.
  *
  * Layout:
  *
  *   ┌──────────────────────┬──────────────────────┐
- *   │ 📷 Гадание           │ 📊 Сравнить          │
+ *   │ 📷 Гадание           │ ⚖️ Сравнить          │
  *   ├──────────────────────┼──────────────────────┤
  *   │ 🔮 Кассандра         │ 📜 История           │
  *   ├──────────────────────┼──────────────────────┤
@@ -17,8 +17,9 @@
  *   └──────────────────────┴──────────────────────┘
  *
  * Notes:
- *  - We use `Keyboard.persistent()` (Bot API 6.4+) so the menu survives between
- *    messages — Telegram remembers it once attached.
+ *  - Keyboard is NOT persistent — users can collapse it via the keyboard icon
+ *    in the chat, freeing up screen real-estate. It reappears the next time
+ *    the bot attaches `reply_markup` (e.g. on any command response).
  *  - The "🎁 Купить" button opens a Telegram Mini App (`WEBAPP_URL/pricing`)
  *    when WEBAPP_URL is configured. Otherwise we fall back to a regular text
  *    button — the handler will then send a plain CTA message with a URL.
@@ -132,8 +133,11 @@ export function createMainMenuKeyboard(languageCode?: string): Keyboard {
     .row()
     .text(t("mood")).text(t("help"));
 
+  // Note: we intentionally DO NOT call `.persistent()`. Letting the user
+  // collapse the keyboard (via the keyboard icon in the chat) keeps the chat
+  // area visually clean — the keyboard reappears the next time the bot
+  // attaches `reply_markup` (e.g. on any command response).
   return keyboard
     .resized()
-    .persistent()
     .placeholder(getBotMessage("menu.placeholder", languageCode));
 }

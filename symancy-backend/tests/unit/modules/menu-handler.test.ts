@@ -109,7 +109,7 @@ const LOCALIZED_LABELS: Record<
 > = {
   ru: {
     predict: "📷 Гадание",
-    compare: "📊 Сравнить",
+    compare: "⚖️ Сравнить",
     cassandra: "🔮 Кассандра",
     history: "📜 История",
     credits: "💰 Баланс",
@@ -119,7 +119,7 @@ const LOCALIZED_LABELS: Record<
   },
   en: {
     predict: "📷 Reading",
-    compare: "📊 Compare",
+    compare: "⚖️ Compare",
     cassandra: "🔮 Cassandra",
     history: "📜 History",
     credits: "💰 Balance",
@@ -129,7 +129,7 @@ const LOCALIZED_LABELS: Record<
   },
   zh: {
     predict: "📷 占卜",
-    compare: "📊 比较",
+    compare: "⚖️ 比较",
     cassandra: "🔮 卡桑德拉",
     history: "📜 历史",
     credits: "💰 余额",

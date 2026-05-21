@@ -160,7 +160,7 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
     'onboarding.completion.compareHint':
       '\n\n✨ Новинка: используй /compare чтобы сравнить две чашки!',
     'menu.button.predict': '📷 Гадание',
-    'menu.button.compare': '📊 Сравнить',
+    'menu.button.compare': '⚖️ Сравнить',
     'menu.button.cassandra': '🔮 Кассандра',
     'menu.button.history': '📜 История',
     'menu.button.credits': '💰 Баланс',
@@ -263,7 +263,7 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
     'onboarding.completion.compareHint':
       '\n\n✨ New: use /compare to compare two cups!',
     'menu.button.predict': '📷 Reading',
-    'menu.button.compare': '📊 Compare',
+    'menu.button.compare': '⚖️ Compare',
     'menu.button.cassandra': '🔮 Cassandra',
     'menu.button.history': '📜 History',
     'menu.button.credits': '💰 Balance',
@@ -365,7 +365,7 @@ const messages: Record<BotLang, Record<BotMessageKey, string>> = {
     'onboarding.completion.compareHint':
       '\n\n✨ 新功能：使用 /compare 来比较两个杯子！',
     'menu.button.predict': '📷 占卜',
-    'menu.button.compare': '📊 比较',
+    'menu.button.compare': '⚖️ 比较',
     'menu.button.cassandra': '🔮 卡桑德拉',
     'menu.button.history': '📜 历史',
     'menu.button.credits': '💰 余额',
