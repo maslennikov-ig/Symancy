@@ -31,7 +31,6 @@ import { getEnv } from "../../config/env.js";
 import {
   MENU_ACTIONS,
   MENU_BUTTON_KEYS,
-  createMainMenuKeyboard,
   type MenuAction,
 } from "./keyboards.js";
 import {
@@ -146,7 +145,6 @@ async function dispatchMenuAction(
       // photo. The actual analysis is triggered by `bot.on("message:photo")`.
       await ctx.reply(
         getBotMessage("menu.action.predictPrompt" as BotMessageKey, language),
-        { reply_markup: createMainMenuKeyboard(language) },
       );
       return;
     }
@@ -245,7 +243,6 @@ export async function handleMainMenuText(ctx: BotContext): Promise<boolean> {
             "menu.compareSessionWarning" as BotMessageKey,
             language,
           ),
-          { reply_markup: createMainMenuKeyboard(language) },
         );
         return true;
       }

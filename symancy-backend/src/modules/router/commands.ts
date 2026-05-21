@@ -10,22 +10,12 @@ import { getSupabase } from '../../core/database.js';
 import { getCreditBalance } from '../credits/service.js';
 import { generateLinkToken } from '../../services/auth/LinkTokenService.js';
 import { getBotMessage } from '../../services/i18n/index.js';
-import { createMainMenuKeyboard } from '../menu/keyboards.js';
 import {
   handleCompareDynamicsCommand as compareDynamicsImpl,
   handleCompareCompatibilityCommand as compareCompatibilityImpl,
   handleCancelCompareCommand as cancelCompareImpl,
   handleCompareCommand as compareImpl,
 } from '../compare/handler.js';
-
-/**
- * Resolve the language we should localize the persistent menu under.
- * Mirrors the same precedence used by the menu handler so labels match
- * between attach-time and lookup-time.
- */
-function resolveMenuLang(ctx: BotContext): string | undefined {
-  return ctx.profile?.language_code || ctx.from?.language_code || undefined;
-}
 
 // ──────────────────────────────────────────────────────────────────────────
 // Re-export compare command handlers so the router has a single import site.
@@ -48,9 +38,7 @@ export async function handleCassandraCommand(ctx: BotContext): Promise<void> {
   try {
     const message = getBotMessage('cassandra.intro', lang);
 
-    await ctx.reply(message, {
-      reply_markup: createMainMenuKeyboard(resolveMenuLang(ctx)),
-    });
+    await ctx.reply(message);
 
     logger.info(
       {
@@ -81,10 +69,7 @@ export async function handleHelpCommand(ctx: BotContext): Promise<void> {
 
     const message = `${title}\n\n${commands}\n\n${usage}`;
 
-    await ctx.reply(message, {
-      parse_mode: 'Markdown',
-      reply_markup: createMainMenuKeyboard(resolveMenuLang(ctx)),
-    });
+    await ctx.reply(message, { parse_mode: 'Markdown' });
 
     logger.info(
       {
@@ -125,10 +110,7 @@ export async function handleCreditsCommand(ctx: BotContext): Promise<void> {
 
     const message = `${balanceMsg}\n\n${pricingMsg}\n\n${topUpMsg}`;
 
-    await ctx.reply(message, {
-      parse_mode: 'Markdown',
-      reply_markup: createMainMenuKeyboard(resolveMenuLang(ctx)),
-    });
+    await ctx.reply(message, { parse_mode: 'Markdown' });
 
     logger.info(
       {
@@ -180,9 +162,7 @@ export async function handleHistoryCommand(ctx: BotContext): Promise<void> {
     }
 
     if (!readings || readings.length === 0) {
-      await ctx.reply(getBotMessage('history.empty', lang), {
-        reply_markup: createMainMenuKeyboard(resolveMenuLang(ctx)),
-      });
+      await ctx.reply(getBotMessage('history.empty', lang));
       logger.info(
         { userId: ctx.from.id, command: 'history' },
         'No readings found'
@@ -213,10 +193,7 @@ export async function handleHistoryCommand(ctx: BotContext): Promise<void> {
     const title = getBotMessage('history.title', lang);
     const message = `${title}\n\n${historyLines.join('\n\n')}`;
 
-    await ctx.reply(message, {
-      parse_mode: 'Markdown',
-      reply_markup: createMainMenuKeyboard(resolveMenuLang(ctx)),
-    });
+    await ctx.reply(message, { parse_mode: 'Markdown' });
 
     logger.info(
       {
