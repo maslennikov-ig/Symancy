@@ -48,6 +48,12 @@ import {
 } from "../compare/keyboards.js";
 import { createMainMenuKeyboard } from "../menu/keyboards.js";
 import { handleMainMenuText } from "../menu/handler.js";
+import {
+  handleBuyCommand,
+  handleBuyCallback,
+  handlePreCheckoutQuery,
+  handleSuccessfulPayment,
+} from "../payments/index.js";
 
 const logger = getLogger().child({ module: "router" });
 
@@ -301,6 +307,24 @@ export function setupRouter(): void {
     }
   });
 
+  // Handle /buy command
+  bot.command("buy", async (ctx) => {
+    const botCtx = ctx as BotContext;
+    logger.info({ telegramUserId: ctx.from?.id }, "Received /buy command");
+
+    if (requiresOnboarding(botCtx)) {
+      await sendOnboardingRequired(botCtx);
+      return;
+    }
+
+    try {
+      await handleBuyCommand(botCtx);
+    } catch (error) {
+      logger.error({ error, telegramUserId: ctx.from?.id }, "Error in /buy command");
+      await ctx.reply("Ошибка в команде /buy");
+    }
+  });
+
   // Handle /mood command
   bot.command("mood", async (ctx) => {
     const botCtx = ctx as BotContext;
@@ -542,11 +566,61 @@ export function setupRouter(): void {
         return;
       }
 
+      // Route payment callbacks (tariff picker + payment method picker)
+      if (
+        ctx.callbackQuery.data.startsWith("buy:") ||
+        ctx.callbackQuery.data.startsWith("pay:")
+      ) {
+        await handleBuyCallback(botCtx);
+        return;
+      }
+
       // Unknown callback - acknowledge to remove loading state
       await ctx.answerCallbackQuery({ text: "Обрабатывается..." });
     } catch (error) {
       logger.error({ error, telegramUserId: ctx.from.id }, "Error handling callback query");
       await ctx.answerCallbackQuery({ text: "Произошла ошибка" });
+    }
+  });
+
+  // Telegram payments: validate pre_checkout_query (must answer within 10s)
+  bot.on("pre_checkout_query", async (ctx) => {
+    logger.info(
+      {
+        telegramUserId: ctx.from?.id,
+        currency: ctx.preCheckoutQuery?.currency,
+        totalAmount: ctx.preCheckoutQuery?.total_amount,
+      },
+      "Received pre_checkout_query"
+    );
+    try {
+      await handlePreCheckoutQuery(ctx);
+    } catch (error) {
+      logger.error(
+        { error, telegramUserId: ctx.from?.id },
+        "pre_checkout_query handler failed"
+      );
+    }
+  });
+
+  // Telegram payments: process successful_payment service-message
+  bot.on("message:successful_payment", async (ctx) => {
+    const botCtx = ctx as BotContext;
+    logger.info(
+      {
+        telegramUserId: ctx.from?.id,
+        currency: ctx.message?.successful_payment?.currency,
+        totalAmount: ctx.message?.successful_payment?.total_amount,
+      },
+      "Received successful_payment"
+    );
+    try {
+      await handleSuccessfulPayment(botCtx);
+    } catch (error) {
+      logger.error(
+        { error, telegramUserId: ctx.from?.id },
+        "successful_payment handler failed"
+      );
     }
   });
 
@@ -568,6 +642,7 @@ export function setupRouter(): void {
       { command: "compare", description: "Сравнить две чашки" },
       { command: "cancel_compare", description: "Отменить сравнение чашек" },
       { command: "credits", description: "Проверить баланс кредитов" },
+      { command: "buy", description: "Купить кредиты" },
       { command: "history", description: "История гаданий" },
       { command: "link", description: "Связать с веб-версией" },
       { command: "mood", description: "Записать настроение" },

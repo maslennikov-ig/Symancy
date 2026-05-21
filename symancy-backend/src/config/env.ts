@@ -34,6 +34,11 @@ const EnvSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().regex(/^\d+:[A-Za-z0-9_-]+$/, "Invalid Telegram bot token format"),
   TELEGRAM_WEBHOOK_SECRET: z.string().min(16, "Webhook secret must be at least 16 characters"),
 
+  // Telegram Payments (optional)
+  // Provider token issued via @BotFather → Bot Settings → Payments → YooKassa.
+  // When unset, only Telegram Stars (XTR) payments are available.
+  TELEGRAM_PAYMENT_PROVIDER_TOKEN: z.string().optional(),
+
   // OpenRouter (LLM API)
   OPENROUTER_API_KEY: z.string().startsWith("sk-or-"),
 
