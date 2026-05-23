@@ -6,6 +6,7 @@ import { PgBoss } from "pg-boss";
 import type { Job, JobWithMetadata, WorkOptions, SendOptions } from "pg-boss";
 import { getEnv } from "../config/env.js";
 import { getLogger } from "./logger.js";
+import { sendErrorAlert } from "../utils/admin-alerts.js";
 import {
   QUEUE_ANALYZE_PHOTO,
   QUEUE_CHAT_REPLY,
@@ -55,6 +56,7 @@ export async function getQueue(): Promise<PgBoss> {
     // Error handling
     _boss.on("error", (error: Error) => {
       logger.error({ error }, "pg-boss error");
+      void sendErrorAlert(error, { source: "pg-boss" });
     });
 
     // Monitor maintenance operations (if needed)
@@ -256,6 +258,10 @@ export async function registerWorker<T extends object = object>(
         } catch (error) {
           logger.error({ jobId: job.id, error }, "Job failed");
 
+          // Report to Sentry + Telegram admin (rate-limited inside sendErrorAlert)
+          const err = error instanceof Error ? error : new Error(String(error));
+          void sendErrorAlert(err, { jobId: job.id, queue: queueName });
+
           // Check if error is retryable
           if (isRetryableError(error)) {
             throw error; // pg-boss will retry based on retryLimit
@@ -310,6 +316,21 @@ export async function registerWorkerWithMetadata<T extends object = object>(
             { jobId: job.id, retryCount: job.retryCount, retryLimit: job.retryLimit, error },
             "Job failed"
           );
+
+          // Report to Sentry + Telegram admin only on final attempt (last retry
+          // exhausted or non-retryable). pg-boss retries are stored on the job
+          // record; rate-limiting in sendErrorAlert protects against bursts.
+          const isFinalAttempt =
+            job.retryCount >= job.retryLimit || !isRetryableError(error);
+          if (isFinalAttempt) {
+            const err = error instanceof Error ? error : new Error(String(error));
+            void sendErrorAlert(err, {
+              jobId: job.id,
+              queue: queueName,
+              retryCount: job.retryCount,
+              retryLimit: job.retryLimit,
+            });
+          }
 
           // Check if error is retryable
           if (isRetryableError(error)) {

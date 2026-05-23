@@ -5,6 +5,7 @@
 import { getBot } from "../../core/telegram.js";
 import { getLogger } from "../../core/logger.js";
 import { getEnv } from "../../config/env.js";
+import { sendErrorAlert } from "../../utils/admin-alerts.js";
 import { loadProfile, loadUserState, checkBanned, type BotContext } from "./middleware.js";
 import { rateLimitMiddleware } from "./rate-limit.js";
 import { handlePhotoMessage } from "../photo-analysis/handler.js";
@@ -624,10 +625,18 @@ export function setupRouter(): void {
     }
   });
 
-  // Global error handler
+  // Global error handler — log + report to Sentry/Telegram (rate-limited).
   bot.catch((err) => {
     const updateId = err.ctx?.update?.update_id;
+    const telegramUserId = err.ctx?.from?.id;
     logger.error({ error: err.error, updateId }, "Bot error caught by global handler");
+
+    const error = err.error instanceof Error ? err.error : new Error(String(err.error));
+    void sendErrorAlert(error, {
+      source: "bot.catch",
+      updateId,
+      telegramUserId,
+    });
   });
 
   // Set bot commands menu (fire-and-forget).
