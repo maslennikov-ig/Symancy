@@ -2,6 +2,24 @@
 
 User-facing release notes for all versions.
 
+## v0.6.21
+
+_Released on 2026-05-23_
+
+### ✨ New Features
+
+- **admin**: Add password reset flow (forgot + reset pages)
+- **webhook**: Sentry → Telegram forwarder endpoint
+- **alerts**: Wire worker + bot.catch into sendErrorAlert
+
+### 🐛 Bug Fixes
+
+- **menu**: Attach reply-keyboard only on first contact, not on every command
+
+---
+
+_This release was automatically generated from 6 commits._
+
 ## v0.6.20
 
 _Released on 2026-05-21_

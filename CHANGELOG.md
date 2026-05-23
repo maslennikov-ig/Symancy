@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [0.6.21] - 2026-05-23
+
+### Added
+- **admin**: add password reset flow (forgot + reset pages) (0cdb9e9)
+- **webhook**: Sentry → Telegram forwarder endpoint (20882e0)
+- **alerts**: wire worker + bot.catch into sendErrorAlert (0576200)
+
+### Fixed
+- **menu**: attach reply-keyboard only on first contact, not on every command (bedf521)
+
+### Other
+- **env**: document VITE_SENTRY_DSN and SENTRY_DSN (67f6971)
+- **branding**: clarify Symancy is the brand, MegaCampusAI is legacy Supabase dashboard name (30455d0)
+
 ## [0.6.20] - 2026-05-21
 
 ### Added
