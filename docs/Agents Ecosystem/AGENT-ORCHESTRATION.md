@@ -551,7 +551,7 @@ Prompt: "Implement T005: Create Email service in src/services/email.ts"
 
 **database-architect, infrastructure-specialist, integration-tester**:
 - Use Supabase MCP for all database operations
-- Project ref: `johspxgvkbrysxhilmbg` (MegaCampusAI)
+- Project ref: `johspxgvkbrysxhilmbg` (Symancy; в Supabase dashboard отображается legacy-имя `MegaCampusAI` — не использовать как бренд)
 - Migrations: `packages/course-gen-platform/supabase/migrations/`
 
 **Fallback Strategy**:

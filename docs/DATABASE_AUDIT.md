@@ -1,7 +1,7 @@
 # Database Audit Report
 
 **Generated**: 2026-01-19
-**Project**: Symancy / MegaCampusAI
+**Project**: Symancy
 **Supabase Project**: johspxgvkbrysxhilmbg
 **Audit Type**: Legacy Table Migration Analysis
 

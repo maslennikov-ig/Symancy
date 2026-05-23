@@ -205,7 +205,8 @@ Follow command-specific instructions. See `docs/Agents Ecosystem/AGENT-ORCHESTRA
 
 **Supabase Operations**:
 - Use Supabase MCP when `.mcp.json` includes supabase server
-- Project: Symancy / MegaCampusAI (ref: `johspxgvkbrysxhilmbg`)
+- **Brand / product name**: **Symancy** (домен `symancy.ru`). Использовать ТОЛЬКО это название в коде, документации, сообщениях пользователю и любых внешних коммуникациях.
+- **Supabase project ref**: `johspxgvkbrysxhilmbg`. В Supabase dashboard организация отображается как `MegaCampusAI` — это **legacy техническое имя** (так был создан проект до ребрендинга), **НЕ бренд** и **НЕ имя продукта**. Не использовать.
 - Redirect URLs: Must include `http://localhost:5173/**` and `https://symancy.ru/**` for auth to work.
 
 **MCP Configuration**:
