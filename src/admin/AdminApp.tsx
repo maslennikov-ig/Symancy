@@ -6,6 +6,8 @@ import { LoaderIcon } from '../components/icons/LoaderIcon';
 
 // Lazy-loaded admin pages (placeholder components for now)
 const LoginPage = lazy(() => import('./pages/LoginPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const SystemConfigPage = lazy(() => import('./pages/SystemConfigPage'));
 const UsersPage = lazy(() => import('./pages/UsersPage'));
@@ -116,6 +118,21 @@ export function AdminApp() {
             )
           }
         />
+        {/* Forgot password page: mirrors login redirect behaviour for admins
+            who are already logged in. */}
+        <Route
+          path="forgot-password"
+          element={
+            !isLoading && isAuthenticated && isAdmin ? (
+              <Navigate to="/admin/dashboard" replace />
+            ) : (
+              <ForgotPasswordPage />
+            )
+          }
+        />
+        {/* Reset password page: NEVER redirect — an already-logged-in admin
+            may still want to set a new password via the recovery link. */}
+        <Route path="reset-password" element={<ResetPasswordPage />} />
         {/* All other admin routes are protected */}
         <Route path="*" element={<ProtectedAdminRoutes />} />
       </Routes>

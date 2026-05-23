@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { supabase } from '@/lib/supabaseClient';
 import { useAdminTranslations } from '../hooks/useAdminTranslations';
 import { Button } from '@/components/ui/button';
@@ -107,6 +107,12 @@ export function LoginPage() {
             >
               {isLoading ? t('admin.login.signingIn') : t('admin.login.signIn')}
             </Button>
+            <Link
+              to="/admin/forgot-password"
+              className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+            >
+              {t('admin.login.forgotPassword')}
+            </Link>
           </CardFooter>
         </form>
       </Card>
