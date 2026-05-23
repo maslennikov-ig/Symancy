@@ -27,6 +27,7 @@ import { registerMessagesRoutes } from "./api/messages/index.js";
 import { registerConversationsRoutes } from "./api/conversations/index.js";
 import { registerInsightsRoutes } from "./api/insights/index.js";
 import { registerSettingsRoutes } from "./api/settings/index.js";
+import { registerWebhookRoutes } from "./api/webhook/index.js";
 
 const logger = getLogger();
 
@@ -214,6 +215,10 @@ async function startApi() {
   // Register settings routes
   registerSettingsRoutes(fastify);
   logger.info("Settings routes registered");
+
+  // Register inbound webhook routes (Sentry → Telegram forwarder)
+  registerWebhookRoutes(fastify);
+  logger.info("Webhook routes registered");
 
   await fastify.listen({ port: env.PORT, host: "0.0.0.0" });
   logger.info({ port: env.PORT }, "API server listening");

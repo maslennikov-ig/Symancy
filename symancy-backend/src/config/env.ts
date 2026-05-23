@@ -74,6 +74,11 @@ const EnvSchema = z.object({
 
   // Sentry Error Tracking
   SENTRY_DSN: z.string().url().optional(),
+
+  // Shared secret used to authenticate inbound webhooks from Sentry.
+  // When unset, POST /webhook/sentry returns 503 (feature disabled).
+  // Must be a long random string (recommend 32+ characters).
+  SENTRY_WEBHOOK_SECRET: z.string().min(16).optional(),
 }).refine(
   (data) => data.SUPABASE_JWT_SIGNING_KEY || data.SUPABASE_JWT_SECRET,
   {
