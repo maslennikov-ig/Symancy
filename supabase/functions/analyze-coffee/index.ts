@@ -310,6 +310,30 @@ Deno.serve(async (req) => {
         // We don't fail the request if history save fails, but it's bad.
     }
 
+    // 7.5. RECORD STREAK (gamification, sym-5nt — web/edge path)
+    // Web/MiniApp analyses go through this Edge Function (the Telegram bot path
+    // increments streak in symancy-backend). Resolve unified_user_id from the
+    // auth user and call increment_user_streak via a service-role client
+    // (the RPC is service_role-only). Idempotent per day; strictly non-fatal —
+    // a streak failure must never break a successful analysis response.
+    try {
+      const streakClient = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      )
+      const { data: unifiedUser } = await streakClient
+        .from('unified_users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .maybeSingle()
+
+      if (unifiedUser?.id) {
+        await streakClient.rpc('increment_user_streak', { p_unified_user_id: unifiedUser.id })
+      }
+    } catch (streakError) {
+      console.error("Streak update failed (non-fatal):", streakError)
+    }
+
     // 8. RETURN RESULT
     return new Response(JSON.stringify({
         success: true,

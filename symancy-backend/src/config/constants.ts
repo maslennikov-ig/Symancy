@@ -95,6 +95,11 @@ export const QUEUE_INACTIVE_REMINDER = "inactive-reminder";
 export const QUEUE_WEEKLY_CHECKIN = "weekly-checkin";
 
 /**
+ * Queue name for streak-at-risk engagement nudge (sym-tb3)
+ */
+export const QUEUE_STREAK_AT_RISK = "streak-at-risk";
+
+/**
  * Queue name for daily fortune engagement
  */
 export const QUEUE_DAILY_FORTUNE = "daily-fortune";
