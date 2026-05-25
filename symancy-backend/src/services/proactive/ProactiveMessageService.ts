@@ -44,7 +44,8 @@ export type ProactiveMessageType =
   | "weekly-checkin"
   | "daily-fortune"
   | "morning-insight"
-  | "evening-insight";
+  | "evening-insight"
+  | "streak-at-risk";
 
 /**
  * Result of sending proactive message

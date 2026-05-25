@@ -25,6 +25,11 @@ const SCHEDULES = {
     tz: "Europe/Moscow",
     description: "Weekly check-in for all active users",
   },
+  "streak-at-risk": {
+    cron: "0 20 * * *", // Daily at 20:00 MSK (evening nudge before midnight reset)
+    tz: "Europe/Moscow",
+    description: "Remind users with an active streak who haven't been active today",
+  },
   // DEPRECATED: Replaced by morning-insight
   // "daily-fortune": {
   //   cron: "0 8 * * *",

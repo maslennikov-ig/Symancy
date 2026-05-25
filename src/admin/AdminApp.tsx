@@ -15,6 +15,7 @@ const UserDetailPage = lazy(() => import('./pages/UserDetailPage'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const CostsPage = lazy(() => import('./pages/CostsPage'));
 const UserStatesPage = lazy(() => import('./pages/UserStatesPage'));
+const PromptsPage = lazy(() => import('./pages/PromptsPage'));
 
 /**
  * Loading spinner component for admin pages
@@ -86,6 +87,7 @@ function ProtectedAdminRoutes() {
         <Route path="messages" element={<MessagesPage />} />
         <Route path="costs" element={<CostsPage />} />
         <Route path="user-states" element={<UserStatesPage />} />
+        <Route path="prompts" element={<PromptsPage />} />
         {/* Catch-all redirect to dashboard */}
         <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
       </Routes>

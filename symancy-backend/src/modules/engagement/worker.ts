@@ -23,6 +23,10 @@ import {
 } from "./triggers/weekly-checkin.js";
 import { cleanupExpiredPhotos } from "./triggers/photo-cleanup.js";
 import {
+  findStreakAtRiskUsers,
+  createStreakAtRiskMessage,
+} from "./triggers/streak-at-risk.js";
+import {
   generateMorningAdvice,
   generateEveningInsight,
   generateWithRetry,
@@ -173,6 +177,61 @@ export async function processWeeklyCheckIn(job: Job): Promise<void> {
   }
 }
 
+
+/**
+ * Process streak-at-risk job (Gamification, sym-tb3)
+ *
+ * Finds users with an active streak (>= 2 days) who have not been active yet
+ * today and nudges them to keep the streak alive before midnight.
+ *
+ * Uses ProactiveMessageService for delivery, rate limiting, blocked-bot
+ * handling, and engagement_log de-duplication.
+ */
+export async function processStreakAtRisk(job: Job): Promise<void> {
+  const jobLogger = logger.child({ jobId: job.id, type: "streak-at-risk" });
+
+  jobLogger.info("Starting streak-at-risk processing");
+
+  try {
+    const atRisk = await findStreakAtRiskUsers();
+
+    if (atRisk.length === 0) {
+      jobLogger.info("No streak-at-risk users to nudge");
+      return;
+    }
+
+    // Map streak length by unified user id so the content generator can mention it.
+    const streakByUserId = new Map(atRisk.map((entry) => [entry.user.id, entry.currentStreak]));
+    const users = atRisk.map((entry) => entry.user);
+
+    jobLogger.info({ count: users.length }, "Sending streak-at-risk nudges");
+
+    const proactiveService = getProactiveMessageService();
+    const results = await proactiveService.sendBatchEngagementMessages(
+      users,
+      "streak-at-risk",
+      (user) =>
+        createStreakAtRiskMessage(
+          user.displayName,
+          streakByUserId.get(user.id) ?? 0,
+          user.languageCode
+        )
+    );
+
+    jobLogger.info(
+      {
+        total: results.total,
+        success: results.success,
+        failed: results.failed,
+        blocked: results.blocked,
+      },
+      "Streak-at-risk processing completed"
+    );
+  } catch (error) {
+    jobLogger.error({ error }, "Streak-at-risk processing failed");
+    throw error; // Trigger pg-boss retry
+  }
+}
 
 /**
  * Process photo cleanup job
@@ -571,6 +630,18 @@ export async function registerEngagementWorkers(): Promise<string[]> {
   );
   workerIds.push(weeklyWorkerId);
   logger.info({ workerId: weeklyWorkerId }, "Weekly check-in worker registered");
+
+  // Register streak-at-risk worker (gamification, sym-tb3)
+  const streakAtRiskWorkerId = await registerWorker(
+    "streak-at-risk",
+    processStreakAtRisk,
+    {
+      batchSize: 1,
+      pollingIntervalSeconds: 60,
+    }
+  );
+  workerIds.push(streakAtRiskWorkerId);
+  logger.info({ workerId: streakAtRiskWorkerId }, "Streak-at-risk worker registered");
 
   // Register photo cleanup worker
   const photoCleanupWorkerId = await registerWorker(

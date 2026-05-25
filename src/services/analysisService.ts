@@ -25,6 +25,19 @@ export interface UserData {
 }
 
 /**
+ * Machine-readable hint codes returned when a photo fails quality pre-check.
+ * Frontend maps these to localized strings via quality.hints.* i18n keys.
+ */
+export type QualityHintCode =
+  | 'too_dark'
+  | 'too_bright'
+  | 'blurry'
+  | 'no_grounds'
+  | 'cup_bottom_not_visible'
+  | 'image_not_coffee'
+  | 'too_much_liquid';
+
+/**
  * Custom error class with error code
  */
 export class AnalysisError extends Error {
@@ -35,7 +48,29 @@ export class AnalysisError extends Error {
 }
 
 /**
+ * Thrown when the photo fails AI quality pre-check.
+ * No credit is consumed in this case.
+ */
+export class QualityCheckError extends Error {
+  public readonly code: typeof ErrorCodes.QUALITY_CHECK_FAILED;
+  public readonly hints: QualityHintCode[];
+  public readonly issues: string[];
+
+  constructor(hints: QualityHintCode[], issues: string[]) {
+    super('Photo quality check failed');
+    this.name = 'QualityCheckError';
+    this.code = ErrorCodes.QUALITY_CHECK_FAILED;
+    this.hints = hints;
+    this.issues = issues;
+  }
+}
+
+/**
  * Calls the Supabase Edge Function to analyze the coffee cup image.
+ *
+ * The Edge Function runs an AI quality pre-check before consuming any credit.
+ * If the photo is rejected, a QualityCheckError is thrown (no credit consumed).
+ * If the photo passes, the credit is consumed and the analysis is returned.
  *
  * @param imageData The base64-encoded image data (without data URL prefix).
  * @param mimeType The MIME type of the image.
@@ -43,6 +78,8 @@ export class AnalysisError extends Error {
  * @param mode The analysis mode ('psychologist' or 'esoteric').
  * @param language The language for the analysis response.
  * @returns A promise that resolves to the analysis response.
+ * @throws QualityCheckError if photo is rejected (no credit consumed)
+ * @throws AnalysisError for other errors
  */
 export const analyzeCoffeeCup = async (
   imageData: string,
@@ -65,8 +102,18 @@ export const analyzeCoffeeCup = async (
     if (error) {
       console.error('Edge Function Error:', error);
 
-      // Check for error code in the response
+      // Check for error code in the response body
       const errorCode = (error as any).code || (data as any)?.code;
+
+      // Quality check failed — no credit consumed
+      if (
+        errorCode === ErrorCodes.QUALITY_CHECK_FAILED ||
+        (data as any)?.code === ErrorCodes.QUALITY_CHECK_FAILED
+      ) {
+        const hints: QualityHintCode[] = (data as any)?.hints ?? [];
+        const issues: string[] = (data as any)?.issues ?? [];
+        throw new QualityCheckError(hints, issues);
+      }
 
       // Handle specific error codes
       if (errorCode) {
@@ -85,6 +132,13 @@ export const analyzeCoffeeCup = async (
         error.message || 'Analysis service unavailable',
         ErrorCodes.INTERNAL_ERROR
       );
+    }
+
+    // Handle quality check failure returned as success:false (422 non-error path)
+    if (!data.success && data.code === ErrorCodes.QUALITY_CHECK_FAILED) {
+      const hints: QualityHintCode[] = data.hints ?? [];
+      const issues: string[] = data.issues ?? [];
+      throw new QualityCheckError(hints, issues);
     }
 
     if (!data.success) {

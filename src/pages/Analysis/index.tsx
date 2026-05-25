@@ -25,8 +25,7 @@ import { cn } from '../../lib/utils';
 import { useTelegramWebApp } from '../../hooks/useTelegramWebApp';
 import { useBackButton } from '../../hooks/useBackButton';
 import { getUserCredits } from '../../services/paymentService';
-import { analyzeCoffeeCup, AnalysisError } from '../../services/analysisService';
-import { consumeCredit } from '../../services/creditService';
+import { analyzeCoffeeCup, AnalysisError, QualityCheckError, type QualityHintCode } from '../../services/analysisService';
 import { Capture } from './Capture';
 import { Preview } from './Preview';
 import { Processing } from './Processing';
@@ -87,6 +86,9 @@ export function Analysis({ language, t: propT }: AnalysisProps) {
   const [statusKey, setStatusKey] = useState<string>('analysis.processing.defaultStatus');
   const [error, setError] = useState<string | null>(null);
 
+  // Quality check hints (set when photo is rejected by AI pre-check)
+  const [qualityHints, setQualityHints] = useState<QualityHintCode[]>([]);
+
   /**
    * Load user credits on mount
    */
@@ -139,6 +141,7 @@ export function Analysis({ language, t: propT }: AnalysisProps) {
     setImageFile(file);
     setStep('preview');
     setError(null);
+    setQualityHints([]);
   }, []);
 
   /**
@@ -146,6 +149,7 @@ export function Analysis({ language, t: propT }: AnalysisProps) {
    */
   const handleRetake = useCallback(() => {
     setImageFile(null);
+    setQualityHints([]);
     setStep('capture');
   }, []);
 
@@ -169,7 +173,12 @@ export function Analysis({ language, t: propT }: AnalysisProps) {
   };
 
   /**
-   * Start analysis process
+   * Start analysis process.
+   *
+   * Credit management is handled entirely by the Edge Function:
+   * 1. Edge Function runs AI quality pre-check (no credit consumed).
+   * 2. If photo passes — credit is consumed atomically inside the function.
+   * 3. If photo fails — QualityCheckError is thrown, no credit lost.
    */
   const handleStartAnalysis = useCallback(async () => {
     if (!imageFile) return;
@@ -177,19 +186,9 @@ export function Analysis({ language, t: propT }: AnalysisProps) {
     setStep('processing');
     setProgress(0);
     setStatusKey('analysis.processing.preparingImage');
+    setQualityHints([]);
 
     try {
-      // Consume credit first
-      setProgress(10);
-      setStatusKey('analysis.processing.checkingCredits');
-
-      const creditType = selectedPersona === 'cassandra' ? 'cassandra' : 'basic';
-      const consumeResult = await consumeCredit(creditType);
-
-      if (!consumeResult.success) {
-        throw new Error(consumeResult.error || 'Failed to consume credit');
-      }
-
       // Compress image
       setProgress(20);
       setStatusKey('analysis.processing.compressingImage');
@@ -259,7 +258,16 @@ export function Analysis({ language, t: propT }: AnalysisProps) {
         hapticFeedback.notification('error');
       }
 
-      // Handle error
+      // Quality check failed: photo was rejected, no credit consumed.
+      // Show hints on the preview screen so the user can retake.
+      if (err instanceof QualityCheckError) {
+        setQualityHints(err.hints);
+        setStep('preview');
+        setProgress(0);
+        return;
+      }
+
+      // Handle other errors
       let errorMessage = t('error.analyzeFailed') as string;
       if (err instanceof AnalysisError) {
         errorMessage = err.message;
@@ -311,6 +319,7 @@ export function Analysis({ language, t: propT }: AnalysisProps) {
           credits={credits}
           language={language}
           t={t as (key: string) => string}
+          qualityHints={qualityHints}
         />
       )}
 

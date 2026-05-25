@@ -27,6 +27,7 @@ import { TelegramLinkPrompt } from '../components/features/auth/TelegramLinkProm
 import { EmailLinkModal } from '../components/features/auth/EmailLinkModal';
 import { TimezoneSelector } from '../components/features/settings/TimezoneSelector';
 import { InsightTimePicker } from '../components/features/settings/InsightTimePicker';
+import { StreakBadge } from '../components/features/streak/StreakBadge';
 import { getStoredToken } from '../services/authService';
 import { translations, Lang, t as i18n_t } from '../lib/i18n';
 import type { UserCredits } from '../types/payment';
@@ -935,6 +936,9 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
           </div>
         </CardContent>
       </Card>
+
+      {/* Streak Badge (gamification, sym-tb3) */}
+      <StreakBadge unifiedUserId={unifiedUser?.id} t={t} />
 
       {/* Settings Section */}
       <Card className="mx-4 mt-3">

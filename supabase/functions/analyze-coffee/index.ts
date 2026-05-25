@@ -5,6 +5,7 @@ import { ARINA_SYSTEM_PROMPT, CASSANDRA_SYSTEM_PROMPT, VISION_SYSTEM_PROMPT } fr
 import { getPrompt } from "./getPrompt.ts"
 import { getConfigValue } from "./getConfig.ts"
 import { getCreditType } from "./creditMapping.ts"
+import { runQualityCheck } from "./qualityCheck.ts"
 
 /**
  * Sanitize user input before prompt interpolation to prevent prompt injection.
@@ -52,6 +53,11 @@ const FALLBACK_CASSANDRA_MAX_TOKENS = 5000
 const FALLBACK_CASSANDRA_FREQUENCY_PENALTY = 0.4
 const FALLBACK_CASSANDRA_PRESENCE_PENALTY = 0.3
 
+// Quality check model: cheap, fast, vision-capable.
+// Used only for the pre-check call — does NOT affect main analysis quality.
+// Deliberately a lightweight model to keep latency and cost low.
+const FALLBACK_QUALITY_CHECK_MODEL = "google/gemma-3-12b-it"
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders })
@@ -76,7 +82,42 @@ Deno.serve(async (req) => {
 
     if (!image) throw new Error("Image is required")
 
-    // 3. CONSUME CREDIT (Atomic Transaction)
+    // 3. QUALITY PRE-CHECK (before credit consumption)
+    // Run a lightweight vision call to detect bad photos.
+    // If the photo is rejected, return hints WITHOUT consuming any credit.
+    const qualityCheckModel = await getConfigValue(
+      supabaseClient,
+      "quality_check_model",
+      FALLBACK_QUALITY_CHECK_MODEL,
+    )
+
+    const qualityResult = await runQualityCheck(
+      supabaseClient,
+      image,
+      mimeType,
+      OPENROUTER_API_KEY!,
+      SITE_URL,
+      APP_NAME,
+      qualityCheckModel,
+    )
+
+    if (!qualityResult.ok) {
+      // Photo quality is insufficient — return hints, do NOT consume credit.
+      return new Response(
+        JSON.stringify({
+          success: false,
+          code: "QUALITY_CHECK_FAILED",
+          hints: qualityResult.hints,
+          issues: qualityResult.issues,
+        }),
+        {
+          status: 422,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      )
+    }
+
+    // 4. CONSUME CREDIT (Atomic Transaction)
     // Determine credit type from mode or explicit override
     const resolvedCreditType = getCreditType(mode, creditType)
 
@@ -92,7 +133,7 @@ Deno.serve(async (req) => {
       }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } })
     }
 
-    // 4. AI ANALYSIS - STEP 1: VISION
+    // 5. AI ANALYSIS - STEP 1: VISION
     // Model + params come from system_config (admin panel), with code fallback.
     const visionPromptResult = await getPrompt(supabaseClient, 'vision', VISION_SYSTEM_PROMPT);
     const visionSystemPrompt = visionPromptResult.content;
@@ -144,7 +185,7 @@ Deno.serve(async (req) => {
     const visionResult = await visionResponse.json()
     const visionDescription = visionResult.choices[0].message.content
 
-    // 5. AI ANALYSIS - STEP 2: INTERPRETATION
+    // 6. AI ANALYSIS - STEP 2: INTERPRETATION
     // Persona-specific model + params from system_config (admin panel), with code fallback.
     const isEsoteric = mode === 'esoteric';
     const selectedPromptKey = isEsoteric ? 'cassandra' : 'arina';
@@ -246,7 +287,7 @@ Deno.serve(async (req) => {
         throw new Error("Failed to generate valid analysis format")
     }
 
-    // 6. SAVE HISTORY
+    // 7. SAVE HISTORY
     // Use service role client to bypass RLS if needed, or just standard client
     // Standard client (supabaseClient) acts as the user, so RLS must allow INSERT own history
     const { error: historyError } = await supabaseClient
@@ -269,7 +310,7 @@ Deno.serve(async (req) => {
         // We don't fail the request if history save fails, but it's bad.
     }
 
-    // 7. RETURN RESULT
+    // 8. RETURN RESULT
     return new Response(JSON.stringify({
         success: true,
         data: finalAnalysis,

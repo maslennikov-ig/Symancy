@@ -23,3 +23,8 @@ export {
   findDailyFortuneUsers,
   createDailyFortuneMessage,
 } from "./triggers/daily-fortune.js";
+export {
+  findStreakAtRiskUsers,
+  createStreakAtRiskMessage,
+  type StreakAtRiskUser,
+} from "./triggers/streak-at-risk.js";

@@ -45,6 +45,7 @@ import { savePhoto } from "./storage.service.js";
 import { getEnv } from "../../config/env.js";
 import { randomUUID } from "node:crypto";
 import { createRetopicKeyboard } from "./keyboards.js";
+import { recordStreakActivityForTelegramUser } from "../gamification/index.js";
 
 const logger = getLogger().child({ module: "photo-analysis-worker" });
 
@@ -428,6 +429,20 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
       // Don't throw - result is already saved in analysis_history
     } else {
       jobLogger.debug("Chat message saved");
+    }
+
+    // Step 8.5: Record daily-usage streak (gamification, sym-tb3)
+    // Idempotent per calendar day; non-fatal (never breaks the analysis flow).
+    try {
+      const streak = await recordStreakActivityForTelegramUser(telegramUserId);
+      if (streak) {
+        jobLogger.debug(
+          { currentStreak: streak.currentStreak, longestStreak: streak.longestStreak },
+          "Streak updated after successful analysis"
+        );
+      }
+    } catch (streakError) {
+      jobLogger.warn({ error: streakError }, "Failed to update streak (non-fatal)");
     }
 
     // Step 9: Update user state with last analysis

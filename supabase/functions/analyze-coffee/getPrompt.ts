@@ -113,7 +113,7 @@ function logPromptEvent(
 
 export async function getPrompt(
   supabase: ReturnType<typeof createClient>,
-  key: 'vision' | 'arina' | 'cassandra',
+  key: 'vision' | 'arina' | 'cassandra' | 'quality_check',
   fallback: string
 ): Promise<PromptResult> {
   const now = Date.now()

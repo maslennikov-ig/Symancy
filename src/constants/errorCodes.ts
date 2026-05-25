@@ -8,6 +8,8 @@ export const ErrorCodes = {
   RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
   UNAUTHORIZED: 'UNAUTHORIZED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
+  /** Photo failed AI quality pre-check; no credit was consumed. */
+  QUALITY_CHECK_FAILED: 'QUALITY_CHECK_FAILED',
 } as const;
 
 export type ErrorCode = typeof ErrorCodes[keyof typeof ErrorCodes];

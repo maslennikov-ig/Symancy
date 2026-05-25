@@ -20,6 +20,7 @@ import { useTelegramWebApp } from '../../hooks/useTelegramWebApp';
 import { useMainButton } from '../../hooks/useMainButton';
 import { PersonaSelector, Persona } from '../../components/features/analysis/PersonaSelector';
 import { RefreshIcon } from '../../components/icons';
+import type { QualityHintCode } from '../../services/analysisService';
 
 /**
  * Credit balance for display
@@ -50,6 +51,12 @@ interface PreviewProps {
   language: 'ru' | 'en' | 'zh';
   /** Translation function */
   t: (key: string) => string;
+  /**
+   * Quality hint codes returned when the AI pre-check rejects the photo.
+   * The component renders localized hint text for each code.
+   * Empty array (default) means no quality issues were detected.
+   */
+  qualityHints?: QualityHintCode[];
   /** Optional className for container */
   className?: string;
 }
@@ -66,6 +73,7 @@ export function Preview({
   credits,
   language,
   t,
+  qualityHints = [],
   className,
 }: PreviewProps) {
   const { hapticFeedback, isWebApp } = useTelegramWebApp();
@@ -197,6 +205,29 @@ export function Preview({
         <p className="mt-4 text-sm text-destructive text-center">
           {t('analysis.error.noCredits')}
         </p>
+      )}
+
+      {/* Quality check hints — shown when AI rejects the photo */}
+      {qualityHints.length > 0 && (
+        <div className="mt-4 w-full max-w-xs rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+          <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-2">
+            {t('quality.title')}
+          </p>
+          <ul className="space-y-1">
+            {qualityHints.map((code) => (
+              <li
+                key={code}
+                className="flex items-start gap-2 text-sm text-amber-700 dark:text-amber-300"
+              >
+                <span className="mt-0.5 shrink-0" aria-hidden="true">&#x26A0;&#xFE0F;</span>
+                <span>{t(`quality.hints.${code}`)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-amber-600 dark:text-amber-400/80">
+            {t('quality.retakeAdvice')}
+          </p>
+        </div>
       )}
     </div>
   );

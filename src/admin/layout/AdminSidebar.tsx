@@ -6,6 +6,7 @@ import {
   MessageSquare,
   DollarSign,
   Activity,
+  FileText,
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -24,6 +25,7 @@ const navItems: NavItem[] = [
   { to: '/admin/messages', labelKey: 'admin.sidebar.messages', icon: MessageSquare },
   { to: '/admin/costs', labelKey: 'admin.sidebar.costs', icon: DollarSign },
   { to: '/admin/user-states', labelKey: 'admin.sidebar.userStates', icon: Activity },
+  { to: '/admin/prompts', labelKey: 'admin.sidebar.prompts', icon: FileText },
 ]
 
 interface AdminSidebarProps {
