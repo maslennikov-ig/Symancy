@@ -16,7 +16,8 @@ import { sendJob } from "../../core/queue.js";
 import { getBotApi } from "../../core/telegram.js";
 import type { PhotoAnalysisJobData } from "../../types/telegram.js";
 import { QUEUE_ANALYZE_PHOTO } from "../../config/constants.js";
-import { grantInitialCredits } from "../credits/service.js";
+// Welcome credits are granted as unified credits inside the onboarding graph
+// (graphs/onboarding/nodes/complete.ts → grantUnifiedInitialCredits). No legacy grant here.
 import { findOrCreateByTelegramId } from "../../services/user/UnifiedUserService.js";
 import { z } from "zod";
 
@@ -580,28 +581,11 @@ export async function handleOnboardingCallback(
         "Timezone selected, onboarding flow updated"
       );
 
-      // Grant initial free credit when onboarding completes
+      // Welcome credits are granted as UNIFIED (3 basic + 1 pro) inside the
+      // onboarding graph's complete node (grantUnifiedInitialCredits). The legacy
+      // grantInitialCredits call was removed (sym-1xi): it wrote a stranded credit
+      // to backend_user_credits and risked double-counting in the unified backfill.
       if (result.completed) {
-        const grantResult = await grantInitialCredits(telegramUserId);
-
-        if (!grantResult.success) {
-          logger.error(
-            { telegramUserId, error: grantResult.error },
-            "Failed to grant initial credits - user may not be able to analyze photos"
-          );
-          // Continue with onboarding completion - don't block user
-        } else if (grantResult.alreadyGranted) {
-          logger.info(
-            { telegramUserId, balance: grantResult.balance },
-            "Free credit already granted (idempotent call)"
-          );
-        } else {
-          logger.info(
-            { telegramUserId, balance: grantResult.balance },
-            "Initial free credit granted on onboarding completion"
-          );
-        }
-
         // Ensure unified_users record exists (defensive backup for complete.ts)
         // Trigger auto-copies credits from backend_user_credits
         try {
