@@ -123,12 +123,31 @@ async function handlePaymentSucceeded(
     throw updateError
   }
 
-  // Grant credits using RPC function
-  const { error: grantError } = await supabase.rpc('grant_credits', {
-    p_user_id: user_id,
-    p_product_type: product_type,
-    p_credits: tariff.credits
-  })
+  // Resolve unified user from the auth user_id stored on the purchase.
+  const { data: unifiedRow, error: unifiedErr } = await supabase
+    .from('unified_users')
+    .select('id')
+    .eq('auth_id', user_id)
+    .single()
+
+  if (unifiedErr || !unifiedRow) {
+    console.error('CRITICAL: no unified_users mapping for paid auth user', { purchase_id, user_id, error: unifiedErr })
+  }
+
+  // Grant unified credits via the same RPC the Telegram path uses (+ credit_transactions log).
+  const basicDelta = (product_type === 'basic' || product_type === 'pack5') ? tariff.credits : 0
+  const proDelta = product_type === 'pro' ? tariff.credits : 0
+  const cassandraDelta = product_type === 'cassandra' ? tariff.credits : 0
+
+  const { error: grantError } = unifiedRow
+    ? await supabase.rpc('admin_adjust_credits', {
+        p_unified_user_id: unifiedRow.id,
+        p_basic_delta: basicDelta,
+        p_pro_delta: proDelta,
+        p_cassandra_delta: cassandraDelta,
+        p_reason: `web_payment:yookassa:${product_type}`,
+      })
+    : { error: new Error('no unified_users mapping') }
 
   if (grantError) {
     console.error('Error granting credits:', grantError)
