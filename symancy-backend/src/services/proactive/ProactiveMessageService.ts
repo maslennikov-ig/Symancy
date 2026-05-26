@@ -10,6 +10,7 @@
  * Web-only users (is_telegram_linked=false) receive nothing.
  */
 
+import type { InlineKeyboardMarkup } from "grammy/types";
 import { getSupabase } from "../../core/database.js";
 import { getLogger } from "../../core/logger.js";
 import { getDeliveryService } from "../delivery/DeliveryService.js";
@@ -45,7 +46,9 @@ export type ProactiveMessageType =
   | "daily-fortune"
   | "morning-insight"
   | "evening-insight"
-  | "streak-at-risk";
+  | "streak-at-risk"
+  | "trial-low"
+  | "trial-zero";
 
 /**
  * Result of sending proactive message
@@ -281,12 +284,14 @@ export class ProactiveMessageService {
    * @param user - User to send message to
    * @param messageType - Type of proactive message
    * @param content - Message content (HTML formatted)
+   * @param opts - Optional extras (e.g. inline keyboard / reply markup)
    * @returns ProactiveMessageResult
    */
   public async sendEngagementMessage(
     user: ProactiveEligibleUser,
     messageType: ProactiveMessageType,
-    content: string
+    content: string,
+    opts?: { replyMarkup?: InlineKeyboardMarkup }
   ): Promise<ProactiveMessageResult> {
     const logger = this.logger.child({
       method: "sendEngagementMessage",
@@ -315,7 +320,7 @@ export class ProactiveMessageService {
       const result = await deliveryService.deliverToTelegram(
         user.telegramId,
         content,
-        { parse_mode: "HTML" }
+        { parse_mode: "HTML", reply_markup: opts?.replyMarkup }
       );
 
       if (result.success) {
@@ -379,12 +384,14 @@ export class ProactiveMessageService {
    * @param users - Users to send to
    * @param messageType - Type of proactive message
    * @param contentGenerator - Function to generate message content per user
+   * @param opts - Optional extras applied to every message (e.g. inline keyboard)
    * @returns Summary of results
    */
   public async sendBatchEngagementMessages(
     users: ProactiveEligibleUser[],
     messageType: ProactiveMessageType,
-    contentGenerator: (user: ProactiveEligibleUser) => string | Promise<string>
+    contentGenerator: (user: ProactiveEligibleUser) => string | Promise<string>,
+    opts?: { replyMarkup?: InlineKeyboardMarkup }
   ): Promise<{
     total: number;
     success: number;
@@ -401,7 +408,7 @@ export class ProactiveMessageService {
 
     for (const user of users) {
       const content = await contentGenerator(user);
-      const result = await this.sendEngagementMessage(user, messageType, content);
+      const result = await this.sendEngagementMessage(user, messageType, content, opts);
 
       if (result.success) {
         successCount++;

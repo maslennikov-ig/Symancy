@@ -100,6 +100,12 @@ export const QUEUE_WEEKLY_CHECKIN = "weekly-checkin";
 export const QUEUE_STREAK_AT_RISK = "streak-at-risk";
 
 /**
+ * Queue name for trial-nudge engagement (Trial follow-up, sym-9gy / sym-g5xm).
+ * Hourly finder that nudges users whose welcome (trial) credits ran low/out.
+ */
+export const QUEUE_TRIAL_NUDGE = "trial-nudge";
+
+/**
  * Queue name for daily fortune engagement
  */
 export const QUEUE_DAILY_FORTUNE = "daily-fortune";

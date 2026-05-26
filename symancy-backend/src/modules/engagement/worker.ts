@@ -27,6 +27,12 @@ import {
   createStreakAtRiskMessage,
 } from "./triggers/streak-at-risk.js";
 import {
+  findTrialNudgeUsers,
+  createTrialNudgeMessage,
+  type TrialNudgeStage,
+} from "./triggers/trial-nudge.js";
+import { createTariffPickerKeyboard } from "../payments/keyboards.js";
+import {
   generateMorningAdvice,
   generateEveningInsight,
   generateWithRetry,
@@ -229,6 +235,78 @@ export async function processStreakAtRisk(job: Job): Promise<void> {
     );
   } catch (error) {
     jobLogger.error({ error }, "Streak-at-risk processing failed");
+    throw error; // Trigger pg-boss retry
+  }
+}
+
+/**
+ * Process trial-nudge job (Trial follow-up, sym-9gy / sym-g5xm — approach B)
+ *
+ * Hourly finder: surfaces users whose welcome (trial) credits have crossed to
+ * low (total === 1) or zero (total === 0), independent of which channel
+ * (Telegram or web Edge functions) drained the balance. Each stage fires at
+ * most once per user, ever (all-time engagement_log dedup inside the finder).
+ *
+ * Sends, per stage group, a localized nudge with an inline tariff-picker
+ * keyboard so the user can buy without leaving the chat. Reuses the payments
+ * `buy:*` callback handler already wired globally.
+ */
+export async function processTrialNudge(job: Job): Promise<void> {
+  const jobLogger = logger.child({ jobId: job.id, type: "trial-nudge" });
+
+  jobLogger.info("Starting trial-nudge processing");
+
+  try {
+    const candidates = await findTrialNudgeUsers();
+
+    if (candidates.length === 0) {
+      jobLogger.info("No trial-nudge users to notify");
+      return;
+    }
+
+    // Group eligible users by stage so each group sends the right message type
+    // ("trial-low" / "trial-zero") with stage-appropriate content.
+    const byStage = new Map<TrialNudgeStage, typeof candidates[number]["user"][]>();
+    for (const { user, stage } of candidates) {
+      const group = byStage.get(stage) ?? [];
+      group.push(user);
+      byStage.set(stage, group);
+    }
+
+    const proactiveService = getProactiveMessageService();
+    const replyMarkup = createTariffPickerKeyboard();
+
+    let total = 0;
+    let success = 0;
+    let failed = 0;
+    let blocked = 0;
+
+    for (const [stage, users] of byStage) {
+      if (users.length === 0) {
+        continue;
+      }
+
+      jobLogger.info({ stage, count: users.length }, "Sending trial-nudge group");
+
+      const results = await proactiveService.sendBatchEngagementMessages(
+        users,
+        `trial-${stage}`,
+        (user) => createTrialNudgeMessage(stage, user.displayName, user.languageCode),
+        { replyMarkup }
+      );
+
+      total += results.total;
+      success += results.success;
+      failed += results.failed;
+      blocked += results.blocked;
+    }
+
+    jobLogger.info(
+      { total, success, failed, blocked },
+      "Trial-nudge processing completed"
+    );
+  } catch (error) {
+    jobLogger.error({ error }, "Trial-nudge processing failed");
     throw error; // Trigger pg-boss retry
   }
 }
@@ -642,6 +720,18 @@ export async function registerEngagementWorkers(): Promise<string[]> {
   );
   workerIds.push(streakAtRiskWorkerId);
   logger.info({ workerId: streakAtRiskWorkerId }, "Streak-at-risk worker registered");
+
+  // Register trial-nudge worker (Trial follow-up, sym-9gy / sym-g5xm)
+  const trialNudgeWorkerId = await registerWorker(
+    "trial-nudge",
+    processTrialNudge,
+    {
+      batchSize: 1,
+      pollingIntervalSeconds: 60,
+    }
+  );
+  workerIds.push(trialNudgeWorkerId);
+  logger.info({ workerId: trialNudgeWorkerId }, "Trial-nudge worker registered");
 
   // Register photo cleanup worker
   const photoCleanupWorkerId = await registerWorker(
