@@ -31,7 +31,7 @@ Out of scope: changing the credit/tariff model (blocked: sym-vgc), new payment m
 - **Purchase flow already exists** (reuse, do not rebuild): `payments` module with
   `pay:yookassa:<tariff>` / `pay:stars:<tariff>` callbacks + "🎁 Купить" WebApp button
   (`WEBAPP_URL/pricing`).
-- **Source of truth for "ever purchased": `backend_credit_transactions`** — the audit log of
+- **Source of truth for "ever purchased": `credit_transactions`** — the audit log of
   all credit grants across channels. A purchase = a row with a purchase-type `reason`
   (`yookassa:%` / `stars:%`), distinct from the welcome-grant reason. This is reliable for
   **Telegram-only** users (who have no `purchases` row — credits granted via
@@ -73,7 +73,7 @@ trial-nudge worker (engagement/worker.ts)
 
 - **VIEW `trial_conversion_funnel`** (for admin analytics): cohort funnel
   `granted` (free_credit_granted=true) → `exhausted` (welcome balance reached 0) →
-  `purchased` (has purchase-type row in `backend_credit_transactions`). Computed from source
+  `purchased` (has purchase-type row in `credit_transactions`). Computed from source
   of truth — no event counters to drift.
 - No schema change for dedup: `engagement_log.message_type` is free text; new values
   `trial-low`, `trial-zero`.
@@ -82,7 +82,7 @@ trial-nudge worker (engagement/worker.ts)
 
 - **`consumeCredits`** (`credits/service.ts`): after successful deduction, compute new total
   welcome balance and detect crossing to 1 (`low`) or 0 (`zero`). Eligibility:
-  `free_credit_granted = true` AND no purchase-type row in `backend_credit_transactions`.
+  `free_credit_granted = true` AND no purchase-type row in `credit_transactions`.
   On match: `boss.send(QUEUE_TRIAL_NUDGE, …)`. Enqueue only; no message logic in hot path.
   Enqueue failures are swallowed/logged (never break the consume path).
 - **`core/queue.ts`**: add `QUEUE_TRIAL_NUDGE` to `queuesToCreate` — **mandatory** (missing
@@ -124,7 +124,7 @@ trial-nudge worker (engagement/worker.ts)
 
 - **Threshold detector**: 4→3→2→1 (fires `low` once at 1), →0 (fires `zero` once); already-0
   re-consume does not refire; non-trial (purchased) users excluded.
-- **Eligibility filter**: purchased (via `backend_credit_transactions`) excluded;
+- **Eligibility filter**: purchased (via `credit_transactions`) excluded;
   `notification_settings` disabled excluded; not-yet-granted excluded.
 - **Dedup**: second crossing of same stage produces no second send.
 - **Message generators**: AI failure falls back to localized text; ru/en/zh covered.
@@ -132,5 +132,5 @@ trial-nudge worker (engagement/worker.ts)
 
 ## Open questions
 
-None. (Purchase source of truth = `backend_credit_transactions`; keyboard via extended
+None. (Purchase source of truth = `credit_transactions`; keyboard via extended
 `replyMarkup` option — both resolved during design.)
