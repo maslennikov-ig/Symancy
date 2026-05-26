@@ -6,6 +6,13 @@ import { getPrompt } from "./getPrompt.ts"
 import { getConfigValue } from "./getConfig.ts"
 import { getCreditType } from "./creditMapping.ts"
 import { runQualityCheck } from "./qualityCheck.ts"
+import {
+  resolveUnifiedUser,
+  consumeCreditForAuthUser,
+  refundCreditForAuthUser,
+  type CreditType,
+  type UnifiedUserLookup,
+} from "../_shared/unified-credits.ts"
 
 /**
  * Sanitize user input before prompt interpolation to prevent prompt injection.
@@ -74,6 +81,14 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     )
 
+    // Service-role client for the SECURITY DEFINER unified-credit RPCs
+    // (consume_unified_credit* / refund_unified_credit*). Mirrors compare-coffee.
+    const serviceClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
     if (userError || !user) throw new Error("Unauthorized")
 
@@ -117,19 +132,25 @@ Deno.serve(async (req) => {
       )
     }
 
-    // 4. CONSUME CREDIT (Atomic Transaction)
-    // Determine credit type from mode or explicit override
-    const resolvedCreditType = getCreditType(mode, creditType)
+    // 4. CONSUME CREDIT (unified, race-safe via SECURITY DEFINER RPC)
+    // Determine credit type from mode or explicit override (esoteric→cassandra preserved).
+    // getCreditType returns one of 'basic' | 'cassandra' | 'pro' at runtime
+    // (map values + override validator are constrained to these); cast to the union.
+    const resolvedCreditType = getCreditType(mode, creditType) as CreditType
 
-    const { data: creditResult, error: creditError } = await supabaseClient.rpc('consume_credit', {
-      p_user_id: user.id,
-      p_credit_type: resolvedCreditType
-    })
-
-    if (creditError || !creditResult.success) {
+    const unifiedUser: UnifiedUserLookup | null = await resolveUnifiedUser(serviceClient, user.id)
+    if (!unifiedUser) {
       return new Response(JSON.stringify({
-        error: "Insufficient credits", 
-        code: "INSUFFICIENT_CREDITS" 
+        error: "User mapping not found",
+        code: "NO_UNIFIED_USER"
+      }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } })
+    }
+
+    const creditResult = await consumeCreditForAuthUser(serviceClient, unifiedUser, resolvedCreditType)
+    if (!creditResult.success) {
+      return new Response(JSON.stringify({
+        error: "Insufficient credits",
+        code: "INSUFFICIENT_CREDITS"
       }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } })
     }
 
@@ -179,6 +200,7 @@ Deno.serve(async (req) => {
         const err = await visionResponse.text()
         console.error("Vision API Error:", err)
         console.error("AI_FAILURE_AFTER_CREDIT", { userId: user.id, creditType: resolvedCreditType, error: err })
+        await refundCreditForAuthUser(serviceClient, unifiedUser, resolvedCreditType)
         throw new Error("AI Vision service unavailable")
     }
 
@@ -272,6 +294,7 @@ Deno.serve(async (req) => {
         const err = await interpretResponse.text()
         console.error("Interpretation API Error:", err)
         console.error("AI_FAILURE_AFTER_CREDIT", { userId: user.id, creditType: resolvedCreditType, error: err })
+        await refundCreditForAuthUser(serviceClient, unifiedUser, resolvedCreditType)
         throw new Error("AI Interpretation service unavailable")
     }
 
@@ -312,24 +335,12 @@ Deno.serve(async (req) => {
 
     // 7.5. RECORD STREAK (gamification, sym-5nt — web/edge path)
     // Web/MiniApp analyses go through this Edge Function (the Telegram bot path
-    // increments streak in symancy-backend). Resolve unified_user_id from the
-    // auth user and call increment_user_streak via a service-role client
-    // (the RPC is service_role-only). Idempotent per day; strictly non-fatal —
-    // a streak failure must never break a successful analysis response.
+    // increments streak in symancy-backend). Reuse the unified user already
+    // resolved for credit consumption and the existing service-role client
+    // (increment_user_streak is service_role-only). Idempotent per day; strictly
+    // non-fatal — a streak failure must never break a successful analysis response.
     try {
-      const streakClient = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      )
-      const { data: unifiedUser } = await streakClient
-        .from('unified_users')
-        .select('id')
-        .eq('auth_id', user.id)
-        .maybeSingle()
-
-      if (unifiedUser?.id) {
-        await streakClient.rpc('increment_user_streak', { p_unified_user_id: unifiedUser.id })
-      }
+      await serviceClient.rpc('increment_user_streak', { p_unified_user_id: unifiedUser.unifiedUserId })
     } catch (streakError) {
       console.error("Streak update failed (non-fatal):", streakError)
     }
