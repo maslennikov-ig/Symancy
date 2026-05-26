@@ -690,11 +690,14 @@ export async function handleSuccessfulPayment(ctx: BotContext): Promise<void> {
   const reason =
     `telegram_payment:${isStars ? "stars" : "yookassa"}:${payload.product_type}`;
 
-  const { error: grantError } = await supabase.rpc("admin_adjust_credits", {
+  // Use the service-role-safe purchase RPC. admin_adjust_credits guards on is_admin()
+  // (auth.jwt()->>'email' ∈ admin_emails), which the SERVICE_ROLE JWT fails — so it would
+  // RAISE 'Unauthorized' and silently fail to credit paid users (sym-1xi-adjacent P0).
+  const { error: grantError } = await supabase.rpc("grant_purchased_credits", {
     p_unified_user_id: unifiedUserId,
-    p_basic_delta: basicDelta,
-    p_pro_delta: proDelta,
-    p_cassandra_delta: cassandraDelta,
+    p_basic: basicDelta,
+    p_pro: proDelta,
+    p_cassandra: cassandraDelta,
     p_reason: reason,
   });
 

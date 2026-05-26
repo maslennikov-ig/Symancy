@@ -7,7 +7,7 @@
 import type { BotContext } from './middleware.js';
 import { getLogger } from '../../core/logger.js';
 import { getSupabase } from '../../core/database.js';
-import { getCreditBalance } from '../credits/service.js';
+import { getAllCredits } from '../credits/service.js';
 import { generateLinkToken } from '../../services/auth/LinkTokenService.js';
 import { getBotMessage } from '../../services/i18n/index.js';
 import {
@@ -100,7 +100,8 @@ export async function handleCreditsCommand(ctx: BotContext): Promise<void> {
       return;
     }
 
-    const balance = await getCreditBalance(ctx.from.id);
+    const credits = await getAllCredits(ctx.from.id);
+    const balance = credits ? credits.basic + credits.pro + credits.cassandra : 0;
 
     const balanceMsg = getBotMessage('credits.balance', lang, {
       balance: String(balance),

@@ -123,12 +123,33 @@ async function handlePaymentSucceeded(
     throw updateError
   }
 
-  // Grant credits using RPC function
-  const { error: grantError } = await supabase.rpc('grant_credits', {
-    p_user_id: user_id,
-    p_product_type: product_type,
-    p_credits: tariff.credits
-  })
+  // Resolve unified user from the auth user_id stored on the purchase.
+  const { data: unifiedRow, error: unifiedErr } = await supabase
+    .from('unified_users')
+    .select('id')
+    .eq('auth_id', user_id)
+    .single()
+
+  if (unifiedErr || !unifiedRow) {
+    console.error('CRITICAL: no unified_users mapping for paid auth user', { purchase_id, user_id, error: unifiedErr })
+  }
+
+  // Grant unified credits via the service-role-safe purchase RPC.
+  // (admin_adjust_credits guards on is_admin() which rejects the service-role JWT — it has no
+  //  email claim — so it cannot be used from server-side payment handlers. See grant_purchased_credits.)
+  const basicDelta = (product_type === 'basic' || product_type === 'pack5') ? tariff.credits : 0
+  const proDelta = product_type === 'pro' ? tariff.credits : 0
+  const cassandraDelta = product_type === 'cassandra' ? tariff.credits : 0
+
+  const { error: grantError } = unifiedRow
+    ? await supabase.rpc('grant_purchased_credits', {
+        p_unified_user_id: unifiedRow.id,
+        p_basic: basicDelta,
+        p_pro: proDelta,
+        p_cassandra: cassandraDelta,
+        p_reason: `web_payment:yookassa:${product_type}`,
+      })
+    : { error: new Error('no unified_users mapping') }
 
   if (grantError) {
     console.error('Error granting credits:', grantError)
