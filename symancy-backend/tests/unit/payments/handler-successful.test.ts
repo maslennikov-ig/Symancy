@@ -266,7 +266,7 @@ describe("handleSuccessfulPayment", () => {
       );
     });
 
-    it("calls admin_adjust_credits with basicDelta=1 for 'basic'", async () => {
+    it("calls grant_purchased_credits with basicDelta=1 for 'basic'", async () => {
       const ctx = buildSuccessCtx({
         currency: "RUB",
         total_amount: TARIFFS.basic.price * 100,
@@ -277,17 +277,17 @@ describe("handleSuccessfulPayment", () => {
       await handleSuccessfulPayment(ctx);
 
       expect(mockRpc).toHaveBeenCalledWith(
-        "admin_adjust_credits",
+        "grant_purchased_credits",
         expect.objectContaining({
           p_unified_user_id: "unified-user-uuid",
-          p_basic_delta: 1,
-          p_pro_delta: 0,
-          p_cassandra_delta: 0,
+          p_basic: 1,
+          p_pro: 0,
+          p_cassandra: 0,
         })
       );
     });
 
-    it("calls admin_adjust_credits with basicDelta=5 for 'pack5'", async () => {
+    it("calls grant_purchased_credits with basicDelta=5 for 'pack5'", async () => {
       const ctx = buildSuccessCtx({
         currency: "RUB",
         total_amount: TARIFFS.pack5.price * 100,
@@ -298,16 +298,16 @@ describe("handleSuccessfulPayment", () => {
       await handleSuccessfulPayment(ctx);
 
       expect(mockRpc).toHaveBeenCalledWith(
-        "admin_adjust_credits",
+        "grant_purchased_credits",
         expect.objectContaining({
-          p_basic_delta: 5,
-          p_pro_delta: 0,
-          p_cassandra_delta: 0,
+          p_basic: 5,
+          p_pro: 0,
+          p_cassandra: 0,
         })
       );
     });
 
-    it("calls admin_adjust_credits with proDelta=1 for 'pro'", async () => {
+    it("calls grant_purchased_credits with proDelta=1 for 'pro'", async () => {
       const ctx = buildSuccessCtx({
         currency: "RUB",
         total_amount: TARIFFS.pro.price * 100,
@@ -318,16 +318,16 @@ describe("handleSuccessfulPayment", () => {
       await handleSuccessfulPayment(ctx);
 
       expect(mockRpc).toHaveBeenCalledWith(
-        "admin_adjust_credits",
+        "grant_purchased_credits",
         expect.objectContaining({
-          p_basic_delta: 0,
-          p_pro_delta: 1,
-          p_cassandra_delta: 0,
+          p_basic: 0,
+          p_pro: 1,
+          p_cassandra: 0,
         })
       );
     });
 
-    it("calls admin_adjust_credits with cassandraDelta=1 for 'cassandra'", async () => {
+    it("calls grant_purchased_credits with cassandraDelta=1 for 'cassandra'", async () => {
       const ctx = buildSuccessCtx({
         currency: "RUB",
         total_amount: TARIFFS.cassandra.price * 100,
@@ -338,11 +338,11 @@ describe("handleSuccessfulPayment", () => {
       await handleSuccessfulPayment(ctx);
 
       expect(mockRpc).toHaveBeenCalledWith(
-        "admin_adjust_credits",
+        "grant_purchased_credits",
         expect.objectContaining({
-          p_basic_delta: 0,
-          p_pro_delta: 0,
-          p_cassandra_delta: 1,
+          p_basic: 0,
+          p_pro: 0,
+          p_cassandra: 1,
         })
       );
     });
@@ -451,7 +451,7 @@ describe("handleSuccessfulPayment", () => {
       );
     });
 
-    it("calls admin_adjust_credits with correct deltas for Stars 'basic'", async () => {
+    it("calls grant_purchased_credits with correct deltas for Stars 'basic'", async () => {
       const ctx = buildSuccessCtx({
         currency: "XTR",
         total_amount: STARS_PRICES.basic,
@@ -463,11 +463,11 @@ describe("handleSuccessfulPayment", () => {
       await handleSuccessfulPayment(ctx);
 
       expect(mockRpc).toHaveBeenCalledWith(
-        "admin_adjust_credits",
+        "grant_purchased_credits",
         expect.objectContaining({
-          p_basic_delta: 1,
-          p_pro_delta: 0,
-          p_cassandra_delta: 0,
+          p_basic: 1,
+          p_pro: 0,
+          p_cassandra: 0,
         })
       );
     });
@@ -485,7 +485,7 @@ describe("handleSuccessfulPayment", () => {
       });
     });
 
-    it("skips purchases insert but still calls admin_adjust_credits", async () => {
+    it("skips purchases insert but still calls grant_purchased_credits", async () => {
       const ctx = buildSuccessCtx({
         currency: "RUB",
         total_amount: TARIFFS.basic.price * 100,
@@ -511,7 +511,7 @@ describe("handleSuccessfulPayment", () => {
       await handleSuccessfulPayment(ctx);
 
       expect(mockInsert).not.toHaveBeenCalled();
-      expect(mockRpc).toHaveBeenCalledWith("admin_adjust_credits", expect.any(Object));
+      expect(mockRpc).toHaveBeenCalledWith("grant_purchased_credits", expect.any(Object));
     });
 
     it("still sends confirmation reply to user", async () => {
@@ -547,7 +547,7 @@ describe("handleSuccessfulPayment", () => {
   // RPC failure
   // --------------------------------------------------------------------------
   describe("RPC failure", () => {
-    it("sends error reply with support email when admin_adjust_credits fails", async () => {
+    it("sends error reply with support email when grant_purchased_credits fails", async () => {
       // Idempotency check → no existing row
       let maybeSingleCall = 0;
       mockMaybeSingle.mockImplementation(() => {

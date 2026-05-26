@@ -134,17 +134,19 @@ async function handlePaymentSucceeded(
     console.error('CRITICAL: no unified_users mapping for paid auth user', { purchase_id, user_id, error: unifiedErr })
   }
 
-  // Grant unified credits via the same RPC the Telegram path uses (+ credit_transactions log).
+  // Grant unified credits via the service-role-safe purchase RPC.
+  // (admin_adjust_credits guards on is_admin() which rejects the service-role JWT — it has no
+  //  email claim — so it cannot be used from server-side payment handlers. See grant_purchased_credits.)
   const basicDelta = (product_type === 'basic' || product_type === 'pack5') ? tariff.credits : 0
   const proDelta = product_type === 'pro' ? tariff.credits : 0
   const cassandraDelta = product_type === 'cassandra' ? tariff.credits : 0
 
   const { error: grantError } = unifiedRow
-    ? await supabase.rpc('admin_adjust_credits', {
+    ? await supabase.rpc('grant_purchased_credits', {
         p_unified_user_id: unifiedRow.id,
-        p_basic_delta: basicDelta,
-        p_pro_delta: proDelta,
-        p_cassandra_delta: cassandraDelta,
+        p_basic: basicDelta,
+        p_pro: proDelta,
+        p_cassandra: cassandraDelta,
         p_reason: `web_payment:yookassa:${product_type}`,
       })
     : { error: new Error('no unified_users mapping') }
