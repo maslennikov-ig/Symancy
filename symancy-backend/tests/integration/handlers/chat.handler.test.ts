@@ -37,7 +37,9 @@ vi.mock('@/modules/config/service.js', () => ({
 }))
 
 vi.mock('@/modules/credits/service.js', () => ({
-  hasCredits: vi.fn(() => Promise.resolve(true)),
+  hasCreditsOfType: vi.fn(() => Promise.resolve(true)),
+  consumeCreditsOfType: vi.fn(() => Promise.resolve(true)),
+  refundCreditsOfType: vi.fn(() => Promise.resolve(true)),
 }))
 
 // =============================================================================
@@ -658,25 +660,25 @@ describe('handleTextMessage - Integration Tests', () => {
   describe('Credit Check', () => {
     it('should check hasCredits before queuing', async () => {
       mockDailyLimitNotReached()
-      const { hasCredits } = await import('@/modules/credits/service.js')
+      const { hasCreditsOfType } = await import('@/modules/credits/service.js')
       const { sendJob } = await import('@/core/queue.js')
 
-      vi.mocked(hasCredits).mockResolvedValue(true)
+      vi.mocked(hasCreditsOfType).mockResolvedValue(true)
 
       const ctx = createTextContext('Hello')
 
       await handleTextMessage(ctx)
 
-      expect(hasCredits).toHaveBeenCalledWith(123456789, 1)
+      expect(hasCreditsOfType).toHaveBeenCalledWith(123456789, 'basic')
       expect(sendJob).toHaveBeenCalled()
     })
 
     it('should send insufficient credits message when needed', async () => {
       mockDailyLimitNotReached()
-      const { hasCredits } = await import('@/modules/credits/service.js')
+      const { hasCreditsOfType } = await import('@/modules/credits/service.js')
       const { sendJob } = await import('@/core/queue.js')
 
-      vi.mocked(hasCredits).mockResolvedValue(false)
+      vi.mocked(hasCreditsOfType).mockResolvedValue(false)
 
       const ctx = createTextContext('Hello')
 
@@ -690,9 +692,9 @@ describe('handleTextMessage - Integration Tests', () => {
 
     it('should mention balance top-up in credit error', async () => {
       mockDailyLimitNotReached()
-      const { hasCredits } = await import('@/modules/credits/service.js')
+      const { hasCreditsOfType } = await import('@/modules/credits/service.js')
 
-      vi.mocked(hasCredits).mockResolvedValue(false)
+      vi.mocked(hasCreditsOfType).mockResolvedValue(false)
 
       const ctx = createTextContext('Hello')
 
