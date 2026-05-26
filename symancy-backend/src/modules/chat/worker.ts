@@ -22,7 +22,7 @@ import { getSupabase } from "../../core/database.js";
 import { getLogger } from "../../core/logger.js";
 import { registerWorkerWithMetadata } from "../../core/queue.js";
 import { generateChatResponseDirect } from "../../chains/chat.chain.js";
-import { consumeCredits, refundCredits } from "../credits/service.js";
+import { consumeCreditsOfType, refundCreditsOfType } from "../credits/service.js";
 import { splitMessage } from "../../utils/message-splitter.js";
 import { sanitizeTelegramHtml } from "../../utils/html-formatter.js";
 import { QUEUE_CHAT_REPLY, DAILY_CHAT_LIMIT } from "../../config/constants.js";
@@ -264,7 +264,7 @@ export async function processChatReply(job: JobWithMetadata<ChatReplyJobData>): 
 
     // Step 6: Consume credits BEFORE sending response
     jobLogger.debug("Consuming credits");
-    const consumed = await consumeCredits(telegramUserId, 1);
+    const consumed = await consumeCreditsOfType(telegramUserId, "basic");
     if (!consumed) {
       throw new Error("Failed to consume credits");
     }
@@ -342,7 +342,7 @@ export async function processChatReply(job: JobWithMetadata<ChatReplyJobData>): 
     // Refund credits if they were consumed
     if (creditsConsumed) {
       jobLogger.info("Refunding credits due to failure");
-      const refunded = await refundCredits(telegramUserId, 1);
+      const refunded = await refundCreditsOfType(telegramUserId, "basic");
       if (refunded) {
         jobLogger.info("Credits refunded successfully");
       } else {

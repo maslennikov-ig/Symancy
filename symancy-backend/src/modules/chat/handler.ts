@@ -5,7 +5,7 @@
 import type { BotContext } from "../router/middleware.js";
 import type { ChatReplyJobData } from "../../types/telegram.js";
 import { getLogger } from "../../core/logger.js";
-import { hasCredits } from "../credits/service.js";
+import { hasCreditsOfType } from "../credits/service.js";
 import { sendJob } from "../../core/queue.js";
 import { isMaintenanceMode } from "../config/service.js";
 import { getSupabase } from "../../core/database.js";
@@ -157,7 +157,7 @@ export async function handleTextMessage(ctx: BotContext): Promise<void> {
   );
 
   // Check if user has credits (must have at least 1 credit)
-  if (!(await hasCredits(telegramUserId, 1))) {
+  if (!(await hasCreditsOfType(telegramUserId, "basic"))) {
     logger.info({ telegramUserId }, "User has insufficient credits for chat");
     await ctx.reply(
       "💳 У вас недостаточно кредитов для чата.\n" +
