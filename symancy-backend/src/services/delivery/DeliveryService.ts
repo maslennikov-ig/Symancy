@@ -8,7 +8,7 @@
  * - Error handling for transient failures (network, rate limits, 5xx)
  */
 
-import type { ParseMode } from "grammy/types";
+import type { ParseMode, InlineKeyboardMarkup } from "grammy/types";
 import { getBotApi } from "../../core/telegram.js";
 import { getSupabase } from "../../core/database.js";
 import { getLogger } from "../../core/logger.js";
@@ -44,6 +44,8 @@ export interface TelegramSendOptions {
   disable_web_page_preview?: boolean;
   disable_notification?: boolean;
   reply_to_message_id?: number;
+  /** Optional inline keyboard (e.g. tariff picker for trial follow-up) */
+  reply_markup?: InlineKeyboardMarkup;
 }
 
 /**
@@ -159,6 +161,7 @@ export class DeliveryService {
               : undefined,
             disable_notification: options?.disable_notification,
             reply_to_message_id: options?.reply_to_message_id,
+            reply_markup: options?.reply_markup,
           });
 
           return {

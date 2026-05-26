@@ -20,6 +20,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCloudStorage } from '../hooks/useCloudStorage';
 import { useTelegramWebApp } from '../hooks/useTelegramWebApp';
 import { BalanceCard } from '../components/features/home/BalanceCard';
+import { LowCreditBanner } from '../components/features/home/LowCreditBanner';
 import { CompareBanner } from '../components/features/home/CompareBanner';
 import { DailyInsightCard } from '../components/features/home/DailyInsightCard';
 import { QuickActions } from '../components/features/home/QuickActions';
@@ -86,6 +87,13 @@ const Home: React.FC<HomeProps> = ({ language: propLanguage, t: propT }) => {
 
       {/* Main content */}
       <main className="px-4 space-y-4">
+        {/* Low Credit Banner - top-up nudge when balance is low/zero */}
+        {isAuthenticated && (
+          <LowCreditBanner
+            t={t as (key: string) => string}
+          />
+        )}
+
         {/* Balance Card */}
         {isAuthenticated && (
           <BalanceCard

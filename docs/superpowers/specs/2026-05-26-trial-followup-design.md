@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-26
 **Epic:** BETA — Retention и монетизация (sym-sym-p4i)
-**Status:** Design approved → planning
+**Status:** Design revised A→B (scheduled finder) → planning → implementation
 
 ## Problem
 
@@ -43,67 +43,98 @@ Out of scope: changing the credit/tariff model (blocked: sym-vgc), new payment m
   small, clean extension to carry an optional `replyMarkup` (inline keyboard) through to
   `bot.api.sendMessage`.
 
-## Architecture — Event-driven (approach A)
+## Architecture — Scheduled finder (approach B)
 
-The nudge fires at the exact moment the welcome balance crosses a threshold, immediately after
-the reading that drained it (peak engagement). Daily-scheduler (approach B) was rejected: up to
-24h delay degrades timing and therefore conversion.
+> **Revised from event-driven (approach A) on 2026-05-26.** Approach A enqueued the nudge from
+> `consumeCredits` in Node at the moment the balance crossed a threshold. **Fatal flaw:** web
+> credit consumption runs through **Supabase Edge functions, bypassing Node entirely** — a Node
+> event-hook in `consumeCredits` would silently miss every web user. Approach B reads
+> `unified_user_credits` (the single source of truth) on a schedule, independent of which channel
+> drained the balance, so it catches Telegram *and* web users uniformly. Trade-off: up to ~1h
+> latency. Mitigation: **hourly** cadence (same as `insight-dispatcher`), an acceptable balance
+> between timing and full-channel coverage. (Daily would add up to 24h delay — rejected.)
+
+This mirrors the proven `streak-at-risk` pattern: hourly cron → finder (reads current balance,
+applies eligibility + dedup) → batch send via `ProactiveMessageService`.
 
 ### Data flow
 
 ```
-consumeCredits (hot path)
-  └─ after deduction: compute new total welcome balance
-     └─ detect threshold crossing (→1 = low, →0 = zero)
-        └─ if free_credit_granted = true AND never purchased
-           └─ boss.send(QUEUE_TRIAL_NUDGE, { unifiedUserId, telegramId, stage, languageCode, displayName })
-                                            (enqueue only — no engagement logic in hot path)
-
-trial-nudge worker (engagement/worker.ts)
-  └─ dedup: engagement_log has no prior row for (telegram_id, message_type=trial-<stage>)
-     └─ eligibility re-check: notification_settings enabled, not banned, still no purchase
-        └─ generate message (trial-nudge.ts) — localized + AI(ru) + fallback
-           └─ ProactiveMessageService.sendEngagementMessage(user, "trial-<stage>", content, { replyMarkup: buyKeyboard })
-              └─ log to engagement_log
+hourly cron "trial-nudge"  (scheduler.ts)
+  └─ worker processTrialNudge (engagement/worker.ts)
+     └─ findTrialNudgeUsers()  (engagement/triggers/trial-nudge.ts)
+          ├─ query unified_user_credits (free_credit_granted=true) ⨝ unified_users
+          │     compute total = basic + pro + cassandra
+          │     stage = total===0 ? "zero" : total===1 ? "low" : skip
+          ├─ eligibility: is_telegram_linked, not banned, onboarding_completed,
+          │     notification_settings.enabled !== false
+          ├─ exclude purchased: NO credit_transactions row (transaction_type='purchase')
+          └─ dedup (ALL-TIME): engagement_log has no prior row for
+                (telegram_id, message_type = "trial-<stage>")   ← at most once per user, ever
+     └─ sendBatchEngagementMessages(users, "trial-<stage>", generator,
+             { replyMarkup: createTariffPickerKeyboard() })
+          └─ per user: deliver + log to engagement_log
 ```
+
+### Why all-time dedup (differs from streak-at-risk)
+
+`streak-at-risk` dedups **per-day** (`gte sent_at today`) because it's a daily reminder. The trial
+nudge must fire **at most once per stage per user, ever** — so the finder checks `engagement_log`
+for *any* prior row of that `message_type` (no date filter). A user who jumps 4→0 between hourly
+runs (never observed at total=1) receives only `trial-zero`; that's intended.
 
 ## Components
 
 ### 1. Database (single migration)
 
-- **VIEW `trial_conversion_funnel`** (for admin analytics): cohort funnel
-  `granted` (free_credit_granted=true) → `exhausted` (welcome balance reached 0) →
-  `purchased` (has purchase-type row in `credit_transactions`). Computed from source
-  of truth — no event counters to drift.
+- **VIEW `trial_conversion_funnel`** (for admin analytics): single-row cohort funnel computed
+  from source of truth (no event counters to drift):
+  - `granted` = count(`unified_user_credits.free_credit_granted = true`)
+  - `exhausted` = count(granted AND `credits_basic + credits_pro + credits_cassandra = 0`)
+  - `purchased` = count(granted AND EXISTS `credit_transactions` row with
+    `transaction_type='purchase'` for that `unified_user_id`)
+  - `conversion_rate` = `purchased::numeric / NULLIF(granted, 0)`
 - No schema change for dedup: `engagement_log.message_type` is free text; new values
-  `trial-low`, `trial-zero`.
+  `trial-low`, `trial-zero`. (Verify `engagement_log` columns `telegram_id`, `message_type`,
+  `sent_at` exist — used by existing triggers.)
 
-### 2. Backend — event-driven nudge
+### 2. Backend — scheduled finder
 
-- **`consumeCredits`** (`credits/service.ts`): after successful deduction, compute new total
-  welcome balance and detect crossing to 1 (`low`) or 0 (`zero`). Eligibility:
-  `free_credit_granted = true` AND no purchase-type row in `credit_transactions`.
-  On match: `boss.send(QUEUE_TRIAL_NUDGE, …)`. Enqueue only; no message logic in hot path.
-  Enqueue failures are swallowed/logged (never break the consume path).
-- **`core/queue.ts`**: add `QUEUE_TRIAL_NUDGE` to `queuesToCreate` — **mandatory** (missing
-  queue registration crashes the worker on startup; prior ~1h outage cause).
-  Add `sendTrialNudgeJob(data)` helper with a Zod schema, mirroring existing senders.
-- **`engagement/triggers/trial-nudge.ts`** (new): `createTrialNudgeMessage(stage, name, lang)`
-  — localized fallback for ru/en/zh + AI variant for ru only (cost), mirroring
-  `streak-at-risk.ts`. Two tones: `low` = gentle warm-up; `zero` = clear buy offer.
-- **`engagement/worker.ts`**: register `QUEUE_TRIAL_NUDGE` handler — dedup check, eligibility
-  re-check, generate, send with inline "🎁 Купить" keyboard (reuse payments keyboard helper),
-  log.
-- **`ProactiveMessageService.sendEngagementMessage`** + **`DeliveryService.deliverToTelegram`**:
-  extend options with optional `replyMarkup` threaded to `bot.api.sendMessage`. Add
+- **`engagement/triggers/trial-nudge.ts`** (new):
+  - `findTrialNudgeUsers()` — mirrors `findStreakAtRiskUsers()`. Queries
+    `unified_user_credits` (`free_credit_granted = true`) joined to `unified_users`, computes
+    `total = credits_basic + credits_pro + credits_cassandra`, derives `stage`
+    (`0 → zero`, `1 → low`, else skip). Filters eligibility (telegram-linked, not banned,
+    onboarding completed, notifications not disabled), **excludes purchased** (no
+    `credit_transactions` row with `transaction_type='purchase'` for that `unified_user_id`),
+    and **excludes all-time-deduped** (`engagement_log` already has `trial-<stage>` for that
+    `telegram_id`). Returns `{ user, stage }[]`.
+  - `createTrialNudgeMessage(stage, name, lang)` — localized fallback for ru/en/zh + AI variant
+    for ru only (cost), mirroring `streak-at-risk.ts`. Two tones: `low` = gentle "running low"
+    warm-up; `zero` = clear "welcome credits used up — buy to continue" offer.
+- **`core/queue.ts`**: add `QUEUE_TRIAL_NUDGE` constant **and append it to `queuesToCreate`** —
+  **mandatory** (missing queue registration crashes the worker on startup; prior ~1h outage cause).
+- **`engagement/scheduler.ts`**: add `"trial-nudge"` to `SCHEDULES` with hourly cron
+  (`"0 * * * *"`, tz UTC — same cadence as `insight-dispatcher`).
+- **`engagement/worker.ts`**: add `processTrialNudge(job)` (mirrors `processStreakAtRisk`) and
+  register it in `registerEngagementWorkers()`. Calls `findTrialNudgeUsers()`, then for each
+  stage group `sendBatchEngagementMessages(users, "trial-<stage>", generator, { replyMarkup })`
+  where `replyMarkup = createTariffPickerKeyboard()` (reuse payments keyboard — global `buy:*`
+  callback handler already wired).
+- **`ProactiveMessageService.sendEngagementMessage` / `sendBatchEngagementMessages`** +
+  **`DeliveryService.deliverToTelegram`**: thread an optional `replyMarkup` (grammY
+  `InlineKeyboardMarkup`) through `TelegramSendOptions` to `bot.api.sendMessage`. Add
   `trial-low` / `trial-zero` to the `ProactiveMessageType` union.
 
 ### 3. Frontend — web banner
 
 - **`LowCreditBanner.tsx`** (new, mirrors `components/features/home/CompareBanner.tsx`): shown
-  to a logged-in **web** user when welcome credits are low/zero and no purchase exists; CTA →
-  `/pricing`. i18n ×3 (ru/en/zh in `src/lib/i18n.ts`), light/dark via CSS variables.
-- Reuses existing credit-balance state (`CreditBalance`/`CreditBadge`). Lazyweb references
+  on the Home dashboard when the total credit balance is **low (≤ 1)**; CTA → `/pricing`.
+  Reuses `getUserCredits()` (`services/paymentService`) — the same source `BalanceCard` uses.
+  **No purchase-exclusion on the frontend** (simplification): a low balance is itself the
+  trigger, and a top-up nudge is appropriate even for a user who bought and spent down. Two
+  tones by balance (`1` = low, `0` = zero). i18n ×3 (ru/en/zh in `src/lib/i18n.ts`), light/dark
+  via CSS variables. Rendered in `Home.tsx` above `BalanceCard`. Lazyweb references
   (paywall / low-balance / upgrade prompts) consulted before markup.
 
 ### 4. Metric
@@ -113,21 +144,28 @@ trial-nudge worker (engagement/worker.ts)
 
 ## Anti-spam / idempotency
 
-- Each stage (`trial-low`, `trial-zero`) fires **at most once per user** — dedup via
-  `engagement_log` keyed on `message_type`.
-- Respect `notification_settings` (skip if disabled).
-- Never nudge users who have already purchased (point-of-action reactive message covers them).
-- Event-driven enqueue tolerates concurrent `consumeCredits`; the worker's `engagement_log`
-  dedup is the single guard against duplicates.
+- Each stage (`trial-low`, `trial-zero`) fires **at most once per user, ever** — dedup via
+  `engagement_log` keyed on `message_type` with **no date filter** (differs from
+  `streak-at-risk`'s per-day dedup).
+- Respect `notification_settings` (skip if `enabled === false`).
+- Never nudge users who have already purchased (point-of-action reactive message covers them):
+  excluded via `credit_transactions.transaction_type='purchase'`.
+- Hourly finder is idempotent: re-running within the same hour finds the same users but the
+  `engagement_log` dedup prevents a second send.
 
 ## Testing (TDD)
 
-- **Threshold detector**: 4→3→2→1 (fires `low` once at 1), →0 (fires `zero` once); already-0
-  re-consume does not refire; non-trial (purchased) users excluded.
-- **Eligibility filter**: purchased (via `credit_transactions`) excluded;
-  `notification_settings` disabled excluded; not-yet-granted excluded.
-- **Dedup**: second crossing of same stage produces no second send.
-- **Message generators**: AI failure falls back to localized text; ru/en/zh covered.
+- **`findTrialNudgeUsers` — stage derivation**: total 1 → `low`; total 0 → `zero`; total ≥ 2 → not
+  selected; `free_credit_granted=false` → not selected.
+- **Eligibility filter**: purchased (`credit_transactions.transaction_type='purchase'`) excluded;
+  `notification_settings.enabled=false` excluded; not telegram-linked / banned / onboarding
+  incomplete excluded.
+- **All-time dedup**: a prior `trial-low` row in `engagement_log` (any date) excludes the user
+  from `low` again; `trial-zero` is independent (separate `message_type`).
+- **Message generators**: AI failure falls back to localized text; ru/en/zh covered; `low` and
+  `zero` tones distinct.
+- **replyMarkup threading**: `deliverToTelegram` passes `reply_markup` to `api.sendMessage` when
+  provided; omitted when not.
 - **Funnel VIEW**: granted/exhausted/purchased counts correct on a seeded fixture.
 
 ## Open questions

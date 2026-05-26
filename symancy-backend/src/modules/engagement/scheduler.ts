@@ -30,6 +30,11 @@ const SCHEDULES = {
     tz: "Europe/Moscow",
     description: "Remind users with an active streak who haven't been active today",
   },
+  "trial-nudge": {
+    cron: "0 * * * *", // Every hour at minute 0 (full-channel coverage, ~1h latency)
+    tz: "UTC",
+    description: "Hourly trial low/zero-credit nudge (sym-9gy)",
+  },
   // DEPRECATED: Replaced by morning-insight
   // "daily-fortune": {
   //   cron: "0 8 * * *",

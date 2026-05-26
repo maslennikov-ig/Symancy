@@ -13,6 +13,7 @@ import { logger } from '../utils/logger';
 import { StatCardSkeleton } from '../components/skeletons';
 import { PaymentCancellationStats } from '../components/PaymentCancellationStats';
 import { SystemHealthWidget } from '../components/SystemHealthWidget';
+import { TrialFunnelCard } from '../components/TrialFunnelCard';
 
 interface DashboardStats {
   totalUsers: number;
@@ -239,6 +240,11 @@ export function DashboardPage() {
       {/* System Health */}
       <div className="mb-8">
         <SystemHealthWidget />
+      </div>
+
+      {/* Trial → Paid Conversion Funnel */}
+      <div className="mb-8">
+        <TrialFunnelCard />
       </div>
 
       {/* Payment Cancellation Analytics */}
