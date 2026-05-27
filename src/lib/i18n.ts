@@ -728,6 +728,7 @@ export const translations = {
     // Profile Screen (Telegram Mini App)
     'profile.title': 'Profile',
     'profile.balance': 'Balance',
+    'profile.referral': 'Referral program',
     'profile.statistics': 'Statistics',
     'profile.statistics.analyses': 'analyses',
     'profile.statistics.messages': 'messages',
@@ -973,6 +974,25 @@ export const translations = {
 
     // CreditBalance badge
     'subscription.badge.active': 'Active',
+
+    // Referral program
+    'referral.title': 'Referral program',
+    'referral.subtitle': 'Invite friends and earn free analyses together',
+    'referral.yourCode': 'Your referral code',
+    'referral.copyLink': 'Copy link',
+    'referral.copied': 'Copied!',
+    'referral.share': 'Share',
+    'referral.inviteText': 'Join me on Symancy — coffee cup readings powered by AI. Use my link to get started:',
+    'referral.stats.invited': 'Invited',
+    'referral.stats.activated': 'Activated',
+    'referral.stats.earned': 'Analyses earned',
+    'referral.stats.pending': 'Pending',
+    'referral.how.title': 'How it works',
+    'referral.how.step1': 'Invite a friend with your personal link.',
+    'referral.how.step2': 'When they complete their first analysis, you both get +1 analysis.',
+    'referral.how.limit': 'Up to 5 rewards within 30 days.',
+    'referral.loading': 'Loading referral data...',
+    'referral.error': 'Failed to load referral data',
 
     // MultiImageUploader (compare two cups)
     'multiImageUploader.firstCup': 'First cup',
@@ -1738,6 +1758,7 @@ export const translations = {
     // Profile Screen (Telegram Mini App)
     'profile.title': 'Профиль',
     'profile.balance': 'Баланс',
+    'profile.referral': 'Реферальная программа',
     'profile.statistics': 'Статистика',
     'profile.statistics.analyses': 'анализов',
     'profile.statistics.messages': 'сообщений',
@@ -1983,6 +2004,25 @@ export const translations = {
 
     // CreditBalance badge
     'subscription.badge.active': 'Активна',
+
+    // Referral program
+    'referral.title': 'Реферальная программа',
+    'referral.subtitle': 'Приглашайте друзей — и получайте бесплатные анализы вместе',
+    'referral.yourCode': 'Ваш реферальный код',
+    'referral.copyLink': 'Скопировать ссылку',
+    'referral.copied': 'Скопировано!',
+    'referral.share': 'Поделиться',
+    'referral.inviteText': 'Присоединяйся ко мне в Symancy — гадание по кофейной гуще на основе ИИ. Переходи по моей ссылке:',
+    'referral.stats.invited': 'Приглашено',
+    'referral.stats.activated': 'Активировано',
+    'referral.stats.earned': 'Заработано анализов',
+    'referral.stats.pending': 'В ожидании',
+    'referral.how.title': 'Как это работает',
+    'referral.how.step1': 'Пригласите друга по своей персональной ссылке.',
+    'referral.how.step2': 'Когда он сделает первый анализ, вы оба получите +1 анализ.',
+    'referral.how.limit': 'До 5 наград за 30 дней.',
+    'referral.loading': 'Загрузка реферальных данных...',
+    'referral.error': 'Не удалось загрузить реферальные данные',
 
     // MultiImageUploader (compare two cups)
     'multiImageUploader.firstCup': 'Первая чашка',
@@ -2748,6 +2788,7 @@ export const translations = {
     // Profile Screen (Telegram Mini App)
     'profile.title': '个人资料',
     'profile.balance': '余额',
+    'profile.referral': '推荐计划',
     'profile.statistics': '统计',
     'profile.statistics.analyses': '分析次数',
     'profile.statistics.messages': '消息数',
@@ -2993,6 +3034,25 @@ export const translations = {
 
     // CreditBalance badge
     'subscription.badge.active': '活跃',
+
+    // Referral program
+    'referral.title': '推荐计划',
+    'referral.subtitle': '邀请好友，一起获得免费分析',
+    'referral.yourCode': '您的推荐码',
+    'referral.copyLink': '复制链接',
+    'referral.copied': '已复制！',
+    'referral.share': '分享',
+    'referral.inviteText': '快来和我一起使用 Symancy——由 AI 驱动的咖啡占卜。点击我的链接开始体验：',
+    'referral.stats.invited': '已邀请',
+    'referral.stats.activated': '已激活',
+    'referral.stats.earned': '已获得分析',
+    'referral.stats.pending': '待激活',
+    'referral.how.title': '运作方式',
+    'referral.how.step1': '通过您的专属链接邀请好友。',
+    'referral.how.step2': '当好友完成首次分析后，你们双方各获得 +1 次分析。',
+    'referral.how.limit': '30 天内最多可获得 5 次奖励。',
+    'referral.loading': '正在加载推荐数据...',
+    'referral.error': '加载推荐数据失败',
 
     // MultiImageUploader (compare two cups)
     'multiImageUploader.firstCup': '第一杯',

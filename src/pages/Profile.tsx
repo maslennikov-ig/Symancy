@@ -100,6 +100,27 @@ function PlusIcon(): React.ReactElement {
   );
 }
 
+function GiftIcon(): React.ReactElement {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="20 12 20 22 4 22 4 12" />
+      <rect x="2" y="7" width="20" height="5" />
+      <line x1="12" y1="22" x2="12" y2="7" />
+      <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+      <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+    </svg>
+  );
+}
+
 function StarIcon(): React.ReactElement {
   return (
     <svg
@@ -680,6 +701,11 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
     navigate('/profile/credits');
   }, [hapticFeedback, navigate]);
 
+  const handleNavigateToReferral = useCallback(() => {
+    hapticFeedback.impact('light');
+    navigate('/profile/referral');
+  }, [hapticFeedback, navigate]);
+
   const handleNavigateToHelp = useCallback(() => {
     hapticFeedback.impact('light');
     // Navigate to contacts page (in-app) instead of external link
@@ -839,6 +865,51 @@ export function Profile({ language, t }: ProfileProps): React.ReactElement {
               )}
               <ChevronRightIcon />
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Referral Program Row */}
+      <Card
+        className="mx-4 mt-3 cursor-pointer hover:bg-accent/50 transition-colors"
+        onClick={handleNavigateToReferral}
+      >
+        <CardContent className="p-4">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span
+                style={{
+                  color: 'var(--tg-theme-button-color, hsl(var(--primary)))',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <GiftIcon />
+              </span>
+              <span
+                style={{
+                  fontSize: '15px',
+                  color: 'var(--tg-theme-text-color, hsl(var(--foreground)))',
+                }}
+              >
+                {t('profile.referral')}
+              </span>
+            </div>
+            <span
+              style={{
+                color: 'var(--tg-theme-hint-color, hsl(var(--muted-foreground)))',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <ChevronRightIcon />
+            </span>
           </div>
         </CardContent>
       </Card>

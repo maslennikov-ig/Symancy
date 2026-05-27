@@ -34,6 +34,14 @@ const EnvSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().regex(/^\d+:[A-Za-z0-9_-]+$/, "Invalid Telegram bot token format"),
   TELEGRAM_WEBHOOK_SECRET: z.string().min(16, "Webhook secret must be at least 16 characters"),
 
+  // Telegram bot @username (without the leading @). Used to build referral
+  // deep links: https://t.me/<BOT_USERNAME>?start=ref_<code>. Default matches
+  // the live bot (coffeeveda_bot — legacy handle; brand is Symancy) so the link
+  // is correct even when the env var is not set. Override via BOT_USERNAME if
+  // the bot is ever renamed. The frontend uses VITE_TELEGRAM_BOT_NAME for the
+  // same value.
+  BOT_USERNAME: z.string().min(1).default("coffeeveda_bot"),
+
   // Telegram Payments (optional)
   // Provider token issued via @BotFather → Bot Settings → Payments → YooKassa.
   // When unset, only Telegram Stars (XTR) payments are available.

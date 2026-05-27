@@ -49,6 +49,8 @@ import {
 } from "../compare/keyboards.js";
 import { createMainMenuKeyboard } from "../menu/keyboards.js";
 import { handleMainMenuText } from "../menu/handler.js";
+import { parseRefPayload } from "../referrals/parse.js";
+import { captureReferral } from "../referrals/service.js";
 import {
   handleBuyCommand,
   handleBuyCallback,
@@ -195,6 +197,20 @@ export function setupRouter(): void {
   bot.command("start", async (ctx) => {
     const botCtx = ctx as BotContext;
     logger.info({ telegramUserId: ctx.from?.id }, "Received /start command");
+
+    // Referral capture: deep links of the form t.me/<bot>?start=ref_<code>
+    // deliver the payload via ctx.match. We capture BEFORE onboarding and never
+    // let referral failures block the onboarding/start flow.
+    try {
+      const code = parseRefPayload(typeof ctx.match === "string" ? ctx.match : undefined);
+      if (code && ctx.from?.id) {
+        await captureReferral(code, ctx.from.id).catch((err) => {
+          logger.warn({ err, telegramUserId: ctx.from?.id }, "Referral capture failed");
+        });
+      }
+    } catch (refError) {
+      logger.warn({ refError, telegramUserId: ctx.from?.id }, "Referral capture threw");
+    }
 
     try {
       // Check if onboarding needed
