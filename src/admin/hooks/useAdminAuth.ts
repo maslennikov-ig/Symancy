@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import type { User } from '@supabase/supabase-js';
+import type { User, Session } from '@supabase/supabase-js';
 import { getStoredToken, getCurrentUser, clearToken } from '../../services/authService';
 import type { UnifiedUser } from '../../types/omnichannel';
 
@@ -142,14 +142,14 @@ export function useAdminAuth(): UseAdminAuthReturn {
 
     checkAuth();
 
-    // Listen for Supabase auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (cancelled) return;
-
+    // Re-resolve admin state for a given session. This performs async Supabase
+    // calls (rpc / network) and therefore MUST NOT run synchronously inside the
+    // onAuthStateChange callback: auth-js holds an internal lock while the
+    // callback executes, and awaiting Supabase there can deadlock. It is invoked
+    // via setTimeout(0) below to escape that lock-held context.
+    const revalidateAdmin = async (session: Session | null) => {
       const currentUser = session?.user ?? null;
-      setUser(currentUser);
 
-      // Re-check admin status on auth state change
       if (currentUser) {
         setIsTelegramUser(false);
         setUnifiedUser(null);
@@ -158,43 +158,58 @@ export function useAdminAuth(): UseAdminAuthReturn {
           setIsAdmin(adminCheck === true);
           setIsLoading(false);
         }
-      } else {
-        // User logged out from Supabase - check Telegram token
-        const telegramToken = getStoredToken();
-        if (telegramToken) {
-          try {
-            const telegramUser = await getCurrentUser(telegramToken);
-            if (cancelled) return;
+        return;
+      }
 
-            setUnifiedUser(telegramUser);
-            setIsTelegramUser(true);
+      // No Supabase session — fall back to a linked Telegram account.
+      const telegramToken = getStoredToken();
+      if (telegramToken) {
+        try {
+          const telegramUser = await getCurrentUser(telegramToken);
+          if (cancelled) return;
 
-            if (telegramUser.auth_id) {
-              const { data: adminCheck } = await supabase.rpc('is_admin_by_auth_id', {
-                p_auth_id: telegramUser.auth_id,
-              });
-              if (!cancelled) {
-                setIsAdmin(adminCheck === true);
-              }
-            } else {
-              setIsAdmin(false);
+          setUnifiedUser(telegramUser);
+          setIsTelegramUser(true);
+
+          if (telegramUser.auth_id) {
+            const { data: adminCheck } = await supabase.rpc('is_admin_by_auth_id', {
+              p_auth_id: telegramUser.auth_id,
+            });
+            if (!cancelled) {
+              setIsAdmin(adminCheck === true);
             }
-          } catch {
-            clearToken();
+          } else if (!cancelled) {
+            setIsAdmin(false);
+          }
+        } catch {
+          clearToken();
+          if (!cancelled) {
             setIsAdmin(false);
             setIsTelegramUser(false);
             setUnifiedUser(null);
           }
-        } else {
-          setIsAdmin(false);
-          setIsTelegramUser(false);
-          setUnifiedUser(null);
         }
-
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+      } else if (!cancelled) {
+        setIsAdmin(false);
+        setIsTelegramUser(false);
+        setUnifiedUser(null);
       }
+
+      if (!cancelled) {
+        setIsLoading(false);
+      }
+    };
+
+    // Listen for Supabase auth state changes. The callback stays synchronous
+    // (it only mirrors the user); the async admin re-check is deferred out of
+    // the lock-held callback context to avoid an auth-js deadlock.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (cancelled) return;
+      setUser(session?.user ?? null);
+      setTimeout(() => {
+        if (cancelled) return;
+        void revalidateAdmin(session);
+      }, 0);
     });
 
     return () => {
