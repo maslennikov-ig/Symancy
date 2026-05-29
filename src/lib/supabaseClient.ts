@@ -54,6 +54,10 @@ export function createSupabaseWithToken(accessToken: string): SupabaseClient {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
+      // Distinct namespace so these short-lived JWT clients never share the main
+      // client's auth storage/lock — avoids the "Multiple GoTrueClient instances"
+      // warning and any lock contention with the primary session.
+      storageKey: 'sb-telegram-jwt-readonly',
     },
   });
 }
