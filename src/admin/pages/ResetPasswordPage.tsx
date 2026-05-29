@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { supabase } from '@/lib/supabaseClient';
 import { useAdminTranslations } from '../hooks/useAdminTranslations';
@@ -20,6 +20,9 @@ const RECOVERY_TIMEOUT_MS = 3000;
 // hanging network revoke) can never freeze the form on the spinner forever.
 const UPDATE_TIMEOUT_MS = 15000;
 const SIGNOUT_TIMEOUT_MS = 5000;
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 /**
  * Reject after `ms` if `promise` has not settled. Used to bound Supabase auth
@@ -54,6 +57,9 @@ export function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // Recovery access token captured the moment the session is established, so the
+  // submit handler never has to touch the auth-js lock to read it again.
+  const recoveryTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,6 +72,7 @@ export function ResetPasswordPage() {
         // the URL for a session. We also accept SIGNED_IN if a session is
         // already present from a previous exchange.
         if (event === 'PASSWORD_RECOVERY' && session) {
+          recoveryTokenRef.current = session.access_token;
           setReady(true);
           setLinkInvalid(false);
         }
@@ -77,6 +84,7 @@ export function ResetPasswordPage() {
     void supabase.auth.getSession().then(({ data }) => {
       if (cancelled) return;
       if (data.session) {
+        recoveryTokenRef.current = data.session.access_token;
         setReady(true);
         setLinkInvalid(false);
       }
@@ -120,23 +128,67 @@ export function ResetPasswordPage() {
     setIsLoading(true);
 
     try {
-      // Bounded so a navigatorLock deadlock surfaces as a retryable error
-      // instead of an endless spinner.
-      const { error: updateError } = await withTimeout(
-        supabase.auth.updateUser({ password }),
-        UPDATE_TIMEOUT_MS,
-        'updateUser'
-      );
+      // Resolve the recovery access token (captured when the form became ready).
+      let accessToken = recoveryTokenRef.current;
+      if (!accessToken) {
+        // Bounded fallback if the listener never populated the ref.
+        try {
+          const { data } = await withTimeout(
+            supabase.auth.getSession(),
+            UPDATE_TIMEOUT_MS,
+            'getSession'
+          );
+          accessToken = data.session?.access_token ?? null;
+        } catch (sessionErr) {
+          console.warn('getSession fallback failed:', sessionErr);
+        }
+      }
 
-      if (updateError) {
-        setError(updateError.message);
+      if (!accessToken) {
+        setError(t('admin.resetPassword.errorInvalidLink'));
         return;
       }
 
-      // Sign the recovery session out so the user must re-authenticate with the
-      // new password. Use scope:'local' — it only clears the session from this
-      // browser (no network revoke), so it cannot hang the flow; the recovery
-      // session is single-use server-side anyway. Bounded + non-fatal.
+      // Update the password via a direct GoTrue REST call (PUT /auth/v1/user)
+      // instead of supabase.auth.updateUser(). updateUser() serializes on the
+      // auth-js navigatorLock and, inside the Telegram in-app WebView, that lock
+      // deadlocked — the call hung forever (confirmed: "updateUser timed out").
+      // A plain fetch with the recovery bearer token has no lock/refresh
+      // machinery and also bypasses the client-side "token issued in the future"
+      // clock-skew check that was firing on the user's device. This is exactly
+      // the request updateUser makes internally.
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), UPDATE_TIMEOUT_MS);
+      let res: Response;
+      try {
+        res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+          method: 'PUT',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ password }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+
+      if (!res.ok) {
+        let message = t('admin.resetPassword.errorGeneric');
+        try {
+          const body = await res.json();
+          message = body?.msg || body?.error_description || body?.message || message;
+        } catch {
+          // non-JSON error body — keep the generic message
+        }
+        setError(message);
+        return;
+      }
+
+      // Best-effort local sign-out so the recovery session is cleared from this
+      // browser. Bounded + non-fatal — navigate regardless.
       try {
         await withTimeout(
           supabase.auth.signOut({ scope: 'local' }),
