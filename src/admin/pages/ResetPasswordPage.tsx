@@ -16,6 +16,23 @@ import {
 
 const MIN_PASSWORD_LENGTH = 8;
 const RECOVERY_TIMEOUT_MS = 3000;
+// Hard caps so a stuck Supabase auth call (navigatorLock contention or a
+// hanging network revoke) can never freeze the form on the spinner forever.
+const UPDATE_TIMEOUT_MS = 15000;
+const SIGNOUT_TIMEOUT_MS = 5000;
+
+/**
+ * Reject after `ms` if `promise` has not settled. Used to bound Supabase auth
+ * calls that can otherwise hang indefinitely on the internal Web Locks lock.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    ),
+  ]);
+}
 
 /**
  * Admin Reset Password Page
@@ -103,27 +120,37 @@ export function ResetPasswordPage() {
     setIsLoading(true);
 
     try {
-      const { error: updateError } = await supabase.auth.updateUser({
-        password,
-      });
+      // Bounded so a navigatorLock deadlock surfaces as a retryable error
+      // instead of an endless spinner.
+      const { error: updateError } = await withTimeout(
+        supabase.auth.updateUser({ password }),
+        UPDATE_TIMEOUT_MS,
+        'updateUser'
+      );
 
       if (updateError) {
         setError(updateError.message);
         return;
       }
 
-      // Sign the recovery session out so the user must re-authenticate
-      // with the new password. Failure here is non-fatal — log and proceed.
+      // Sign the recovery session out so the user must re-authenticate with the
+      // new password. Use scope:'local' — it only clears the session from this
+      // browser (no network revoke), so it cannot hang the flow; the recovery
+      // session is single-use server-side anyway. Bounded + non-fatal.
       try {
-        await supabase.auth.signOut();
+        await withTimeout(
+          supabase.auth.signOut({ scope: 'local' }),
+          SIGNOUT_TIMEOUT_MS,
+          'signOut'
+        );
       } catch (signOutErr) {
-        console.warn('signOut after password reset failed:', signOutErr);
+        console.warn('signOut after password reset failed (non-fatal):', signOutErr);
       }
 
       navigate('/admin/login', { state: { passwordResetSuccess: true } });
     } catch (err) {
       console.error('Password update error:', err);
-      setError('An unexpected error occurred. Please try again.');
+      setError(t('admin.resetPassword.errorGeneric'));
     } finally {
       setIsLoading(false);
     }
