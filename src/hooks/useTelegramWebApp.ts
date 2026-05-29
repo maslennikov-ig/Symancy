@@ -139,6 +139,8 @@ export interface TelegramWebApp {
   };
   // Write Access API (Bot API 6.9+) - Request permission to send messages
   requestWriteAccess?: (callback: (granted: boolean) => void) => void;
+  // Open a Telegram link (e.g. share URL) inside the Telegram client
+  openTelegramLink?: (url: string) => void;
 }
 
 /**

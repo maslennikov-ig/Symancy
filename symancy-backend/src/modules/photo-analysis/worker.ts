@@ -46,6 +46,7 @@ import { getEnv } from "../../config/env.js";
 import { randomUUID } from "node:crypto";
 import { createRetopicKeyboard } from "./keyboards.js";
 import { recordStreakActivityForTelegramUser } from "../gamification/index.js";
+import { rewardReferrerOnActivation } from "../referrals/service.js";
 
 const logger = getLogger().child({ module: "photo-analysis-worker" });
 
@@ -520,6 +521,16 @@ export async function processPhotoAnalysis(job: Job<PhotoAnalysisJobData>): Prom
         jobLogger.debug({ chunk: index + 1, total: messages.length }, "Sent message chunk");
       }
     }
+
+    // Reward the referrer on referee activation (referral program), AFTER the
+    // analysis result has actually been delivered to the user — "first completed
+    // analysis" means the user received their reading. The RPC is idempotent
+    // (rewards once) and enforces a monthly limit, so calling it after every
+    // completed analysis is safe. Non-fatal: a referral failure must never break
+    // the analysis flow.
+    await rewardReferrerOnActivation(telegramUserId).catch((e) =>
+      jobLogger.warn({ err: e }, "referral reward failed")
+    );
 
     jobLogger.info(
       { processingTime, tokensUsed: totalTokensUsed },

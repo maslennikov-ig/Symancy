@@ -11,6 +11,7 @@ import {
 } from "../../../modules/credits/service.js";
 import { getLogger } from "../../../core/logger.js";
 import { findOrCreateByTelegramId } from "../../../services/user/UnifiedUserService.js";
+import { attributeRefereeSignup } from "../../../modules/referrals/service.js";
 import { getBotMessage } from "../../../services/i18n/index.js";
 import { createMainMenuKeyboard } from "../../../modules/menu/keyboards.js";
 
@@ -75,6 +76,24 @@ export async function complete(
         logger.info(
           { telegramUserId, unifiedUserId, granted: grantResult.granted, balance: grantResult.balance },
           "Welcome credits granted successfully"
+        );
+      }
+    }
+
+    // 2.5) Attribute a pending referral (if the referee arrived via a ref_ deep
+    //      link). Idempotent and non-fatal: a referral failure must never break
+    //      onboarding. Credits the referee with +1 basic when a capture exists.
+    if (unifiedUserId) {
+      try {
+        const attribution = await attributeRefereeSignup(telegramUserId, unifiedUserId);
+        logger.info(
+          { telegramUserId, unifiedUserId, attribution },
+          "Referee signup attribution attempted"
+        );
+      } catch (referralError) {
+        logger.warn(
+          { telegramUserId, unifiedUserId, error: referralError },
+          "Failed to attribute referee signup (non-fatal)"
         );
       }
     }
