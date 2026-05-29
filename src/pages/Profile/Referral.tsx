@@ -367,17 +367,20 @@ export function Referral({ language: _language, t }: ReferralProps): React.React
                   </p>
                 </div>
 
-                {/* Actions */}
+                {/* Actions — stacked full-width to avoid overflow on narrow
+                    Telegram Mini App webviews (shadcn buttons are nowrap and the
+                    RU labels are long, so a side-by-side row overflows). */}
                 <div
                   style={{
                     display: 'flex',
+                    flexDirection: 'column',
                     gap: '8px',
                     marginTop: '20px',
                   }}
                 >
                   <Button
                     onClick={handleCopy}
-                    className="flex-1"
+                    className="w-full"
                     variant={copied ? 'secondary' : 'default'}
                   >
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
@@ -387,7 +390,7 @@ export function Referral({ language: _language, t }: ReferralProps): React.React
                   </Button>
 
                   {isWebApp && (
-                    <Button onClick={handleShare} variant="outline" className="flex-1">
+                    <Button onClick={handleShare} variant="outline" className="w-full">
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         <ShareIcon />
                         {t('referral.share')}
