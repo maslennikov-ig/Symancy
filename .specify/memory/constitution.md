@@ -44,7 +44,8 @@ Before implementing custom solutions (>20 lines):
 2. Evaluate: maintenance status, security, bundle size, TypeScript support
 3. Use library if it covers >70% of requirements
 
-**Context7 Rule**: Before writing code that uses ANY library, MUST fetch up-to-date documentation via `mcp__context7__get-library-docs`. This ensures correct API usage and avoids deprecated patterns.
+- Docs L1/L2 policy: query @neuledge/context MCP first with package@version from the lockfile and domain/API keywords; Context7 tool names below are L2 fallback only for L1 miss/stale/insufficient.
+**Docs L1/L2 Rule**: Before writing code that uses any library, query `@neuledge/context` first with the lockfile-routed package/version and API/domain keywords. Use Context7 MCP only as L2 fallback for L1 miss/stale/insufficient results.
 
 **Rationale**: Reduces maintenance burden, leverages community standards and security fixes.
 
