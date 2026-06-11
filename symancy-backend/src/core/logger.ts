@@ -20,6 +20,13 @@ function createLogger(): pino.Logger {
       pid: process.pid,
       env: env.NODE_ENV,
     },
+    // Most call sites log errors under the "error" key, but pino's standard
+    // serializer is only wired to "err" — without this, production logs show
+    // error:{} with the message and stack lost (sym-9211).
+    serializers: {
+      err: pino.stdSerializers.err,
+      error: pino.stdSerializers.err,
+    },
   };
 
   // In development, use pino-pretty transport
