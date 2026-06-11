@@ -397,18 +397,20 @@ export async function cleanupStaleLocks(maxAgeMinutes: number = 5): Promise<numb
     // Query the pgboss.job table for stale jobs
     const pool = await import("../core/database.js").then((m) => m.getPool());
 
+    // pg-boss 12 renamed job columns to snake_case (started_on, completed_on);
+    // the old camel-ish names fail with 42703 (sym-elwm)
     const result = await pool.query(
       `
       UPDATE pgboss.job
       SET state = 'failed',
-          completedon = NOW(),
+          completed_on = NOW(),
           output = jsonb_build_object(
             'error', 'Job stale - cleared by cleanup task',
             'cleanedAt', NOW()
           )
       WHERE state = 'active'
-        AND startedon < $1
-      RETURNING id, name, startedon
+        AND started_on < $1
+      RETURNING id, name, started_on
       `,
       [cutoffTime]
     );
@@ -427,7 +429,7 @@ export async function cleanupStaleLocks(maxAgeMinutes: number = 5): Promise<numb
           {
             jobId: row.id,
             jobName: row.name,
-            startedOn: row.startedon,
+            startedOn: row.started_on,
           },
           "Stale job cleaned up"
         );
