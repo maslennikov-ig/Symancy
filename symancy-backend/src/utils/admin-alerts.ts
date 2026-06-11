@@ -51,6 +51,192 @@ const alertCache = new Map<string, AlertCacheEntry>();
 const RATE_LIMIT_MS = 60 * 1000;
 
 /**
+ * Known transient connection error patterns.
+ *
+ * Network blips between the VPS and the Supabase pooler arrive in bursts of
+ * alternating messages ("Connection terminated due to connection timeout" /
+ * "timeout exceeded when trying to connect"), so per-message rate limiting
+ * still produced ~2 alerts/minute for the whole episode (sym-s7lc). All such
+ * errors share one aggregation bucket with a longer alert window and a
+ * recovery notice once the burst stops.
+ */
+const TRANSIENT_CONNECTION_ERROR_PATTERNS: RegExp[] = [
+  /connection terminated due to connection timeout/i,
+  /timeout exceeded when trying to connect/i,
+  /connection terminated unexpectedly/i,
+  /ECONNRESET/,
+  /ECONNREFUSED/,
+  /ETIMEDOUT/,
+  /ENOTFOUND/,
+  /EAI_AGAIN/,
+];
+
+/**
+ * Check whether an error message matches a known transient connection error
+ */
+export function isTransientConnectionError(message: string): boolean {
+  return TRANSIENT_CONNECTION_ERROR_PATTERNS.some((re) => re.test(message));
+}
+
+/**
+ * Minimum interval between repeated alerts within one connectivity episode
+ */
+const TRANSIENT_ALERT_WINDOW_MS = 10 * 60 * 1000;
+
+/**
+ * Quiet period without transient errors after which the episode is
+ * considered over and a recovery notice is sent
+ */
+const TRANSIENT_RECOVERY_QUIET_MS = 3 * 60 * 1000;
+
+/**
+ * State of the current transient-connectivity episode (null = no episode)
+ */
+interface TransientEpisodeState {
+  firstErrorAt: number;
+  lastErrorAt: number;
+  count: number;
+  lastAlertAt: number;
+  lastErrorMessage: string;
+  recoveryTimer: NodeJS.Timeout | null;
+}
+
+let transientEpisode: TransientEpisodeState | null = null;
+
+/**
+ * Reset transient episode state (for tests)
+ */
+export function resetTransientEpisodeState(): void {
+  if (transientEpisode?.recoveryTimer) {
+    clearTimeout(transientEpisode.recoveryTimer);
+  }
+  transientEpisode = null;
+}
+
+/**
+ * Aggregate transient connection errors into a single episode:
+ * - first error sends one "connectivity degraded" alert immediately;
+ * - repeats within TRANSIENT_ALERT_WINDOW_MS only bump the counter;
+ * - after TRANSIENT_RECOVERY_QUIET_MS without errors a recovery notice
+ *   with episode totals is sent and the state is cleared.
+ */
+async function handleTransientConnectionError(
+  error: Error,
+  context?: Record<string, unknown>
+): Promise<void> {
+  const now = Date.now();
+
+  if (!transientEpisode) {
+    transientEpisode = {
+      firstErrorAt: now,
+      lastErrorAt: now,
+      count: 1,
+      lastAlertAt: 0,
+      lastErrorMessage: error.message,
+      recoveryTimer: null,
+    };
+  } else {
+    transientEpisode.count++;
+    transientEpisode.lastErrorAt = now;
+    transientEpisode.lastErrorMessage = error.message;
+  }
+
+  // (Re)arm the recovery timer on every error so it fires only after quiet
+  if (transientEpisode.recoveryTimer) {
+    clearTimeout(transientEpisode.recoveryTimer);
+  }
+  transientEpisode.recoveryTimer = setTimeout(() => {
+    void sendTransientRecoveryNotice();
+  }, TRANSIENT_RECOVERY_QUIET_MS);
+  transientEpisode.recoveryTimer.unref?.();
+
+  const isFirstAlert = transientEpisode.lastAlertAt === 0;
+  if (!isFirstAlert && now - transientEpisode.lastAlertAt < TRANSIENT_ALERT_WINDOW_MS) {
+    logger.debug("Transient connection error aggregated", {
+      count: transientEpisode.count,
+      error: error.message,
+    });
+    return;
+  }
+  transientEpisode.lastAlertAt = now;
+
+  // Sentry once per alert (not per error) to avoid flooding
+  captureException(error, context);
+
+  const sinceFirst = Math.round((now - transientEpisode.firstErrorAt) / 1000);
+  let body = `⚠️ WARNING ALERT\nTime: ${new Date(now).toISOString()}\n`;
+  body += `\nMessage: DB/network connectivity degraded (transient connection errors)\n`;
+  body += `Errors in episode: ${transientEpisode.count}`;
+  body += isFirstAlert ? ` (episode just started)\n` : ` over ${sinceFirst}s\n`;
+  body += `Latest error: ${error.message}\n`;
+  if (context && Object.keys(context).length > 0) {
+    body += `\nContext:\n`;
+    for (const [key, value] of Object.entries(context)) {
+      const valueStr =
+        typeof value === "object" ? JSON.stringify(value) : String(value);
+      body += `- ${key}: ${valueStr}\n`;
+    }
+  }
+  body += `\nA recovery notice will follow once errors stop for ${TRANSIENT_RECOVERY_QUIET_MS / 60000} min.`;
+
+  try {
+    const env = getEnv();
+    if (!env.ADMIN_CHAT_ID) {
+      return;
+    }
+    const api = getBotApi();
+    await api.sendMessage(env.ADMIN_CHAT_ID, truncateMessage(body, MAX_MESSAGE_LENGTH), {
+      parse_mode: undefined,
+    });
+  } catch (sendError) {
+    logger.error("Failed to send transient connectivity alert", {
+      error: sendError instanceof Error ? sendError.message : String(sendError),
+    });
+  }
+}
+
+/**
+ * Send a recovery notice summarizing the finished connectivity episode
+ */
+async function sendTransientRecoveryNotice(): Promise<void> {
+  const episode = transientEpisode;
+  transientEpisode = null;
+  if (!episode) {
+    return;
+  }
+
+  const durationSec = Math.max(
+    1,
+    Math.round((episode.lastErrorAt - episode.firstErrorAt) / 1000)
+  );
+  let body = `✅ RECOVERED\nTime: ${new Date().toISOString()}\n`;
+  body += `\nMessage: DB/network connectivity restored\n`;
+  body += `Episode: ${episode.count} transient connection error(s) over ${durationSec}s\n`;
+  body += `First: ${new Date(episode.firstErrorAt).toISOString()}\n`;
+  body += `Last:  ${new Date(episode.lastErrorAt).toISOString()}\n`;
+  body += `Last error: ${episode.lastErrorMessage}`;
+
+  try {
+    const env = getEnv();
+    if (!env.ADMIN_CHAT_ID) {
+      return;
+    }
+    const api = getBotApi();
+    await api.sendMessage(env.ADMIN_CHAT_ID, truncateMessage(body, MAX_MESSAGE_LENGTH), {
+      parse_mode: undefined,
+    });
+    logger.info("Transient connectivity episode recovered", {
+      count: episode.count,
+      durationSec,
+    });
+  } catch (sendError) {
+    logger.error("Failed to send recovery notice", {
+      error: sendError instanceof Error ? sendError.message : String(sendError),
+    });
+  }
+}
+
+/**
  * Simple hash function for error messages
  */
 function hashString(str: string): string {
@@ -276,6 +462,13 @@ export async function sendErrorAlert(
     const env = getEnv();
     if (!env.ADMIN_CHAT_ID) {
       logger.debug("Admin alerts disabled (ADMIN_CHAT_ID not set)");
+      return;
+    }
+
+    // Transient connection errors (network blips toward the Supabase pooler)
+    // are aggregated into one episode instead of per-message alerts (sym-s7lc)
+    if (isTransientConnectionError(error.message)) {
+      await handleTransientConnectionError(error, context);
       return;
     }
 
