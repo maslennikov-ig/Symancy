@@ -52,4 +52,4 @@ Never commit secrets. Local runs require `.env.local` entries for `VITE_SUPABASE
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
-- Beads 1.0.0 requires explicit `bd bootstrap`, `bd import`, and `bd export` steps as needed.
+- Use `bd bootstrap`, `bd import`, and `bd export` only when the local workspace state requires them. Install Beads git hooks only when this repo's current contract explicitly authorizes them.
