@@ -24,32 +24,32 @@ Never commit secrets. Local runs require `.env.local` entries for `VITE_SUPABASE
 
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+**When ending a work session**, follow the repo delivery contract and current user authorization. Remote pushes are not automatic.
 
-**MANDATORY WORKFLOW:**
+**WORKFLOW:**
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
+2. **Run final acceptance** - one risk-selected set after implementation; full
+   suite only at epic/release
 3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
+4. **Deliver when authorized** - after final acceptance passes:
    ```bash
-   git pull --rebase
+   git fetch                 # stop if the remote is ahead or diverged
    # If the local Beads DB looks empty or broken after clone/upgrade:
    bd bootstrap --yes
    # If .beads/issues.jsonl has data but the local DB is empty:
    bd import
    # If this repo commits .beads/issues.jsonl, refresh it before push:
    bd export -o .beads/issues.jsonl
-   git push
-   git status  # MUST show "up to date with origin"
+   git push                  # ordinary non-force push to the tracking branch only
    ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
+5. **Preserve unrelated state** - do not clear stashes or prune branches without
+   explicit current authorization
+6. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
+- Stage files explicitly by path; never `git add -A` over unrelated working-tree changes.
+- Ordinary commits and ordinary push are allowed after final acceptance when the repo contract or current user request authorizes delivery. Before push, fetch and stop if the remote is ahead/diverged, the branch/protected target is unclear, or uncommitted scope is unsafe.
+- Leaving work committed but unpushed is a valid outcome. Report it instead of forcing delivery.
+- Ask before force-push, remote branch deletion, PR creation or merge, deploy, and production/live mutation.
 - Use `bd bootstrap`, `bd import`, and `bd export` only when the local workspace state requires them. Install Beads git hooks only when this repo's current contract explicitly authorizes them.

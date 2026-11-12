@@ -6,10 +6,6 @@
 
 - Target runtime: Claude Code CLI in the VS Code integrated terminal on WSL.
 - Primary workflow comes from global `~/.claude/CLAUDE.md` and the `orchestration-bridge` plugin.
-- For medium/complex, risky, docs-sensitive, delegated, file-changing, or handoff-prone work, use `orchestration-bridge:orchestrator-stage`.
-- Do not use `template-bridge` for new orchestration.
-- Use Docs L1/L2: `@neuledge/context` first with lockfile-routed package/version; Context7 MCP or first-party docs only when L1 is missing, stale, or insufficient.
-- Use Beads when available for file-changing, delegated, long, or handoff-prone work.
 - Remote push, PR creation, merge, deploy, force-push, and production mutation require repo contract support and current user authorization.
 
 ## Preserved Project Notes
@@ -40,8 +36,8 @@
 
 **Supabase Operations**:
 - Use Supabase MCP when `.mcp.json` includes supabase server
-- **Brand / product name**: **Symancy** (домен `symancy.ru`). Использовать ТОЛЬКО это название в коде, документации, сообщениях пользователю и любых внешних коммуникациях.
-- **Supabase project ref**: `johspxgvkbrysxhilmbg`. В Supabase dashboard организация отображается как `MegaCampusAI` — это **legacy техническое имя** (так был создан проект до ребрендинга), **НЕ бренд** и **НЕ имя продукта**. Не использовать.
+- **Brand / product name**: **Symancy** (domain `symancy.ru`). Use ONLY this name in code, documentation, user messages, and all external communications.
+- **Supabase project ref**: `johspxgvkbrysxhilmbg`. In the Supabase dashboard, the organization appears as `MegaCampusAI` — this is a **legacy technical name** (the project was created this way before rebranding), **NOT the brand** and **NOT the product name**. Do not use it.
 - Redirect URLs: Must include `http://localhost:5173/**` and `https://symancy.ru/**` for auth to work.
 
 **MCP Configuration**:
@@ -68,7 +64,9 @@
 | Prompts             | `prompt-engineer`               | LLM prompts, system prompts   |
 | Code review         | `code-reviewer`                 | Post-implementation review    |
 
-**Rule**: For complex tasks, ALWAYS consider delegation. Verify result yourself.
+**Rule**: Delegate a coherent complex stream only for material parallel,
+specialist, context-isolation, or write-isolation value. Integrate under one
+root owner and run the task's final risk-selected acceptance once.
 
 ---
 
